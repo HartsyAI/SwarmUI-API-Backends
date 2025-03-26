@@ -85,7 +85,26 @@ public class APIProviderInit : IDisposable
             Description = "OpenAI's DALL-E 2 model",
             ModelClass = CreateModelClass("dall-e", "DALL-E"),
             StandardWidth = 1024,
-            StandardHeight = 1024
+            StandardHeight = 1024,
+            IsSupportedModelType = true,
+            PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/dall-e-2.png"))}",
+            Metadata = new T2IModelHandler.ModelMetadataStore
+            {
+                ModelName = "dall-e-2",
+                Title = "DALL-E 2",
+                Author = "OpenAI",
+                Description = "Generative model capable of creating realistic images from text descriptions",
+                PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/dall-e-2.png"))}",
+                StandardWidth = 1024,
+                StandardHeight = 1024,
+                License = "Commercial",
+                UsageHint = "Good for general image generation via API",
+                Date = "2022",
+                ModelClassType = "dall-e",
+                Tags = ["openai", "dall-e", "generative"],
+                TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            },
         };
 
         T2IModel dallE3 = new(null, null, null, "dall-e-3")
@@ -94,7 +113,26 @@ public class APIProviderInit : IDisposable
             Description = "OpenAI's DALL-E 3 model",
             ModelClass = CreateModelClass("dall-e", "DALL-E"),
             StandardWidth = 1024,
-            StandardHeight = 1024
+            StandardHeight = 1024,
+            IsSupportedModelType = true,
+            PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/dall-e-3.png"))}",
+            Metadata = new T2IModelHandler.ModelMetadataStore
+            {
+                ModelName = "dall-e-3",
+                Title = "DALL-E 3",
+                Author = "OpenAI",
+                Description = "Advanced generative model for creating highly detailed and accurate images from text descriptions",
+                PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/dall-e-3.png"))}",
+                StandardWidth = 1024,
+                StandardHeight = 1024,
+                License = "Commercial",
+                UsageHint = "Excellent for high-quality image generation with accurate text representation",
+                Date = "2023",
+                ModelClassType = "dall-e",
+                Tags = ["openai", "dall-e", "high-quality", "text-accurate"],
+                TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            },
         };
 
         APIProviderMetadata provider = new()
@@ -146,7 +184,26 @@ public class APIProviderInit : IDisposable
                     ModelClass = CreateModelClass("ideogram", "Ideogram"),
                     Description = "Ideogram's image generation model",
                     StandardHeight = 1024,
-                    StandardWidth = 1024
+                    StandardWidth = 1024,
+                    IsSupportedModelType = true,
+                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/ideogram-v1.png"))}",
+                    Metadata = new T2IModelHandler.ModelMetadataStore
+                    {
+                        ModelName = "ideogram-v1",
+                        Title = "Ideogram v1",
+                        Author = "Ideogram AI",
+                        Description = "Ideogram's first-generation image synthesis model optimized for creative content",
+                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/ideogram-v1.png"))}",
+                        StandardWidth = 1024,
+                        StandardHeight = 1024,
+                        License = "Commercial",
+                        UsageHint = "Great for creative image generation with strong artistic style",
+                        Date = "2023",
+                        ModelClassType = "ideogram",
+                        Tags = ["ideogram", "creative", "ai-art"],
+                        TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                        TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    },
                 },
                 ["v2"] = new T2IModel(null, "Ideogram", "v2", "ideogram")
                 {
@@ -154,7 +211,53 @@ public class APIProviderInit : IDisposable
                     ModelClass = CreateModelClass("ideogram", "Ideogram"),
                     Description = "Ideogram's image generation model",
                     StandardHeight = 1024,
-                    StandardWidth = 1024
+                    StandardWidth = 1024,
+                    IsSupportedModelType = true,
+                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/ideogram-v2.png"))}",
+                    Metadata = new T2IModelHandler.ModelMetadataStore
+                    {
+                        ModelName = "ideogram-v2",
+                        Title = "Ideogram v2",
+                        Author = "Ideogram AI",
+                        Description = "Ideogram's second-generation image synthesis model with improved quality and control",
+                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/ideogram-v2.png"))}",
+                        StandardWidth = 1024,
+                        StandardHeight = 1024,
+                        License = "Commercial",
+                        UsageHint = "Excellent for high-quality creative images with enhanced detail",
+                        Date = "2024",
+                        ModelClassType = "ideogram",
+                        Tags = ["ideogram", "creative", "ai-art", "professional"],
+                        TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                        TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    },
+                },
+                ["v3"] = new T2IModel(null, "Ideogram", "v3", "ideogram")
+                {
+                    Title = "Ideogram v3",
+                    ModelClass = CreateModelClass("ideogram", "Ideogram"),
+                    Description = "Ideogram's latest and most advanced image generation model",
+                    StandardHeight = 1024,
+                    StandardWidth = 1024,
+                    IsSupportedModelType = true,
+                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/ideogram-v3.png"))}",
+                    Metadata = new T2IModelHandler.ModelMetadataStore
+                    {
+                        ModelName = "ideogram-v3",
+                        Title = "Ideogram v3",
+                        Author = "Ideogram AI",
+                        Description = "Ideogram's third-generation image synthesis model with state-of-the-art quality, detail and creative control",
+                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/ideogram-v3.png"))}",
+                        StandardWidth = 1024,
+                        StandardHeight = 1024,
+                        License = "Commercial",
+                        UsageHint = "Cutting-edge image generation with exceptional quality and precise prompt following",
+                        Date = "2025",
+                        ModelClassType = "ideogram",
+                        Tags = ["ideogram", "creative", "ai-art", "professional", "cutting-edge"],
+                        TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                        TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    },
                 }
             },
             RequestConfig = new RequestConfig
@@ -179,7 +282,7 @@ public class APIProviderInit : IDisposable
             }
         };
         // Set model-specific parameters
-        foreach (string version in new[] { "v1", "v2" })
+        foreach (string version in new[] { "v1", "v2", "v3" })
         {
             provider.AddParameterToModel(version, "style_type", SwarmUIAPIBackends.StyleParam_Ideogram);
             provider.AddParameterToModel(version, "magic_prompt", SwarmUIAPIBackends.MagicPromptParam_Ideogram);
@@ -228,7 +331,25 @@ public class APIProviderInit : IDisposable
                     ModelClass = CreateModelClass("flux", "Flux"),
                     IsSupportedModelType = true,
                     StandardWidth = 1024,
-                    StandardHeight = 768
+                    StandardHeight = 768,
+                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/flux-pro.png"))}",
+                    Metadata = new T2IModelHandler.ModelMetadataStore
+                    {
+                        ModelName = "API/flux-pro-1.1.safetensors",
+                        Title = "FLUX 1.1 Pro",
+                        Author = "Black Forest Labs",
+                        Description = "Professional Flux model for high-quality image generation",
+                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/flux-pro.png"))}",
+                        StandardWidth = 1024,
+                        StandardHeight = 768,
+                        License = "Commercial",
+                        UsageHint = "Great for professional image generation with detailed control",
+                        Date = "2023",
+                        ModelClassType = "flux",
+                        Tags = ["flux", "professional", "high-quality"],
+                        TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                        TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    },
                 },
                 ["API/flux-dev"] = new T2IModel(null, "API", "API/flux-dev.safetensors", "flux-dev")
                 {
@@ -237,7 +358,25 @@ public class APIProviderInit : IDisposable
                     ModelClass = CreateModelClass("flux", "Flux"),
                     IsSupportedModelType = true,
                     StandardWidth = 1024,
-                    StandardHeight = 768
+                    StandardHeight = 768,
+                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/flux-dev.png"))}",
+                    Metadata = new T2IModelHandler.ModelMetadataStore
+                    {
+                        ModelName = "API/flux-dev.safetensors",
+                        Title = "FLUX.1 Dev",
+                        Author = "Black Forest Labs",
+                        Description = "Developmental Flux model for general-purpose image generation",
+                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/flux-dev.png"))}",
+                        StandardWidth = 1024,
+                        StandardHeight = 768,
+                        License = "Commercial",
+                        UsageHint = "Good for general-purpose image generation",
+                        Date = "2023",
+                        ModelClassType = "flux",
+                        Tags = ["flux", "development"],
+                        TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                        TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    },
                 }
             },
             RequestConfig = new RequestConfig

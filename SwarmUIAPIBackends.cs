@@ -98,7 +98,7 @@ public class SwarmUIAPIBackends : Extension
             "DALL-E 2: Smaller sizes (256x256, 512x512) generate faster but with less detail.\n" +
             "DALL-E 3: Larger sizes (1792x1024, 1024x1792) better for wide or tall compositions, 1024x1024 for balanced images.",
             "1024x1024", GetValues: model => model.ID.Contains("dall-e-2") ? ["256x256", "512x512", "1024x1024"] : ["1024x1024", 
-            "1792x1024", "1024x1792"], OrderPriority: -10, ViewType: ParamViewType.DROPDOWN, 
+            "1792x1024", "1024x1792"], OrderPriority: -10, ViewType: ParamViewType.POT_SLIDER, 
             Group: DallE3Group, FeatureFlag: "openai-api"));
 
         // DALL-E 3 Specific Parameters
