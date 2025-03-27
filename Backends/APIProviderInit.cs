@@ -398,16 +398,11 @@ public class APIProviderInit
                         request["raw"] = input.TryGet(SwarmUIAPIBackends.RawModeParam_BlackForest, out bool raw) && raw;
                         request["steps"] = input.TryGet(T2IParamTypes.Steps, out int steps) ? steps : 25;
                         request["seed"] = 1;
-                        // Process image prompt if present
-                        if (input.TryGet(SwarmUIAPIBackends.ImagePromptParam_BlackForest, out Image img) && img != null)
+                        if (input.TryGet(SwarmUIAPIBackends.ImagePromptParam_BlackForest, out Image imagePrompt) && imagePrompt != null)
                         {
-                            //TODO: Implement image prompt processing (Init Image)
-                            request["image_prompt_strength"] = input.TryGet(SwarmUIAPIBackends.ImagePromptStrengthParam_BlackForest, out double strength) ? strength : 0.1;
-                        }
-                        else
-                        {
+                            // TODO: Implement image prompt handling properly
                             request["image_prompt"] = "";
-                            request["image_prompt_strength"] = 0.1;
+                            request["image_prompt_strength"] = input.TryGet(SwarmUIAPIBackends.ImagePromptStrengthParam_BlackForest, out double strength) ? strength : 0.1;
                         }
                     }
                     else
