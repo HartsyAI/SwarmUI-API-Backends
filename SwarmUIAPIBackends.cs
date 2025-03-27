@@ -16,15 +16,15 @@ public static class APIBackendsPermissions
 
     public static readonly PermInfo PermUseOpenAI = Permissions.Register(new("use_openai", "Use OpenAI APIs",
         "Allows using OpenAI's DALL-E models for image generation.",
-        PermissionDefault.GUEST, APIBackendsPermGroup));
+        PermissionDefault.USER, APIBackendsPermGroup));
 
     public static readonly PermInfo PermUseIdeogram = Permissions.Register(new("use_ideogram", "Use Ideogram API",
         "Allows using Ideogram's API for image generation.",
-        PermissionDefault.GUEST, APIBackendsPermGroup));
+        PermissionDefault.USER, APIBackendsPermGroup));
 
     public static readonly PermInfo PermUseBlackForest = Permissions.Register(new("use_blackforest", "Use Black Forest Labs API",
         "Allows using Black Forest Labs' Flux model APIs for image generation.",
-        PermissionDefault.GUEST, APIBackendsPermGroup));
+        PermissionDefault.USER, APIBackendsPermGroup));
 }
 
 /// <summary>Extension that adds support for various API-based image generation services.</summary>
@@ -126,6 +126,7 @@ public class SwarmUIAPIBackends : Extension
             "b64_json", GetValues: _ => ["url", "b64_json"], OrderPriority: -6, 
             Group: DallE3Group, FeatureFlag: "openai-api", IsAdvanced: true));
 
+        // Ideogram Parameters
         StyleParam_Ideogram = T2IParamTypes.Register<string>(new("Generation Style",
             "Determines the artistic approach for image creation:\n" +
             "'Auto' - Automatically selects style based on prompt\n" +
@@ -178,6 +179,7 @@ public class SwarmUIAPIBackends : Extension
             ],
             OrderPriority: -3, Group: IdeogramAdvancedGroup, FeatureFlag: "ideogram-api"));
 
+        // Black Forest Labs API Parameters
         GuidanceParam_BlackForest = T2IParamTypes.Register<double>(new("Prompt Guidance",
             "Controls how strictly the generation follows the prompt.\n" +
             "Flux Pro/1.1: Default 2.5 for balanced results\n" +
@@ -255,11 +257,11 @@ public class SwarmUIAPIBackends : Extension
         }
         // Register API Key tables for each backend - safely handle if already registered
         RegisterApiKeyIfNeeded("openai_api", "openai", "OpenAI (ChatGPT)", "https://platform.openai.com/api-keys", 
-            new HtmlString("To use OpenAI models in SwarmUI (via the MagicPrompt extension), you must set your OpenAI API key."));
-        RegisterApiKeyIfNeeded("black_forest_api", "black_forest", "Black Forest (AI)", "https://blackforestlabs.com/api-keys", 
-            new HtmlString("To use Black Forest in SwarmUI (via the MagicPrompt extension), you must set your Black Forest API key."));
-        RegisterApiKeyIfNeeded("ideogram_api", "ideogram", "Ideogram", "https://ideogram.com/api-keys", 
-            new HtmlString("To use Ideogram in SwarmUI (via the MagicPrompt extension), you must set your Ideogram API key.")); 
+            new HtmlString("To use OpenAI models in SwarmUI (via Hartsy extensions), you must set your OpenAI API key."));
+        RegisterApiKeyIfNeeded("black_forest_api", "black_forest", "Black Forest Labs (FLUX)", "https://dashboard.bfl.ai/", 
+            new HtmlString("To use Black Forest in SwarmUI (via Hartsy extensions), you must set your Black Forest API key."));
+        RegisterApiKeyIfNeeded("ideogram_api", "ideogram", "Ideogram", "https://developer.ideogram.ai/ideogram-api/api-setup", 
+            new HtmlString("To use Ideogram in SwarmUI (via Hartsy extensions), you must set your Ideogram API key.")); 
         Logs.Init("Hartsy's APIBackends extension has successfully started.");
     }
     

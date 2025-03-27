@@ -8,25 +8,22 @@ using System.Xml.Linq;
 using Newtonsoft.Json;
 using System.Reflection;
 using FreneticUtilities.FreneticExtensions;
+using SwarmUI.Backends;
 
 namespace Hartsy.Extensions.APIBackends.Backends;
 
 /// <summary>Initializes and manages API providers for image generation.</summary>
-public class APIProviderInit : IDisposable
+public class APIProviderInit
 {
-    private readonly HttpClient _httpClient;
-    public HttpClient HttpClient => _httpClient;
-    private bool _disposed;
-    private static readonly Dictionary<string, T2IModelClass> _modelClasses = [];
+    public static readonly Dictionary<string, T2IModelClass> _modelClasses = [];
     public Dictionary<string, APIProviderMetadata> Providers { get; private set; }
 
     public APIProviderInit()
     {
-        _httpClient = new HttpClient();
         InitializeProviders();
     }
 
-    private static T2IModelClass CreateModelClass(string id, string name)
+    public static T2IModelClass CreateModelClass(string id, string name)
     {
         if (!_modelClasses.TryGetValue(id, out T2IModelClass modelClass))
         {
@@ -53,7 +50,7 @@ public class APIProviderInit : IDisposable
         return modelClass;
     }
 
-    private void InitializeProviders()
+    public void InitializeProviders()
     {
         Dictionary<string, string> providerKeys = new()
         {
@@ -62,7 +59,6 @@ public class APIProviderInit : IDisposable
             ["Ideogram"] = "ideogram"
         };
         Providers = [];
-
         foreach (var (displayName, key) in providerKeys)
         {
             Logs.Debug($"Initializing provider: {displayName}");
@@ -77,7 +73,7 @@ public class APIProviderInit : IDisposable
         }
     }
 
-    private static APIProviderMetadata InitializeOpenAIProvider()
+    public static APIProviderMetadata InitializeOpenAIProvider()
     {
         T2IModel dallE2 = new(null, null, null, "dall-e-2")
         {
@@ -87,14 +83,14 @@ public class APIProviderInit : IDisposable
             StandardWidth = 1024,
             StandardHeight = 1024,
             IsSupportedModelType = true,
-            PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/dall-e-2.png"))}",
+            PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/dalle2.png"))}",
             Metadata = new T2IModelHandler.ModelMetadataStore
             {
                 ModelName = "dall-e-2",
                 Title = "DALL-E 2",
                 Author = "OpenAI",
                 Description = "Generative model capable of creating realistic images from text descriptions",
-                PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/dall-e-2.png"))}",
+                PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/dalle2.png"))}",
                 StandardWidth = 1024,
                 StandardHeight = 1024,
                 License = "Commercial",
@@ -106,7 +102,6 @@ public class APIProviderInit : IDisposable
                 TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
             },
         };
-
         T2IModel dallE3 = new(null, null, null, "dall-e-3")
         {
             Title = "DALL-E 3",
@@ -115,14 +110,14 @@ public class APIProviderInit : IDisposable
             StandardWidth = 1024,
             StandardHeight = 1024,
             IsSupportedModelType = true,
-            PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/dall-e-3.png"))}",
+            PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/dalle.png"))}",
             Metadata = new T2IModelHandler.ModelMetadataStore
             {
                 ModelName = "dall-e-3",
                 Title = "DALL-E 3",
                 Author = "OpenAI",
                 Description = "Advanced generative model for creating highly detailed and accurate images from text descriptions",
-                PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/dall-e-3.png"))}",
+                PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/dalle.png"))}",
                 StandardWidth = 1024,
                 StandardHeight = 1024,
                 License = "Commercial",
@@ -134,7 +129,6 @@ public class APIProviderInit : IDisposable
                 TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
             },
         };
-
         APIProviderMetadata provider = new()
         {
             Name = "OpenAI",
@@ -171,9 +165,9 @@ public class APIProviderInit : IDisposable
         return provider;
     }
 
-    private APIProviderMetadata InitializeIdeogramProvider()
+    public APIProviderMetadata InitializeIdeogramProvider()
     {
-        var provider = new APIProviderMetadata
+        APIProviderMetadata provider = new()
         {
             Name = "Ideogram",
             Models = new Dictionary<string, T2IModel>
@@ -186,14 +180,14 @@ public class APIProviderInit : IDisposable
                     StandardHeight = 1024,
                     StandardWidth = 1024,
                     IsSupportedModelType = true,
-                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/ideogram-v1.png"))}",
+                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/ideogram.png"))}",
                     Metadata = new T2IModelHandler.ModelMetadataStore
                     {
                         ModelName = "ideogram-v1",
                         Title = "Ideogram v1",
                         Author = "Ideogram AI",
                         Description = "Ideogram's first-generation image synthesis model optimized for creative content",
-                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/ideogram-v1.png"))}",
+                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/ideogram.png"))}",
                         StandardWidth = 1024,
                         StandardHeight = 1024,
                         License = "Commercial",
@@ -213,14 +207,14 @@ public class APIProviderInit : IDisposable
                     StandardHeight = 1024,
                     StandardWidth = 1024,
                     IsSupportedModelType = true,
-                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/ideogram-v2.png"))}",
+                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/ideogram.png"))}",
                     Metadata = new T2IModelHandler.ModelMetadataStore
                     {
                         ModelName = "ideogram-v2",
                         Title = "Ideogram v2",
                         Author = "Ideogram AI",
                         Description = "Ideogram's second-generation image synthesis model with improved quality and control",
-                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/ideogram-v2.png"))}",
+                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/ideogram.png"))}",
                         StandardWidth = 1024,
                         StandardHeight = 1024,
                         License = "Commercial",
@@ -240,14 +234,14 @@ public class APIProviderInit : IDisposable
                     StandardHeight = 1024,
                     StandardWidth = 1024,
                     IsSupportedModelType = true,
-                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/ideogram-v3.png"))}",
+                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/ideogram.png"))}",
                     Metadata = new T2IModelHandler.ModelMetadataStore
                     {
                         ModelName = "ideogram-v3",
                         Title = "Ideogram v3",
                         Author = "Ideogram AI",
                         Description = "Ideogram's third-generation image synthesis model with state-of-the-art quality, detail and creative control",
-                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/ideogram-v3.png"))}",
+                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/ideogram.png"))}",
                         StandardWidth = 1024,
                         StandardHeight = 1024,
                         License = "Commercial",
@@ -277,7 +271,7 @@ public class APIProviderInit : IDisposable
                 ProcessResponse = async response =>
                 {
                     string url = response["images"][0]["url"].ToString();
-                    return await _httpClient.GetByteArrayAsync(url);
+                    return await SwarmSwarmBackend.HttpClient.GetByteArrayAsync(url);
                 }
             }
         };
@@ -290,7 +284,7 @@ public class APIProviderInit : IDisposable
         return provider;
     }
 
-    private APIProviderMetadata InitializeBlackForestProvider()
+    public APIProviderMetadata InitializeBlackForestProvider()
     {
         APIProviderMetadata provider = new()
         {
@@ -301,18 +295,18 @@ public class APIProviderInit : IDisposable
                 {
                     Title = "FLUX 1.1 Ultra",
                     Description = "Black Forest Labs' professional Flux model optimized for high-quality image generation with ultra-refined outputs",
-                    ModelClass = CreateModelClass("flux", "Flux"),
+                    ModelClass = CreateModelClass("bfl", "Flux"),
                     StandardWidth = 1024,
                     StandardHeight = 1024,
                     IsSupportedModelType = true,
-                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/flux-pro-ultra.png"))}",
+                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/flux-pro-ultra.png"))}",
                     Metadata = new T2IModelHandler.ModelMetadataStore
                     {
                         ModelName = "API/flux-pro-1.1-ultra.safetensors",
                         Title = "FLUX 1.1 Ultra",
                         Author = "Black Forest Labs",
                         Description = "Professional Flux model optimized for high-quality image generation with ultra-refined outputs",
-                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/flux-pro-ultra.png"))}",
+                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/flux-pro-ultra.png"))}",
                         StandardWidth = 1024,
                         StandardHeight = 1024,
                         License = "Commercial",
@@ -328,18 +322,18 @@ public class APIProviderInit : IDisposable
                 {
                     Title = "FLUX 1.1 Pro",
                     Description = "Black Forest Labs' Flux model",
-                    ModelClass = CreateModelClass("flux", "Flux"),
+                    ModelClass = CreateModelClass("bfl", "Flux"),
                     IsSupportedModelType = true,
                     StandardWidth = 1024,
                     StandardHeight = 768,
-                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/flux-pro.png"))}",
+                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/flux-pro.png"))}",
                     Metadata = new T2IModelHandler.ModelMetadataStore
                     {
                         ModelName = "API/flux-pro-1.1.safetensors",
                         Title = "FLUX 1.1 Pro",
                         Author = "Black Forest Labs",
                         Description = "Professional Flux model for high-quality image generation",
-                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/flux-pro.png"))}",
+                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/flux-pro.png"))}",
                         StandardWidth = 1024,
                         StandardHeight = 768,
                         License = "Commercial",
@@ -355,18 +349,18 @@ public class APIProviderInit : IDisposable
                 {
                     Title = "FLUX.1 Dev",
                     Description = "Black Forest Labs' Flux model",
-                    ModelClass = CreateModelClass("flux", "Flux"),
+                    ModelClass = CreateModelClass("bfl", "Flux"),
                     IsSupportedModelType = true,
                     StandardWidth = 1024,
                     StandardHeight = 768,
-                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/flux-dev.png"))}",
+                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/flux-dev.png"))}",
                     Metadata = new T2IModelHandler.ModelMetadataStore
                     {
                         ModelName = "API/flux-dev.safetensors",
                         Title = "FLUX.1 Dev",
                         Author = "Black Forest Labs",
                         Description = "Developmental Flux model for general-purpose image generation",
-                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-APIBackends/Images/ModelPreviews/flux-dev.png"))}",
+                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/flux-dev.png"))}",
                         StandardWidth = 1024,
                         StandardHeight = 768,
                         License = "Commercial",
@@ -383,16 +377,59 @@ public class APIProviderInit : IDisposable
             {
                 BaseUrl = "https://api.us1.bfl.ai",
                 AuthHeader = "x-key",
-                BuildRequest = input => new JObject
+                BuildRequest = input =>
                 {
-                    ["prompt"] = input.Get(T2IParamTypes.Prompt),
-                    ["width"] = input.Get(T2IParamTypes.Width),
-                    ["height"] = input.Get(T2IParamTypes.Height),
-                    ["prompt_upsampling"] = input.Get(SwarmUIAPIBackends.PromptEnhanceParam_BlackForest),
-                    ["output_format"] = input.Get(SwarmUIAPIBackends.OutputFormatParam_BlackForest),
-                    ["steps"] = input.Get(T2IParamTypes.Steps),
-                    ["guidance"] = input.Get(SwarmUIAPIBackends.GuidanceParam_BlackForest),
-                    ["interval"] = input.TryGet(SwarmUIAPIBackends.IntervalParam_BlackForest, out var interval) ? interval : null
+                    // Get the model name to determine the appropriate request format
+                    string modelName = input.Get(T2IParamTypes.Model).Name;
+                    JObject request = new()
+                    {
+                        // Common parameters for all models
+                        ["prompt"] = input.Get(T2IParamTypes.Prompt),
+                        ["prompt_upsampling"] = input.Get(SwarmUIAPIBackends.PromptEnhanceParam_BlackForest),
+                        ["output_format"] = input.Get(SwarmUIAPIBackends.OutputFormatParam_BlackForest),
+                        ["safety_tolerance"] = input.TryGet(SwarmUIAPIBackends.SafetyParam_BlackForest, out int safety) ? safety : 2
+                    };
+                    // Model-specific parameters
+                    if (modelName.Contains("flux-pro-1.1-ultra"))
+                    {
+                        // Ultra model uses aspect_ratio
+                        request["aspect_ratio"] = input.TryGet(T2IParamTypes.AspectRatio, out string aspect) ? aspect : "16:9";
+                        request["guidance"] = input.TryGet(SwarmUIAPIBackends.GuidanceParam_BlackForest, out double guidance) ? guidance : 2.5;
+                        request["raw"] = input.TryGet(SwarmUIAPIBackends.RawModeParam_BlackForest, out bool raw) && raw;
+                        request["steps"] = input.TryGet(T2IParamTypes.Steps, out int steps) ? steps : 25;
+                        request["seed"] = 1;
+                        // Process image prompt if present
+                        if (input.TryGet(SwarmUIAPIBackends.ImagePromptParam_BlackForest, out Image img) && img != null)
+                        {
+                            //TODO: Implement image prompt processing (Init Image)
+                            request["image_prompt_strength"] = input.TryGet(SwarmUIAPIBackends.ImagePromptStrengthParam_BlackForest, out double strength) ? strength : 0.1;
+                        }
+                        else
+                        {
+                            request["image_prompt"] = "";
+                            request["image_prompt_strength"] = 0.1;
+                        }
+                    }
+                    else
+                    {
+                        // Other models require explicit width/height that are multiples of 32
+                        int width = input.TryGet(T2IParamTypes.Width, out int w) ? w : 1024;
+                        int height = input.TryGet(T2IParamTypes.Height, out int h) ? h : 768;
+                        // Ensure dimensions are multiples of 32
+                        width = (width + 31) / 32 * 32;  // Round up to nearest multiple of 32
+                        height = (height + 31) / 32 * 32; // Round up to nearest multiple of 32
+                        request["width"] = width;
+                        request["height"] = height;
+                        request["guidance"] = input.TryGet(SwarmUIAPIBackends.GuidanceParam_BlackForest, out double guidance) ? guidance : modelName.Contains("flux-dev") ? 3.0 : 2.5;
+                        request["steps"] = input.TryGet(T2IParamTypes.Steps, out int steps) ? steps : modelName.Contains("flux-dev") ? 28 : 40;
+                        request["seed"] = 1;
+                        // Add interval parameter for flux-pro-1.1
+                        if (modelName.Contains("flux-pro-1.1") && !modelName.Contains("ultra"))
+                        {
+                            request["interval"] = input.TryGet(SwarmUIAPIBackends.IntervalParam_BlackForest, out double interval) ? interval : 2.0;
+                        }
+                    }
+                    return request;
                 },
                 ProcessResponse = async response =>
                 {
@@ -400,14 +437,15 @@ public class APIProviderInit : IDisposable
                     Logs.Debug($"BFL Task ID: {taskId}");
                     while (true)
                     {
-                        HttpResponseMessage result = await _httpClient.GetAsync($"https://api.us1.bfl.ai/v1/get_result?id={taskId}");
+                        HttpResponseMessage result = await SwarmSwarmBackend.HttpClient.GetAsync($"https://api.us1.bfl.ai/v1/get_result?id={taskId}");
                         JObject resultJson = JObject.Parse(await result.Content.ReadAsStringAsync());
                         string status = (string)resultJson["status"];
                         if (status == "Ready" || status == "completed")
                         {
                             string url = (string)resultJson["result"]["sample"];
-                            return await _httpClient.GetByteArrayAsync(url);
+                            return await SwarmSwarmBackend.HttpClient.GetByteArrayAsync(url);
                         }
+                        // TODO: Check for image getting caught in moderation and return a placeholder image
                         Logs.Debug($"BFL Task status: {status}");
                         await Task.Delay(500);
                     }
@@ -429,22 +467,11 @@ public class APIProviderInit : IDisposable
             provider.AddParameterToModel(modelName, "output_format", SwarmUIAPIBackends.OutputFormatParam_BlackForest);
             provider.AddParameterToModel(modelName, "guidance", SwarmUIAPIBackends.GuidanceParam_BlackForest);
         }
-
         // Interval is only supported on some models
         foreach (string modelName in new[] { "flux-pro-1.1-ultra", "flux-pro-1.1" })
         {
             provider.AddParameterToModel(modelName, "interval", SwarmUIAPIBackends.IntervalParam_BlackForest);
         }
         return provider;
-    }
-
-    public void Dispose()
-    {
-        if (!_disposed)
-        {
-            Logs.Debug("Disposing APIProviderInit...");
-            _httpClient?.Dispose();
-            _disposed = true;
-        }
     }
 }

@@ -28,22 +28,10 @@ public class DynamicAPIBackend : SwarmSwarmBackend
     }
 
     public new DynamicAPISettings Settings => SettingsRaw as DynamicAPISettings;
-    private APIProviderMetadata ActiveProvider => _providerInit.Value.Providers[NormalizeProviderKey(Settings.SelectedProvider)];
-    private static readonly Lazy<APIProviderInit> _providerInit = new(() => new APIProviderInit());
+    public APIProviderMetadata ActiveProvider => _providerInit.Value.Providers[NormalizeProviderKey(Settings.SelectedProvider)];
+    public static readonly Lazy<APIProviderInit> _providerInit = new(() => new APIProviderInit());
 
-    public DynamicAPIBackend()
-    {
-        Logs.Debug($"Creating DynamicAPIBackend instance");
-        SettingsRaw = new DynamicAPISettings();
-        RemoteFeatureCombo = new ConcurrentDictionary<string, string>();
-        
-        // Critical: This prevents null reference exceptions in base class methods
-        // and ensures the backend initializes properly
-        IsReal = false;
-        Status = BackendStatus.LOADING;
-    }
-
-    private static string NormalizeProviderKey(string provider) => provider switch
+    public static string NormalizeProviderKey(string provider) => provider switch
     {
         "BFL (Flux)" => "bfl",
         "OpenAI (DALL-E)" => "openai",
@@ -58,19 +46,20 @@ public class DynamicAPIBackend : SwarmSwarmBackend
         RemoteModels = [];
         RemoteBackendTypes = [];
         string normalizedProvider = NormalizeProviderKey(Settings.SelectedProvider);
-        
+        SettingsRaw = Settings;
+        RemoteFeatureCombo = new ConcurrentDictionary<string, string>();
+        IsReal = false;
+        Status = BackendStatus.LOADING;
         try
         {
             APIProviderMetadata provider = ActiveProvider;
             Logs.Debug($"Got provider metadata for {normalizedProvider}, with {provider.Models.Count} models");
-            
             T2IModelHandler handler = Program.T2IModelSets["Stable-Diffusion"];
-            // Add provider-specific features
             switch (normalizedProvider)
             {
                 case "bfl":
                     RemoteFeatureCombo.TryAdd("bfl-api", "bfl-api");
-                    RemoteBackendTypes.Add("flux");
+                    RemoteBackendTypes.Add("bfl");
                     break;
                 case "openai":
                     RemoteFeatureCombo.TryAdd("openai-api", "openai-api");
@@ -81,13 +70,12 @@ public class DynamicAPIBackend : SwarmSwarmBackend
                     RemoteBackendTypes.Add("ideogram");
                     break;
             }
-            // Register models
+            // Register models with the handler
             Dictionary<string, JObject> models = [];
             List<string> modelNames = [];
             foreach (var (name, model) in provider.Models)
             {
                 string cleanName = name.Replace("API/", "").Replace(".safetensors", "");
-
                 JObject modelObj = model.ToNetObject();
                 modelObj["loaded"] = true;
                 modelObj["local"] = false;
@@ -96,12 +84,9 @@ public class DynamicAPIBackend : SwarmSwarmBackend
                 modelObj["name"] = name;
                 modelObj["clean_name"] = cleanName;
                 modelObj["raw_name"] = cleanName;
-
                 Logs.Debug($"Registering API model: {name} with arch={model.ModelClass?.ID}, class={model.ModelClass?.Name}, compat={model.ModelClass?.CompatClass}");
-
                 models[name] = modelObj;
                 modelNames.Add(name);
-
                 handler.ResetMetadataFrom(model);
             }
             RemoteModels["Stable-Diffusion"] = models;
@@ -147,35 +132,34 @@ public class DynamicAPIBackend : SwarmSwarmBackend
     public override async Task<Image[]> Generate(T2IParamInput input)
     {
         string normalizedProvider = NormalizeProviderKey(Settings.SelectedProvider);
-
-        // Check permissions
-        switch (normalizedProvider)
+        PermInfo requiredPermission = normalizedProvider switch
         {
-            case "openai" when !input.SourceSession.User.HasPermission(APIBackendsPermissions.PermUseOpenAI):
-                throw new Exception("You do not have permission to use OpenAI APIs");
-            case "ideogram" when !input.SourceSession.User.HasPermission(APIBackendsPermissions.PermUseIdeogram):
-                throw new Exception("You do not have permission to use Ideogram API");
-            case "bfl" when !input.SourceSession.User.HasPermission(APIBackendsPermissions.PermUseBlackForest):
-                throw new Exception("You do not have permission to use Black Forest Labs API");
+            "openai" => APIBackendsPermissions.PermUseOpenAI,
+            "ideogram" => APIBackendsPermissions.PermUseIdeogram,
+            "bfl" => APIBackendsPermissions.PermUseBlackForest,
+            _ => throw new Exception($"Unsupported provider: {normalizedProvider}")
+        };
+        if (!input.SourceSession.User.HasPermission(requiredPermission))
+        {
+            throw new Exception($"You do not have permission to use {Settings.SelectedProvider}");
         }
         APIProviderMetadata provider = ActiveProvider;
         RequestConfig config = provider.RequestConfig;
-        // Build URL
+        // Get API key configuration details based on provider
+        (string apiKeyType, string headerName, bool useCustomHeader) = normalizedProvider switch
+        {
+            "bfl" => ("black_forest_api", "x-key", true),
+            "openai" => ("openai_api", "Authorization", false),
+            "ideogram" => ("ideogram_api", "Authorization", false),
+            _ => throw new Exception($"Unsupported provider: {normalizedProvider}")
+        };
         string baseUrl;
         if (normalizedProvider == "bfl")
         {
-            // Extract the actual model name from the full model name (removing 'API/' prefix)
-            string modelName = input.Get(T2IParamTypes.Model).Name;
-            if (modelName.StartsWith("API/"))
-            {
-                modelName = modelName.Substring(4);
-            }
-            // Remove .safetensors suffix if present
-            if (modelName.EndsWith(".safetensors"))
-            {
-                modelName = modelName.Substring(0, modelName.Length - 12);
-            }
-            
+            // Extract model name from input and clean it up
+            string modelName = input.Get(T2IParamTypes.Model).Name
+                .Replace("API/", "")
+                .Replace(".safetensors", "");
             baseUrl = $"{(!string.IsNullOrEmpty(Settings.CustomBaseUrl) ? Settings.CustomBaseUrl : config.BaseUrl)}/v1/{modelName}";
             Logs.Debug($"Using BFL API endpoint: {baseUrl}");
         }
@@ -183,45 +167,26 @@ public class DynamicAPIBackend : SwarmSwarmBackend
         {
             baseUrl = !string.IsNullOrEmpty(Settings.CustomBaseUrl) ? Settings.CustomBaseUrl : config.BaseUrl;
         }
-        // Build and send request
+        string apiKey = input.SourceSession.User.GetGenericData(apiKeyType, "key");
+        if (string.IsNullOrEmpty(apiKey))
+        {
+            throw new Exception($"API key not found for {normalizedProvider}. Please set up your API key in the User tab");
+        }
         JObject requestBody = config.BuildRequest(input);
         using HttpRequestMessage request = new(HttpMethod.Post, baseUrl)
         {
             Content = new StringContent(requestBody.ToString(), Encoding.UTF8, "application/json")
         };
-
-        // Get API key from the session user instead of generic shared user
-        string apiKey;
-        if (normalizedProvider == "bfl")
+        if (useCustomHeader)
         {
-            apiKey = input.SourceSession.User.GetGenericData("black_forest_api", "key");
-            Logs.Debug($"Retrieved Black Forest API key for user {apiKey}");
-        }
-        else if (normalizedProvider == "openai") 
-        {
-            apiKey = input.SourceSession.User.GetGenericData("openai_api", "key");
-        }
-        else // ideogram
-        {
-            apiKey = input.SourceSession.User.GetGenericData("ideogram_api", "key");
-        }
-
-        if (string.IsNullOrEmpty(apiKey))
-        {
-            throw new Exception($"API key not found for {normalizedProvider}. Please set up your API key in the settings.");
-        }
-
-        // Add auth header
-        if (normalizedProvider == "bfl")
-        {
-            request.Headers.Add("x-key", apiKey);
+            request.Headers.Add(headerName, apiKey);
         }
         else
         {
-            request.Headers.Add("Authorization", $"{config.AuthHeader} {apiKey}");
+            request.Headers.Add(headerName, $"{config.AuthHeader} {apiKey}");
         }
         // Send request and process response
-        HttpResponseMessage response = await _providerInit.Value.HttpClient.SendAsync(request);
+        HttpResponseMessage response = await HttpClient.SendAsync(request);
         if (!response.IsSuccessStatusCode)
         {
             string error = await response.Content.ReadAsStringAsync();
@@ -240,15 +205,7 @@ public class DynamicAPIBackend : SwarmSwarmBackend
     /// <summary>Override FreeMemory to avoid NullReferenceException when accessing Address</summary>
     public override async Task<bool> FreeMemory(bool systemRam)
     {
-        if (!IsReal)
-        {
-            Logs.Debug("API backend cannot free memory as it is not a real backend");
-            return false;
-        }
-        
         // For API backends, we don't actually need to free memory
-        // since we're not running a local model
-        Logs.Debug("API backend doesn't need to free memory, ignoring request");
         return true;
     }
 }
