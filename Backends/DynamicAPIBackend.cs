@@ -18,13 +18,13 @@ public class DynamicAPIBackend : SwarmSwarmBackend
     {
         [ManualSettingsOptions(Impl = null, Vals = ["BFL (Flux)", "Ideogram", "OpenAI (DALL-E)"])]
         [ConfigComment("Choose the backend API provider to use for image generation. This will add the relevant models to your model list.")]
-        public string SelectedProvider = "BFL (Flux)";
+        public string SelectedProvider = "";
 
         [ConfigComment("Whether the backend is allowed to revert to an 'idle' state if the API is unresponsive.")]
         public bool AllowIdle = false;
 
-        [ConfigComment("Custom Base URL (optional) This value will override the hardcoded base URL.")]
-        public string CustomBaseUrl = "";
+        [ConfigComment("Custom address (optional) This value will override the hardcoded base URL.")]
+        public string Address = "";
     }
 
     public new DynamicAPISettings Settings => SettingsRaw as DynamicAPISettings;
@@ -45,17 +45,34 @@ public class DynamicAPIBackend : SwarmSwarmBackend
         Models = new ConcurrentDictionary<string, List<string>>();
         RemoteModels = [];
         RemoteBackendTypes = [];
-        string normalizedProvider = NormalizeProviderKey(Settings.SelectedProvider);
-        SettingsRaw = Settings;
-        RemoteFeatureCombo = new ConcurrentDictionary<string, string>();
-        IsReal = false;
+        IsReal = true;
         Status = BackendStatus.LOADING;
+        string providerName = Settings.SelectedProvider;
+        // If no provider is selected, set status to LOADING but don't load any models
+        if (string.IsNullOrEmpty(Settings.SelectedProvider))
+        {
+            Logs.Info("No API provider selected. Please choose a provider and save settings.");
+            Status = BackendStatus.LOADING;
+            AddLoadStatus("Please select an API provider from the dropdown and click Save.");
+            return;
+        }
+
+        // Check if API key is available
+        string apiKey = "test";
+        if (string.IsNullOrEmpty(apiKey))
+        {
+            Logs.Error($"API key not found for {providerName}. Please set up your API key in the User tab");
+            Status = BackendStatus.ERRORED;
+            AddLoadStatus($"API key not found for {providerName}. Please set up your API key in the User tab.");
+            return;
+        }
+
         try
         {
             APIProviderMetadata provider = ActiveProvider;
-            Logs.Debug($"Got provider metadata for {normalizedProvider}, with {provider.Models.Count} models");
+            Logs.Debug($"Got provider metadata for {providerName}, with {provider.Models.Count} models");
             T2IModelHandler handler = Program.T2IModelSets["Stable-Diffusion"];
-            switch (normalizedProvider)
+            switch (providerName)
             {
                 case "bfl":
                     RemoteFeatureCombo.TryAdd("bfl-api", "bfl-api");
@@ -91,7 +108,7 @@ public class DynamicAPIBackend : SwarmSwarmBackend
             }
             RemoteModels["Stable-Diffusion"] = models;
             Models.TryAdd("Stable-Diffusion", modelNames);
-            Logs.Debug($"DynamicAPIBackend initialized with {modelNames.Count} models for {normalizedProvider}");
+            Logs.Debug($"DynamicAPIBackend initialized with {modelNames.Count} models for {providerName}");
             Status = BackendStatus.RUNNING;
         }
         catch (Exception ex)
@@ -153,6 +170,11 @@ public class DynamicAPIBackend : SwarmSwarmBackend
             "ideogram" => ("ideogram_api", "Authorization", false),
             _ => throw new Exception($"Unsupported provider: {normalizedProvider}")
         };
+        string apiKey = input.SourceSession.User.GetGenericData(apiKeyType, "key");
+        if (string.IsNullOrEmpty(apiKey))
+        {
+            throw new Exception($"API key not found for {normalizedProvider}. Please set up your API key in the User tab");
+        }
         string baseUrl;
         if (normalizedProvider == "bfl")
         {
@@ -160,17 +182,12 @@ public class DynamicAPIBackend : SwarmSwarmBackend
             string modelName = input.Get(T2IParamTypes.Model).Name
                 .Replace("API/", "")
                 .Replace(".safetensors", "");
-            baseUrl = $"{(!string.IsNullOrEmpty(Settings.CustomBaseUrl) ? Settings.CustomBaseUrl : config.BaseUrl)}/v1/{modelName}";
+            baseUrl = $"{(!string.IsNullOrEmpty(Settings.Address) ? Settings.Address : config.BaseUrl)}/v1/{modelName}";
             Logs.Debug($"Using BFL API endpoint: {baseUrl}");
         }
         else
         {
-            baseUrl = !string.IsNullOrEmpty(Settings.CustomBaseUrl) ? Settings.CustomBaseUrl : config.BaseUrl;
-        }
-        string apiKey = input.SourceSession.User.GetGenericData(apiKeyType, "key");
-        if (string.IsNullOrEmpty(apiKey))
-        {
-            throw new Exception($"API key not found for {normalizedProvider}. Please set up your API key in the User tab");
+            baseUrl = !string.IsNullOrEmpty(Settings.Address) ? Settings.Address : config.BaseUrl;
         }
         JObject requestBody = config.BuildRequest(input);
         using HttpRequestMessage request = new(HttpMethod.Post, baseUrl)
