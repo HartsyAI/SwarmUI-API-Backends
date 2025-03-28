@@ -5,6 +5,7 @@ using SwarmUI.WebAPI;
 using Hartsy.Extensions.APIBackends.Backends;
 using SwarmUI.Text2Image;
 using Microsoft.AspNetCore.Html;
+using Hartsy.Extensions.APIBackends.Models;
 
 namespace Hartsy.Extensions.APIBackends;
 
@@ -30,6 +31,9 @@ public static class APIBackendsPermissions
 /// <summary>Extension that adds support for various API-based image generation services.</summary>
 public class SwarmUIAPIBackends : Extension
 {
+    /// <summary>API provider initialization instance.</summary>
+    private static APIProviderInit _providerInit;
+
     // Parameter Groups for each API service
     public static T2IParamGroup OpenAIParamGroup;
     public static T2IParamGroup DallE2Group;
@@ -255,6 +259,8 @@ public class SwarmUIAPIBackends : Extension
         {
             BasicAPIFeatures.AcceptedAPIKeyTypes.Add(keyType);
         }
+        _providerInit = new APIProviderInit();
+        RegisterApiModelsWithGlobalRegistry();
         // Register API Key tables for each backend - safely handle if already registered
         RegisterApiKeyIfNeeded("openai_api", "openai", "OpenAI (ChatGPT)", "https://platform.openai.com/api-keys", 
             new HtmlString("To use OpenAI models in SwarmUI (via Hartsy extensions), you must set your OpenAI API key."));
@@ -283,6 +289,40 @@ public class SwarmUIAPIBackends : Extension
         catch (Exception ex)
         {
             Logs.Warning($"Failed to register API key type '{keyType}': {ex.Message}");
+        }
+    }
+
+    /// <summary>Registers models from API providers to the global SwarmUI model registry, making them visible in the Models tab.
+    /// This ensures API models can be browsed, selected, and modified like standard local models.</summary>
+    public static void RegisterApiModelsWithGlobalRegistry()
+    {
+        foreach (APIProviderMetadata provider in _providerInit.Providers.Values)
+        {
+            foreach (KeyValuePair<string, T2IModel> entry in provider.Models)
+            {
+                string modelName = entry.Key;
+                T2IModel model = entry.Value;
+                // Skip if model already exists (avoid duplicates)
+                if (Program.MainSDModels.Models.ContainsKey(modelName))
+                {
+                    continue;
+                }
+                // Create a copy of the model for the global registry
+                T2IModel globalModel = new(Program.MainSDModels, null, model.RawFilePath, modelName)
+                {
+                    Title = model.Title,
+                    Description = model.Description,
+                    PreviewImage = model.PreviewImage,
+                    ModelClass = model.ModelClass,
+                    StandardWidth = model.StandardWidth,
+                    StandardHeight = model.StandardHeight,
+                    Metadata = model.Metadata,
+                    IsSupportedModelType = true
+                };
+                // Register the model with the global registry so it shows up in the Models tab
+                Program.MainSDModels.Models[modelName] = globalModel;
+                Logs.Debug($"Registered API model in global registry: {modelName}");
+            }
         }
     }
 }
