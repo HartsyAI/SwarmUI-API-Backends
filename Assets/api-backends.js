@@ -1,77 +1,40 @@
-﻿featureSetChangers.push(() => {
+featureSetChangers.push(() => {
     if (!gen_param_types) {
         return [[], []];
     }
 
-    // Hide the entire Image To Video group for API models
-    const videoGroup = document.getElementById('input_group_content_imagetovideo');
-    if (videoGroup) {
-        videoGroup.style.display =
-            (curModelArch?.startsWith('bfl-api-flux')
-                || curModelArch?.startsWith('openai-api-dalle')
-                || curModelArch?.startsWith('anthropic-api-claude')
-                || curModelArch?.startsWith('ideogram-api')) ? 'none' : '';
-    }
+    // Get the model class from curModelArch
+    const isAPIModel = curModelArch?.startsWith('api-');
 
-    if (curModelArch?.startsWith('bfl-api-flux')
-        || curModelArch?.startsWith('openai-api-dalle')
-        || curModelArch?.startsWith('anthropic-api-claude')
-        || curModelArch?.startsWith('ideogram-api')) {
-
-        // For API models - remove all core and ComfyUI-related parameters
-        let hideFlags = [
-            'comfyui',
-            'controlnet',
-            'video',
-            'text2video',
-            'refiners',
-            'init_image',
-            'resolution',
-            'sampling',
-            'variation_seed',
-            'seamless',
-            'cascade',
-            'sd3',
-            'flux-dev',
-            'steps',
-            'cfg_scale',
-            'seed',
-            'images'
+    if (isAPIModel) {
+        // For any API model, enable basic features and hide standard SD features
+        let addFlags = ['prompt', 'images'];
+        let removeFlags = [
+            'steps', 'cfg_scale', 'seed', 'resolution', 'sampling', 'variation_seed',
+            'init_image', 'refine_upscale', 'controlnet', 'image_to_video', 'advanced_video',
+            'comfyui', 'controlnet_two', 'controlnet_three', 'swarm_internal', 'video_extend',
+            'advanced_model_addons', 'negative_prompt', 'seamless', 'cascade', 'sd3',
+            'sdxl', 'refiners', 'video', 'text2video', 'regional_promptin', 'advanced_sampling'
         ];
 
-        // Add the API-specific feature flag
-        if (curModelArch?.startsWith('bfl-api-flux')) {
-            return [['bfl-api'], hideFlags];
+        // Add provider-specific flags based on model class
+        if (curModelArch?.startsWith('openai_api')) {
+            addFlags.push('openai_api');
         }
-        else if (curModelArch?.startsWith('openai-api-dalle')) {
-            return [['openai-api'], hideFlags];
+        else if (curModelArch?.startsWith('ideogram_api')) {
+            addFlags.push('ideogram_api');
         }
-        else if (curModelArch?.startsWith('anthropic-api-claude')) {
-            return [['anthropic-api'], hideFlags];
+        else if (curModelArch?.startsWith('bfl_api')) {
+            addFlags.push('bfl_api');
         }
-        else if (curModelArch?.startsWith('ideogram-api')) {
-            return [['ideogram-api'], hideFlags];
-        }
+
+        return [addFlags, removeFlags];
     }
-
-    // For non-API models, enable core parameters and hide API features
-    return [[
-        'steps',
-        'cfg_scale',
-        'seed',
-        'images',
-        'resolution',
-        'sampling'
-    ], [
-        'bfl-api',
-        'openai-api',
-        'anthropic-api',
-        'ideogram-api'
-    ]];
+    else {
+        // For non-API models, add standard features and remove API-specific ones
+        return [
+            ['prompt', 'steps', 'cfg_scale', 'seed', 'images', 'resolution', 'sampling', 'negative_prompt'],
+            ['openai_api', 'ideogram_api', 'bfl_api']
+        ];
+    }
 });
-
-// Add a function to reset feature flags
-function resetFeatureFlags() {
-    currentBackendFeatureSet = [];
-    reviseBackendFeatureSet();
-}

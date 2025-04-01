@@ -56,12 +56,6 @@ namespace Hartsy.Extensions.APIBackends.Models
             var parameters = GetParametersForModel(modelName);
             parameters[paramName] = new ParameterHandler<T>(param);
         }
-
-        /// <summary>Whether a model has specific parameters registered.</summary>
-        public bool HasModelParameters(string modelName)
-        {
-            return ModelParameters.ContainsKey(modelName);
-        }
     }
 
     /// <summary>Configuration data for making API requests.</summary>
