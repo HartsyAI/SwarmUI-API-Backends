@@ -249,10 +249,20 @@ public class SwarmUIAPIBackends : Extension
             "jpeg", GetValues: _ => ["jpeg///JPEG (Smaller)", "png///PNG (Lossless)"],
             OrderPriority: 0, IsAdvanced: true, Group: BlackForestAdvancedGroup, FeatureFlag: "bfl_api"));
 
-        // TODO: Rename this to something that displays better in the UI
-        T2IEngine.DisregardedFeatureFlags.Add("bfl_api");
+        // Register all API feature flags
         T2IEngine.DisregardedFeatureFlags.Add("openai_api");
         T2IEngine.DisregardedFeatureFlags.Add("ideogram_api");
+        T2IEngine.DisregardedFeatureFlags.Add("bfl_api");
+
+        // Register model-specific feature flags
+        T2IEngine.DisregardedFeatureFlags.Add("dalle2_params");
+        T2IEngine.DisregardedFeatureFlags.Add("dalle3_params");
+        T2IEngine.DisregardedFeatureFlags.Add("ideogram_v1_params");
+        T2IEngine.DisregardedFeatureFlags.Add("ideogram_v2_params");
+        T2IEngine.DisregardedFeatureFlags.Add("ideogram_v3_params");
+        T2IEngine.DisregardedFeatureFlags.Add("flux_ultra_params");
+        T2IEngine.DisregardedFeatureFlags.Add("flux_pro_params");
+        T2IEngine.DisregardedFeatureFlags.Add("flux_dev_params");
 
         // Register the dynamic API backend type
         Program.Backends.RegisterBackendType<DynamicAPIBackend>("dynamic_api_backend", "3rd Party Paid API Backends",
