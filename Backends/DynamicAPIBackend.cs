@@ -38,20 +38,13 @@ namespace Hartsy.Extensions.APIBackends.Backends
             // Special handling based on subtype
             if (subtype == "Stable-Diffusion" || string.IsNullOrEmpty(subtype))
             {
-                // Use default behavior for Stable-Diffusion models
                 IEnumerable<Dictionary<string, JObject>> modelSets = apiBackends.Select(b => b.RemoteModels.GetValueOrDefault("Stable-Diffusion")).Where(m => m != null);
-                // Combine all model dictionaries into one, prefixing keys with 'API/' TODO: Should we seperate this into name of provider instead of all API/?
                 Dictionary<string, JObject> result = [];
                 foreach (Dictionary<string, JObject> modelSet in modelSets)
                 {
                     foreach (KeyValuePair<string, JObject> kvp in modelSet)
                     {
-                        // Register with API/ prefix (for backward compatibility) TODO: Remove this its stupid. We should not need this if we do it right.
-                        string prefixedKey = $"API/{kvp.Key}";
-                        result[prefixedKey] = kvp.Value;
-                        // ALSO register without prefix (to fix "model not found" errors)
                         result[kvp.Key] = kvp.Value;
-                        Logs.Debug($"[DynamicAPIBackend] Also providing model with unprefixed name: {kvp.Key}");
                     }
                 }
                 Logs.Verbose($"[DynamicAPIBackend] Returned {result.Count} models for subtype: {subtype}");
@@ -133,7 +126,7 @@ namespace Hartsy.Extensions.APIBackends.Backends
             {
                 // Extract model name from input and clean it up
                 string modelName = input.Get(T2IParamTypes.Model).Name
-                    .Replace("API/", "")
+                    .Replace("BFL/", "") //TODO: Why is this done here and why only BFL? How do the others work? 
                     .Replace(".safetensors", "");
                 return $"{baseUrl}/v1/{modelName}";
             }
@@ -186,8 +179,9 @@ namespace Hartsy.Extensions.APIBackends.Backends
                 User sessionUser = null;
                 try
                 {
+                    //TODO: There has to be a more efficient way to get the current user session without creating a new one
                     // Create a new session to access the current user context
-                    using CancellationTokenSource timeout = Utilities.TimedCancel(TimeSpan.FromSeconds(10));
+                    using CancellationTokenSource timeout = Utilities.TimedCancel(TimeSpan.FromSeconds(10)); 
                     string host = Program.ServerSettings.Network.Host;
                     string port = Program.ServerSettings.Network.Port.ToString();
                     JObject sessData = await HttpClient.PostJson($"http://{host}:{port}/API/GetNewSession", [], null, timeout.Token);
@@ -197,6 +191,7 @@ namespace Hartsy.Extensions.APIBackends.Backends
                     {
                         sessionUser = session.User;
                         string apiKey = sessionUser.GetGenericData(provider, "key");
+                        // TODO: Check if the API key is valid. Maybe by making a simple test request to the API?
                         if (!string.IsNullOrEmpty(apiKey))
                         {
                             return true;
@@ -207,7 +202,6 @@ namespace Hartsy.Extensions.APIBackends.Backends
                 {
                     Logs.Error($"[DynamicAPIBackend] Error creating test session: {ex.Message}");
                 }
-                // No key found
                 Logs.Error($"[DynamicAPIBackend] API key validation failed: No API key found for {provider}. Have you saved your key?");
                 return false;
             }

@@ -128,7 +128,7 @@ public class SwarmUIAPIBackends : Extension
             "'Base64' - Returns the image data directly encoded in base64\n" +
             "Base64 is preferred for immediate use, URLs for deferred processing.",
             "b64_json", GetValues: _ => ["url", "b64_json"], OrderPriority: -6, 
-            Group: DallE3Group, FeatureFlag: "openai_api", IsAdvanced: true));
+            Group: DallE3Group, FeatureFlag: "openai_api"));
 
         // Ideogram Parameters
         StyleParam_Ideogram = T2IParamTypes.Register<string>(new("Generation Style",
@@ -210,7 +210,7 @@ public class SwarmUIAPIBackends : Extension
             "Lower values (1.0-2.0): More precise, controlled results\n" +
             "Higher values (2.0-4.0): More creative freedom and variation\n" +
             "Default 2.0 provides good balance of control and creativity.", "2.0", Min: 1.0, Max: 4.0, Step: 0.1,
-            ViewType: ParamViewType.SLIDER, OrderPriority: -5, IsAdvanced: true, Group: BlackForestAdvancedGroup,
+            ViewType: ParamViewType.SLIDER, OrderPriority: -5, Group: BlackForestAdvancedGroup,
             FeatureFlag: "bfl_api"));
 
         PromptEnhanceParam_BlackForest = T2IParamTypes.Register<bool>(new("Prompt Enhancement",
@@ -240,14 +240,14 @@ public class SwarmUIAPIBackends : Extension
             "1.0: Follow image prompt very closely\n" +
             "Default 0.1 provides subtle guidance while allowing creativity.",
             "0.1", Min: 0.0, Max: 1.0, Step: 0.05, ViewType: ParamViewType.SLIDER,
-            OrderPriority: -1, IsAdvanced: true, Group: BlackForestAdvancedGroup, FeatureFlag: "bfl_api"));
+            OrderPriority: -1, Group: BlackForestAdvancedGroup, FeatureFlag: "bfl_api"));
 
         OutputFormatParam_BlackForest = T2IParamTypes.Register<string>(new("Output Format",
             "Choose the file format for saving generated images:\n" +
             "JPEG: Smaller files, slight quality loss, good for sharing\n" +
             "PNG: Lossless quality, larger files, best for editing.",
             "jpeg", GetValues: _ => ["jpeg///JPEG (Smaller)", "png///PNG (Lossless)"],
-            OrderPriority: 0, IsAdvanced: true, Group: BlackForestAdvancedGroup, FeatureFlag: "bfl_api"));
+            OrderPriority: 0, Group: BlackForestAdvancedGroup, FeatureFlag: "bfl_api"));
 
         // Register all API feature flags
         T2IEngine.DisregardedFeatureFlags.Add("openai_api");
@@ -263,6 +263,30 @@ public class SwarmUIAPIBackends : Extension
         T2IEngine.DisregardedFeatureFlags.Add("flux_ultra_params");
         T2IEngine.DisregardedFeatureFlags.Add("flux_pro_params");
         T2IEngine.DisregardedFeatureFlags.Add("flux_dev_params");
+
+        // Hard to remove parameters from the global registry, so we keep them in memory
+        // Basic feature flags for all API backends - disable anything not needed
+        T2IEngine.DisregardedFeatureFlags.Add("sampling");
+        T2IEngine.DisregardedFeatureFlags.Add("zero_negative");
+        T2IEngine.DisregardedFeatureFlags.Add("refiners");
+        T2IEngine.DisregardedFeatureFlags.Add("controlnet");
+        T2IEngine.DisregardedFeatureFlags.Add("variation_seed");
+        T2IEngine.DisregardedFeatureFlags.Add("video");
+        T2IEngine.DisregardedFeatureFlags.Add("autowebui");
+        T2IEngine.DisregardedFeatureFlags.Add("comfyui");
+        T2IEngine.DisregardedFeatureFlags.Add("frameinterps");
+        T2IEngine.DisregardedFeatureFlags.Add("ipadapter");
+        T2IEngine.DisregardedFeatureFlags.Add("sdxl");
+        T2IEngine.DisregardedFeatureFlags.Add("dynamic_thresholding");
+        T2IEngine.DisregardedFeatureFlags.Add("cascade");
+        T2IEngine.DisregardedFeatureFlags.Add("sd3");
+        T2IEngine.DisregardedFeatureFlags.Add("flux-dev");
+        T2IEngine.DisregardedFeatureFlags.Add("seamless");
+        T2IEngine.DisregardedFeatureFlags.Add("freeu");
+        T2IEngine.DisregardedFeatureFlags.Add("teacache");
+        T2IEngine.DisregardedFeatureFlags.Add("text2video");
+        T2IEngine.DisregardedFeatureFlags.Add("yolov8");
+        T2IEngine.DisregardedFeatureFlags.Add("aitemplate");
 
         // Register the dynamic API backend type
         Program.Backends.RegisterBackendType<DynamicAPIBackend>("dynamic_api_backend", "3rd Party Paid API Backends",

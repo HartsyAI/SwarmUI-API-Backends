@@ -40,8 +40,7 @@ namespace Hartsy.Extensions.APIBackends.Backends
                 List<string> modelNames = [];
                 foreach (var (name, model) in ActiveProvider.Models)
                 {
-                    string cleanName = name.Replace("API/", "").Replace(".safetensors", "");
-                    Logs.Verbose($"[APIAbstractBackend] {GetType().Name} - Processing model: {name} (clean name: {cleanName})");
+                    Logs.Verbose($"[APIAbstractBackend] {GetType().Name} - Processing model: {name}");
                     // Set additional properties for better integration
                     model.Handler = Program.MainSDModels;  // Associate with the global handler
                     // Ensure metadata is properly set
