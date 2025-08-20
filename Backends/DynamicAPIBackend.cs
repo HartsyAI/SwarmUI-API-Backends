@@ -153,7 +153,7 @@ namespace Hartsy.Extensions.APIBackends.Backends
             {
                 request.Headers.Add("x-key", apiKey);
             }
-            if (provider == "ideogram_api")
+            else if (provider == "ideogram_api")
             {
                 request.Headers.Add("Api-Key", apiKey);
             }
@@ -182,9 +182,11 @@ namespace Hartsy.Extensions.APIBackends.Backends
                     //TODO: There has to be a more efficient way to get the current user session without creating a new one
                     // Create a new session to access the current user context
                     using CancellationTokenSource timeout = Utilities.TimedCancel(TimeSpan.FromSeconds(10)); 
-                    string host = Program.ServerSettings.Network.Host;
+                    string rawHost = Program.ServerSettings.Network.Host;
+                    string host = string.IsNullOrWhiteSpace(rawHost) || rawHost is "*" or "+" ? "localhost" : rawHost;
                     string port = Program.ServerSettings.Network.Port.ToString();
-                    JObject sessData = await HttpClient.PostJson($"http://{host}:{port}/API/GetNewSession", [], null, timeout.Token);
+                    string url = $"http://{host}:{port}/API/GetNewSession";
+                    JObject sessData = await HttpClient.PostJson(url, [], null, timeout.Token);
                     sessionId = sessData["session_id"].ToString();
                     // Use the session ID to get the session object and user then check for the API key
                     if (Program.Sessions.TryGetSession(sessionId, out Session session) && session?.User != null)
