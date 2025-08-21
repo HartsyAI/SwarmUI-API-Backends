@@ -19,7 +19,7 @@ featureSetChangers.push(() => {
     // If not using any API model, just remove API-specific feature flags
     if (!isApiModel) {
         return [[], ['openai_api', 'ideogram_api', 'bfl_api',
-            'dalle2_params', 'dalle3_params',
+            'dalle2_params', 'dalle3_params', 'gpt-image-1_params',
             'ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params',
             'flux_ultra_params', 'flux_pro_params', 'flux_dev_params']];
     }
@@ -35,10 +35,10 @@ featureSetChangers.push(() => {
     // These are features that should always be enabled for API models
     const addFlags = ['prompt', 'images'];
 
-    // Add provider-specific features only
+        // Add provider-specific features only
     if (isOpenAIModel) {
         addFlags.push('openai_api');
-        addFlags.push('dalle2_params', 'dalle3_params');
+        addFlags.push('dalle2_params', 'dalle3_params', 'gpt-image-1_params');
     } else if (isIdeogramModel) {
         addFlags.push('ideogram_api');
         addFlags.push('ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params');

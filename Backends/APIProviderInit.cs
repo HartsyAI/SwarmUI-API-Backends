@@ -115,27 +115,77 @@ namespace Hartsy.Extensions.APIBackends
                         TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                     },
                 };
+                T2IModel image1 = new(null, null, null, "OpenAI/gpt-image-1")
+                {
+                    Title = "GPT Image 1",
+                    Description = "OpenAI's GPT Image 1 model",
+                    ModelClass = CreateModelClass("openai_api", "DALL-E"),
+                    StandardWidth = 1024,
+                    StandardHeight = 1024,
+                    IsSupportedModelType = true,
+                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/gpt-image-1.png"))}",
+                    Metadata = new T2IModelHandler.ModelMetadataStore
+                    {
+                        ModelName = "OpenAI/gpt-image-1",
+                        Title = "GPT Image 1",
+                        Author = "OpenAI",
+                        Description = "Able to generate images with stronger instruction following, contextual awareness, and world knowledge",
+                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/gpt-image-1.png"))}",
+                        StandardWidth = 1024,
+                        StandardHeight = 1024,
+                        License = "Commercial",
+                        UsageHint = "Best for context-aware image generation and edits requiring strong instruction following",
+                        Date = "2025",
+                        ModelClassType = "openai_api",
+                        Tags = ["openai", "high-quality", "text-accurate", "gpt-image-1_params"],
+                        TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                        TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    },
+                };
                 APIProviderMetadata provider = new()
                 {
                     Name = "OpenAI",
                     Models = new Dictionary<string, T2IModel>
                     {
                         ["OpenAI/dall-e-2"] = dallE2,
-                        ["OpenAI/dall-e-3"] = dallE3
+                        ["OpenAI/dall-e-3"] = dallE3,
+                        ["OpenAI/gpt-image-1"] = image1
                     },
                     RequestConfig = new RequestConfig
                     {
                         BaseUrl = "https://api.openai.com/v1/images/generations",
                         AuthHeader = "Bearer",
-                        BuildRequest = input => new JObject
+                        BuildRequest = input =>
                         {
-                            ["prompt"] = input.Get(T2IParamTypes.Prompt),
-                            ["model"] = input.Get(T2IParamTypes.Model).Name.Replace("OpenAI/", ""),
-                            ["n"] = input.TryGet(T2IParamTypes.Images, out int numImages) && numImages > 0 ? numImages : 1,
-                            ["quality"] = input.Get(SwarmUIAPIBackends.QualityParam_OpenAI),
-                            ["style"] = input.Get(SwarmUIAPIBackends.StyleParam_OpenAI),
-                            ["size"] = input.Get(SwarmUIAPIBackends.SizeParam_OpenAI),
-                            ["response_format"] = "b64_json"
+                            string modelName = input.Get(T2IParamTypes.Model).Name.Replace("OpenAI/", "");
+                            JObject request = new()
+                            {
+                                ["prompt"] = input.Get(T2IParamTypes.Prompt),
+                                ["model"] = modelName,
+                                ["n"] = input.TryGet(T2IParamTypes.Images, out int numImages) && numImages > 0 ? numImages : 1,
+                                ["size"] = input.Get(SwarmUIAPIBackends.SizeParam_OpenAI)
+                            };
+
+                            if (modelName == "gpt-image-1")
+                            {
+                                request["quality"] = input.Get(SwarmUIAPIBackends.QualityParam_GPTImage1);
+                                request["background"] = input.Get(SwarmUIAPIBackends.BackgroundParam_GPTImage1);
+                                request["moderation"] = input.Get(SwarmUIAPIBackends.ModerationParam_GPTImage1);
+                                request["output_format"] = input.Get(SwarmUIAPIBackends.OutputFormatParam_GPTImage1);
+                                request["output_compression"] = input.Get(SwarmUIAPIBackends.OutputCompressionParam_GPTImage1);
+                            }
+                            else if (modelName == "dall-e-3")
+                            {
+                                request["quality"] = input.Get(SwarmUIAPIBackends.QualityParam_OpenAI);
+                                request["style"] = input.Get(SwarmUIAPIBackends.StyleParam_OpenAI);
+                                request["response_format"] = "b64_json";
+                            }
+                            else if (modelName == "dall-e-2")
+                            {
+                                request["response_format"] = "b64_json";
+                            }
+
+                            return request;
                         },
                         ProcessResponse = async response =>
                         {
@@ -179,9 +229,17 @@ namespace Hartsy.Extensions.APIBackends
                 };
                 // Register parameters
                 provider.AddParameterToModel("OpenAI/dall-e-2", "size", SwarmUIAPIBackends.SizeParam_OpenAI);
+                provider.AddParameterToModel("OpenAI/dall-e-2", "response_format", SwarmUIAPIBackends.ResponseFormatParam_OpenAI);
                 provider.AddParameterToModel("OpenAI/dall-e-3", "size", SwarmUIAPIBackends.SizeParam_OpenAI);
                 provider.AddParameterToModel("OpenAI/dall-e-3", "quality", SwarmUIAPIBackends.QualityParam_OpenAI);
                 provider.AddParameterToModel("OpenAI/dall-e-3", "style", SwarmUIAPIBackends.StyleParam_OpenAI);
+                provider.AddParameterToModel("OpenAI/dall-e-3", "response_format", SwarmUIAPIBackends.ResponseFormatParam_OpenAI);
+                provider.AddParameterToModel("OpenAI/gpt-image-1", "size", SwarmUIAPIBackends.SizeParam_OpenAI);
+                provider.AddParameterToModel("OpenAI/gpt-image-1", "quality", SwarmUIAPIBackends.QualityParam_GPTImage1);
+                provider.AddParameterToModel("OpenAI/gpt-image-1", "background", SwarmUIAPIBackends.BackgroundParam_GPTImage1);
+                provider.AddParameterToModel("OpenAI/gpt-image-1", "moderation", SwarmUIAPIBackends.ModerationParam_GPTImage1);
+                provider.AddParameterToModel("OpenAI/gpt-image-1", "output_format", SwarmUIAPIBackends.OutputFormatParam_GPTImage1);
+                provider.AddParameterToModel("OpenAI/gpt-image-1", "output_compression", SwarmUIAPIBackends.OutputCompressionParam_GPTImage1);
                 return provider;
             }
             catch (Exception ex)
