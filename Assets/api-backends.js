@@ -35,7 +35,7 @@ featureSetChangers.push(() => {
     // These are features that should always be enabled for API models
     const addFlags = ['prompt', 'images'];
 
-        // Add provider-specific features only
+    // Add provider-specific features only
     if (isOpenAIModel) {
         addFlags.push('openai_api');
         addFlags.push('dalle2_params', 'dalle3_params', 'gpt-image-1_params');
