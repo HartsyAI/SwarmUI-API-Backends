@@ -38,6 +38,7 @@ public class SwarmUIAPIBackends : Extension
     public static T2IParamGroup OpenAIParamGroup;
     public static T2IParamGroup DallE2Group;
     public static T2IParamGroup DallE3Group;
+    public static T2IParamGroup GPTImage1Group;
 
     public static T2IParamGroup IdeogramParamGroup;
     public static T2IParamGroup IdeogramGeneralGroup;
@@ -53,6 +54,12 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<string> StyleParam_OpenAI;
     public static T2IRegisteredParam<string> ResponseFormatParam_OpenAI;
 
+    // GPT Image 1 Parameters
+    public static T2IRegisteredParam<string> QualityParam_GPTImage1;
+    public static T2IRegisteredParam<string> BackgroundParam_GPTImage1;
+    public static T2IRegisteredParam<string> ModerationParam_GPTImage1;
+    public static T2IRegisteredParam<string> OutputFormatParam_GPTImage1;
+    public static T2IRegisteredParam<int> OutputCompressionParam_GPTImage1;
     // Ideogram Parameters
     public static T2IRegisteredParam<string> StyleParam_Ideogram;
     public static T2IRegisteredParam<string> MagicPromptParam_Ideogram;
@@ -82,6 +89,8 @@ public class SwarmUIAPIBackends : Extension
             Description: "Parameters specific to OpenAI's DALL-E 2 model generation.");
         DallE3Group = new("DALL-E 3 Settings", Toggles: false, Open: true, OrderPriority: 11,
             Description: "Parameters specific to OpenAI's DALL-E 3 model, featuring enhanced quality and style options.");
+        GPTImage1Group = new("GPT Image 1 Settings", Toggles: false, Open: true, OrderPriority: 12,
+            Description: "Able to generate images with stronger instruction following, contextual awareness, and world knowledge.");
 
         IdeogramParamGroup = new("Ideogram API", Toggles: false, Open: true, OrderPriority: 20);
         IdeogramGeneralGroup = new("Ideogram Basic Settings", Toggles: false, Open: true, OrderPriority: 20,
@@ -99,13 +108,21 @@ public class SwarmUIAPIBackends : Extension
         // Core Parameters for both models
         SizeParam_OpenAI = T2IParamTypes.Register<string>(new("Output Resolution",
             "Controls the dimensions of the generated image.\n" +
-            "DALL-E 2: Smaller sizes (256x256, 512x512) generate faster but with less detail.\n" +
-            "DALL-E 3: Larger sizes (1792x1024, 1024x1792) better for wide or tall compositions, 1024x1024 for balanced images.",
-            "1024x1024", GetValues: model => model.ID.Contains("dall-e-2") ? ["256x256", "512x512", "1024x1024"] : ["1024x1024", 
-            "1792x1024", "1024x1792"], OrderPriority: -10, ViewType: ParamViewType.POT_SLIDER, 
+            "DALL-E 2: 256x256, 512x512, or 1024x1024\n" +
+            "DALL-E 3: 1024x1024, 1792x1024, or 1024x1792\n" +
+            "GPT Image 1: auto, 1024x1024, 1536x1024, or 1024x1536",
+            "1024x1024", GetValues: model =>
+            {
+                if (model.ID.Contains("dall-e-2"))
+                    return ["256x256", "512x512", "1024x1024"];
+                else if (model.ID.Contains("gpt-image-1"))
+                    return ["auto///Auto (Recommended)", "1024x1024///Square", "1536x1024///Landscape", "1024x1536///Portrait"];
+                else
+                    return ["1024x1024", "1792x1024", "1024x1792"];
+            },
+            OrderPriority: -10, ViewType: ParamViewType.POT_SLIDER,
             Group: DallE3Group, FeatureFlag: "openai_api"));
 
-        // DALL-E 3 Specific Parameters
         QualityParam_OpenAI = T2IParamTypes.Register<string>(new("Generation Quality",
             "Controls the level of detail and consistency in DALL-E 3 images.\n" +
             "'Standard' - Balanced quality suitable for most uses, generates faster\n" +
@@ -127,8 +144,53 @@ public class SwarmUIAPIBackends : Extension
             "'URL' - Returns a temporary URL valid for 60 minutes\n" +
             "'Base64' - Returns the image data directly encoded in base64\n" +
             "Base64 is preferred for immediate use, URLs for deferred processing.",
-            "b64_json", GetValues: _ => ["url", "b64_json"], OrderPriority: -6, 
+            "b64_json", GetValues: _ => ["url", "b64_json"], OrderPriority: -6,
             Group: DallE3Group, FeatureFlag: "openai_api"));
+
+        // gpt-image-1 parameters
+        QualityParam_GPTImage1 = T2IParamTypes.Register<string>(new("Quality",
+            "Controls the quality of the generated image.\n" +
+            "'Auto' - Automatically selects the best quality for the given model\n" +
+            "'High' - Highest quality with maximum detail and clarity\n" +
+            "'Medium' - Balanced quality suitable for most uses\n" +
+            "'Low' - Faster generation with reduced quality\n" +
+            "Higher quality levels may increase generation time and cost.",
+            "auto", GetValues: _ => ["auto///Auto (Recommended)", "high///High Quality", "medium///Medium Quality", "low///Low Quality"],
+            OrderPriority: -8, Group: GPTImage1Group, FeatureFlag: "gpt-image-1_params"));
+
+        BackgroundParam_GPTImage1 = T2IParamTypes.Register<string>(new("Background",
+            "Controls the background transparency of the generated image.\n" +
+            "'Auto' - Automatically determines the best background for the image\n" +
+            "'Transparent' - Creates a transparent background (requires PNG or WebP format)\n" +
+            "'Opaque' - Creates a solid background with no transparency\n" +
+            "Note: Transparent backgrounds require PNG or WebP output format.",
+            "auto", GetValues: _ => ["auto///Auto (Recommended)", "transparent///Transparent", "opaque///Opaque"],
+            OrderPriority: -7, Group: GPTImage1Group, FeatureFlag: "gpt-image-1_params"));
+
+        ModerationParam_GPTImage1 = T2IParamTypes.Register<string>(new("Content Moderation",
+            "Controls the content moderation level for generated images.\n" +
+            "'Auto' - Uses default moderation settings\n" +
+            "'Low' - Less restrictive content filtering (use with caution)\n" +
+            "Auto setting provides balanced content safety.",
+            "auto", GetValues: _ => ["auto///Auto (Recommended)", "low///Low Filtering"],
+            OrderPriority: -6, Group: GPTImage1Group, FeatureFlag: "gpt-image-1_params"));
+
+        OutputFormatParam_GPTImage1 = T2IParamTypes.Register<string>(new("Image Output Format",
+            "The format for the generated image.\n" +
+            "'PNG' - Lossless format, supports transparency\n" +
+            "'JPEG' - Compressed format, smaller file size\n" +
+            "'WebP' - Modern format, good compression and transparency support\n" +
+            "PNG is recommended for images with transparency.",
+            "png", GetValues: _ => ["png///PNG (Lossless)", "jpeg///JPEG (Compressed)", "webp///WebP (Modern)"],
+            OrderPriority: -5, Group: GPTImage1Group, FeatureFlag: "gpt-image-1_params"));
+
+        OutputCompressionParam_GPTImage1 = T2IParamTypes.Register<int>(new("Output Compression",
+            "The compression level (0-100%) for JPEG and WebP formats.\n" +
+            "Higher values mean better quality but larger file sizes.\n" +
+            "Only applies to JPEG and WebP output formats.\n" +
+            "Default is 100% (maximum quality).",
+            "100", Min: 0, Max: 100, ViewType: ParamViewType.SLIDER,
+            OrderPriority: -4, Group: GPTImage1Group, FeatureFlag: "gpt-image-1_params"));
 
         // Ideogram Parameters
         StyleParam_Ideogram = T2IParamTypes.Register<string>(new("Generation Style",
@@ -217,7 +279,7 @@ public class SwarmUIAPIBackends : Extension
             "Enables Flux's automatic prompt enhancement system.\n" +
             "When enabled: Automatically expands prompts with additional details\n" +
             "Can help achieve more artistic results but may reduce prompt precision\n" +
-            "Recommended for creative/artistic work, disable for exact prompt following.", "false", 
+            "Recommended for creative/artistic work, disable for exact prompt following.", "false",
             OrderPriority: -4, IsAdvanced: true, Group: BlackForestAdvancedGroup, FeatureFlag: "bfl_api"));
 
         RawModeParam_BlackForest = T2IParamTypes.Register<bool>(new("Raw Mode",
@@ -231,7 +293,7 @@ public class SwarmUIAPIBackends : Extension
             "Optional image to use as a starting point or reference.\n" +
             "Acts as a visual guide for the generation process.\n" +
             "Useful for variations, style matching, or guided compositions.\n" +
-            "Use with Image Prompt Strength to control influence.", null, OrderPriority: -2, 
+            "Use with Image Prompt Strength to control influence.", null, OrderPriority: -2,
             IsAdvanced: true, Group: BlackForestAdvancedGroup, FeatureFlag: "bfl_api"));
 
         ImagePromptStrengthParam_BlackForest = T2IParamTypes.Register<double>(new("Image Prompt Strength",
@@ -257,6 +319,7 @@ public class SwarmUIAPIBackends : Extension
         // Register model-specific feature flags
         T2IEngine.DisregardedFeatureFlags.Add("dalle2_params");
         T2IEngine.DisregardedFeatureFlags.Add("dalle3_params");
+        T2IEngine.DisregardedFeatureFlags.Add("gpt-image-1_params");
         T2IEngine.DisregardedFeatureFlags.Add("ideogram_v1_params");
         T2IEngine.DisregardedFeatureFlags.Add("ideogram_v2_params");
         T2IEngine.DisregardedFeatureFlags.Add("ideogram_v3_params");
@@ -292,7 +355,7 @@ public class SwarmUIAPIBackends : Extension
         Program.Backends.RegisterBackendType<DynamicAPIBackend>("dynamic_api_backend", "3rd Party Paid API Backends",
             "Generate images using various API services (OpenAI, Ideogram, Black Forest Labs)", true);
         // All key types must be added to the accepted list first
-        string[] keyTypes = ["openai_api", "bfl_api", "ideogram_api"]; 
+        string[] keyTypes = ["openai_api", "bfl_api", "ideogram_api"];
         foreach (string keyType in keyTypes)
         {
             BasicAPIFeatures.AcceptedAPIKeyTypes.Add(keyType);
@@ -300,15 +363,15 @@ public class SwarmUIAPIBackends : Extension
         _providerInit = new APIProviderInit();
         RegisterApiModelsWithGlobalRegistry();
         // Register API Key tables for each backend - safely handle if already registered
-        RegisterApiKeyIfNeeded("openai_api", "openai", "OpenAI (ChatGPT)", "https://platform.openai.com/api-keys", 
+        RegisterApiKeyIfNeeded("openai_api", "openai", "OpenAI (ChatGPT)", "https://platform.openai.com/api-keys",
             new HtmlString("To use OpenAI models in SwarmUI (via Hartsy extensions), you must set your OpenAI API key."));
-        RegisterApiKeyIfNeeded("bfl_api", "black_forest", "Black Forest Labs (FLUX)", "https://dashboard.bfl.ai/", 
+        RegisterApiKeyIfNeeded("bfl_api", "black_forest", "Black Forest Labs (FLUX)", "https://dashboard.bfl.ai/",
             new HtmlString("To use Black Forest in SwarmUI (via Hartsy extensions), you must set your Black Forest API key."));
-        RegisterApiKeyIfNeeded("ideogram_api", "ideogram", "Ideogram", "https://developer.ideogram.ai/ideogram-api/api-setup", 
-            new HtmlString("To use Ideogram in SwarmUI (via Hartsy extensions), you must set your Ideogram API key.")); 
+        RegisterApiKeyIfNeeded("ideogram_api", "ideogram", "Ideogram", "https://developer.ideogram.ai/ideogram-api/api-setup",
+            new HtmlString("To use Ideogram in SwarmUI (via Hartsy extensions), you must set your Ideogram API key."));
         Logs.Init("Hartsy's APIBackends extension V1.0 has successfully started.");
     }
-    
+
     /// <summary>Safely registers an API key if it's not already registered</summary>
     private static void RegisterApiKeyIfNeeded(string keyType, string jsPrefix, string title, string createLink, HtmlString infoHtml)
     {
