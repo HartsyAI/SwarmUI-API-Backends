@@ -175,7 +175,7 @@ public class SwarmUIAPIBackends : Extension
             "auto", GetValues: _ => ["auto///Auto (Recommended)", "low///Low Filtering"],
             OrderPriority: -6, Group: GPTImage1Group, FeatureFlag: "gpt-image-1_params"));
 
-        OutputFormatParam_GPTImage1 = T2IParamTypes.Register<string>(new("Output Format",
+        OutputFormatParam_GPTImage1 = T2IParamTypes.Register<string>(new("Image Output Format",
             "The format for the generated image.\n" +
             "'PNG' - Lossless format, supports transparency\n" +
             "'JPEG' - Compressed format, smaller file size\n" +
