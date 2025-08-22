@@ -354,12 +354,43 @@ namespace Hartsy.Extensions.APIBackends
                                 // Add other known mappings here if needed
                                 _ => baseModelName.Replace('-', '_').ToUpperInvariant() // Fallback attempt
                             };
+                            string standard_aspect_ratio = input.Get(T2IParamTypes.AspectRatio)?.ToString();
+                            string aspectRatioForRequest;
+                            if (ideogramModelName == "V_3")
+                            {
+                                // v3 uses x format (4x3, 1x1, etc.)
+                                aspectRatioForRequest = standard_aspect_ratio switch
+                                {
+                                    "1:3" => "1x3",
+                                    "3:1" => "3x1", 
+                                    "1:2" => "1x2",
+                                    "2:1" => "2x1",
+                                    "9:16" => "9x16",
+                                    "16:9" => "16x9",
+                                    "10:16" => "10x16", 
+                                    "16:10" => "16x10",
+                                    "2:3" => "2x3",
+                                    "3:2" => "3x2",
+                                    "3:4" => "3x4",
+                                    "4:3" => "4x3",
+                                    "4:5" => "4x5",
+                                    "5:4" => "5x4",
+                                    "1:1" => "1x1",
+                                    _ => "1x1" // Default fallback
+                                };
+                            }
+                            else
+                            {
+                                // for v1, v2 versions
+                                aspectRatioForRequest = ConvertToIdeogramAspectRatio(standard_aspect_ratio);
+                            }
+                            
                             JObject requestBody = new()
                             {
                                 ["prompt"] = input.Get(T2IParamTypes.Prompt).ToString(),
                                 // ["negative_prompt"] = input.GetNegativePrompt(), // Optional
                                 ["model"] = ideogramModelName, // Use the converted name
-                                ["aspect_ratio"] = ConvertToIdeogramAspectRatio(input.Get(T2IParamTypes.AspectRatio)?.ToString()),
+                                ["aspect_ratio"] = aspectRatioForRequest,
                                 ["seed"] = input.Get(T2IParamTypes.Seed),
                                 ["output_format"] = "png" // Request PNG format
                             };
@@ -391,11 +422,15 @@ namespace Hartsy.Extensions.APIBackends
                             {
                                 requestBody["color_palette"] = new JObject { ["name"] = palette };
                             }
-
-                            // Wrap the entire request body in the required 'image_request' object
+                            if (ideogramModelName == "V_3")
+                            {
+                                requestBody.Remove("model");
+                                return requestBody;
+                            }
                             JObject finalPayload = new()
                             {
-                                ["image_request"] = requestBody
+                                ["aspect_ratio"] = aspectRatioForRequest,
+                                ["image_request"] = requestBody,
                             };
                             return finalPayload;
                         },
@@ -458,7 +493,7 @@ namespace Hartsy.Extensions.APIBackends
                     ["flux-pro-1.1"] = "flux_pro_params",
                     ["flux-dev"] = "flux_dev_params",
                     ["flux-kontext-pro"] = "flux_kontext_pro_params",
-                    ["flux-kontext-max"] = "flux_kontext_max_params" 
+                    ["flux-kontext-max"] = "flux_kontext_max_params"
                 };
                 APIProviderMetadata provider = new()
                 {
