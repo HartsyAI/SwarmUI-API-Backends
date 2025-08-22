@@ -457,7 +457,8 @@ namespace Hartsy.Extensions.APIBackends
                     ["flux-pro-1.1-ultra"] = "flux_ultra_params",
                     ["flux-pro-1.1"] = "flux_pro_params",
                     ["flux-dev"] = "flux_dev_params",
-                    ["flux-kontext-pro"] = "flux_kontext_pro_params" 
+                    ["flux-kontext-pro"] = "flux_kontext_pro_params",
+                    ["flux-kontext-max"] = "flux_kontext_max_params" 
                 };
                 APIProviderMetadata provider = new()
                 {
@@ -571,6 +572,33 @@ namespace Hartsy.Extensions.APIBackends
                                 TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                                 TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                             },
+                        },
+                        ["BFL/flux-kontext-max"] = new T2IModel(null, "BFL", "BFL/flux-kontext-max", "flux-kontext-max")
+                        {
+                            Title = "FLUX.1 Kontext Max",
+                            Description = "Black Forest Labs' Flux Kontext Max model",
+                            ModelClass = CreateModelClass("bfl_api", "Flux"),
+                            IsSupportedModelType = true,
+                            StandardWidth = 1024,
+                            StandardHeight = 768,
+                            PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/flux-kontext-max.png"))}",
+                            Metadata = new T2IModelHandler.ModelMetadataStore
+                            {
+                                ModelName = "BFL/flux-kontext-max",
+                                Title = "FLUX.1 Kontext Max",
+                                Author = "Black Forest Labs",
+                                Description = "Delivers maximum speed, precision, and consistency for image editing and generation, maintaining character fidelity across multiple iterations",
+                                PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/flux-kontext-max.png"))}",
+                                StandardWidth = 1024,
+                                StandardHeight = 768,
+                                License = "Commercial",
+                                UsageHint = "Ideal for fast, consistent image editing and generation with context-aware prompts.",
+                                Date = "2025",
+                                ModelClassType = "bfl_api",
+                                Tags = ["flux", "high-quality", fluxModelFlags["flux-kontext-max"]],
+                                TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                                TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                            },
                         }
                     },
                     RequestConfig = new RequestConfig
@@ -599,13 +627,13 @@ namespace Hartsy.Extensions.APIBackends
                     }
                 };
                 // Register parameters for all Flux models supported by Black Forest Labs API
-                foreach (string modelName in new[] { "BFL/flux-pro-1.1-ultra", "BFL/flux-pro-1.1", "BFL/flux-dev", "BFL/flux-kontext-pro" })
+                foreach (string modelName in new[] { "BFL/flux-pro-1.1-ultra", "BFL/flux-pro-1.1", "BFL/flux-dev", "BFL/flux-kontext-pro", "BFL/flux-kontext-max" })
                 {
                     provider.AddParameterToModel(modelName, "prompt_upsampling", SwarmUIAPIBackends.PromptEnhanceParam_BlackForest);
                     provider.AddParameterToModel(modelName, "safety_tolerance", SwarmUIAPIBackends.SafetyParam_BlackForest);
                     provider.AddParameterToModel(modelName, "output_format", SwarmUIAPIBackends.OutputFormatParam_BlackForest);
                 }
-                // guidance paramter not supported on flux-kontext-pro
+                // guidance paramter not supported on flux-kontext models
                 foreach (string modelName in new[] { "BFL/flux-pro-1.1-ultra", "BFL/flux-pro-1.1", "BFL/flux-dev" })
                 {
                     provider.AddParameterToModel(modelName, "guidance", SwarmUIAPIBackends.GuidanceParam_BlackForest);
