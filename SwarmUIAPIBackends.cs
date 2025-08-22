@@ -326,6 +326,7 @@ public class SwarmUIAPIBackends : Extension
         T2IEngine.DisregardedFeatureFlags.Add("flux_ultra_params");
         T2IEngine.DisregardedFeatureFlags.Add("flux_pro_params");
         T2IEngine.DisregardedFeatureFlags.Add("flux_dev_params");
+        T2IEngine.DisregardedFeatureFlags.Add("flux_kontext_pro_params");
 
         // Hard to remove parameters from the global registry, so we keep them in memory
         // Basic feature flags for all API backends - disable anything not needed
