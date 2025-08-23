@@ -21,7 +21,7 @@ featureSetChangers.push(() => {
         return [[], ['openai_api', 'ideogram_api', 'bfl_api',
             'dalle2_params', 'dalle3_params', 'gpt-image-1_params',
             'ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params',
-            'flux_ultra_params', 'flux_pro_params', 'flux_dev_params']];
+            'flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params']];
     }
 
     // These features should be REMOVED for all API backends as they're incompatible
@@ -44,7 +44,7 @@ featureSetChangers.push(() => {
         addFlags.push('ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params');
     } else if (isBlackForestModel) {
         addFlags.push('bfl_api');
-        addFlags.push('flux_ultra_params', 'flux_pro_params', 'flux_dev_params');
+        addFlags.push('flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params');
     }
 
     console.log(`[api-backends] Adding feature flags: ${addFlags.join(', ')}`);

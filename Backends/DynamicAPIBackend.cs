@@ -130,6 +130,15 @@ namespace Hartsy.Extensions.APIBackends.Backends
                     .Replace(".safetensors", "");
                 return $"{baseUrl}/v1/{modelName}";
             }
+            else if (Settings.SelectedProvider == "ideogram_api")
+            {
+                string modelName = input.Get(T2IParamTypes.Model).Name;
+                if (modelName.Contains("v3"))
+                {
+                    // Different Base URL for ideogram v3 model
+                    return "https://api.ideogram.ai/v1/ideogram-v3/generate";
+                }
+            }
             Logs.Verbose($"[DynamicAPIBackend] Using base URL: {baseUrl}");
             return baseUrl;
         }
