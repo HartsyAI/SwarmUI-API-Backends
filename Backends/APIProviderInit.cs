@@ -362,12 +362,12 @@ namespace Hartsy.Extensions.APIBackends
                                 aspectRatioForRequest = standard_aspect_ratio switch
                                 {
                                     "1:3" => "1x3",
-                                    "3:1" => "3x1", 
+                                    "3:1" => "3x1",
                                     "1:2" => "1x2",
                                     "2:1" => "2x1",
                                     "9:16" => "9x16",
                                     "16:9" => "16x9",
-                                    "10:16" => "10x16", 
+                                    "10:16" => "10x16",
                                     "16:10" => "16x10",
                                     "2:3" => "2x3",
                                     "3:2" => "3x2",
@@ -384,7 +384,7 @@ namespace Hartsy.Extensions.APIBackends
                                 // for v1, v2 versions
                                 aspectRatioForRequest = ConvertToIdeogramAspectRatio(standard_aspect_ratio);
                             }
-                            
+
                             JObject requestBody = new()
                             {
                                 ["prompt"] = input.Get(T2IParamTypes.Prompt).ToString(),
@@ -588,7 +588,7 @@ namespace Hartsy.Extensions.APIBackends
                             ModelClass = CreateModelClass("bfl_api", "Flux"),
                             IsSupportedModelType = true,
                             StandardWidth = 1024,
-                            StandardHeight = 768,
+                            StandardHeight = 1024,
                             PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/flux-kontext-pro.png"))}",
                             Metadata = new T2IModelHandler.ModelMetadataStore
                             {
@@ -598,7 +598,7 @@ namespace Hartsy.Extensions.APIBackends
                                 Description = "A unified model for fast editing, generation, and text-to-image with FLUX.1 quality, preserving character consistency across iterations",
                                 PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/flux-kontext-pro.png"))}",
                                 StandardWidth = 1024,
-                                StandardHeight = 768,
+                                StandardHeight = 1024,
                                 License = "Commercial",
                                 UsageHint = "Ideal for fast, consistent image editing and generation with context-aware prompts.",
                                 Date = "2025",
@@ -615,7 +615,7 @@ namespace Hartsy.Extensions.APIBackends
                             ModelClass = CreateModelClass("bfl_api", "Flux"),
                             IsSupportedModelType = true,
                             StandardWidth = 1024,
-                            StandardHeight = 768,
+                            StandardHeight = 1024,
                             PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/flux-kontext-max.png"))}",
                             Metadata = new T2IModelHandler.ModelMetadataStore
                             {
@@ -625,7 +625,7 @@ namespace Hartsy.Extensions.APIBackends
                                 Description = "Delivers maximum speed, precision, and consistency for image editing and generation, maintaining character fidelity across multiple iterations",
                                 PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/flux-kontext-max.png"))}",
                                 StandardWidth = 1024,
-                                StandardHeight = 768,
+                                StandardHeight = 1024,
                                 License = "Commercial",
                                 UsageHint = "Ideal for fast, consistent image editing and generation with context-aware prompts.",
                                 Date = "2025",
@@ -724,9 +724,10 @@ namespace Hartsy.Extensions.APIBackends
                 request["seed"] = new Random().Next(1, 2147483647);
             }
             // Model-specific parameters
-            if (baseModelName.Contains("flux-pro-1.1-ultra"))
+            // Kontext and Ultra uses aspect ratio
+            if (baseModelName.Contains("flux-pro-1.1-ultra") || baseModelName.Contains("flux-kontext"))
             {
-                // Ultra model uses aspect_ratio instead of width/height
+
                 if (input.TryGet(T2IParamTypes.AspectRatio, out string aspectRatio))
                 {
                     request["aspect_ratio"] = aspectRatio;
@@ -736,30 +737,34 @@ namespace Hartsy.Extensions.APIBackends
                     request["aspect_ratio"] = "16:9";
                 }
 
-                if (input.TryGet(SwarmUIAPIBackends.GuidanceParam_BlackForest, out double guidance))
+                if (baseModelName.Contains("flux-pro-1.1-ultra"))
                 {
-                    request["guidance"] = guidance;
-                }
-                else
-                {
-                    request["guidance"] = 2.5;
-                }
+                    // Ultra-specific parameters
+                    if (input.TryGet(SwarmUIAPIBackends.GuidanceParam_BlackForest, out double guidance))
+                    {
+                        request["guidance"] = guidance;
+                    }
+                    else
+                    {
+                        request["guidance"] = 2.5;
+                    }
 
-                if (input.TryGet(SwarmUIAPIBackends.RawModeParam_BlackForest, out bool rawMode))
-                {
-                    request["raw"] = rawMode;
-                }
+                    if (input.TryGet(SwarmUIAPIBackends.RawModeParam_BlackForest, out bool rawMode))
+                    {
+                        request["raw"] = rawMode;
+                    }
 
-                if (input.TryGet(T2IParamTypes.Steps, out int steps))
-                {
-                    request["steps"] = steps;
+                    if (input.TryGet(T2IParamTypes.Steps, out int steps))
+                    {
+                        request["steps"] = steps;
+                    }
+                    else
+                    {
+                        request["steps"] = 25;
+                    }
+                    // For Ultra model, don't include image_prompt if not provided
+                    request["image_prompt"] = null;
                 }
-                else
-                {
-                    request["steps"] = 25;
-                }
-                // For Ultra model, don't include image_prompt if not provided
-                request["image_prompt"] = null;
             }
             else
             {
