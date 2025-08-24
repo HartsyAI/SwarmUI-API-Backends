@@ -26,6 +26,10 @@ public static class APIBackendsPermissions
     public static readonly PermInfo PermUseBlackForest = Permissions.Register(new("use_blackforest", "Use Black Forest Labs API",
         "Allows using Black Forest Labs' Flux model APIs for image generation.",
         PermissionDefault.POWERUSERS, APIBackendsPermGroup));
+
+    public static readonly PermInfo PermUseGrok = Permissions.Register(new("use_grok", "Use Grok API",
+        "Allows using Grok's API for image generation.",
+        PermissionDefault.POWERUSERS, APIBackendsPermGroup));
 }
 
 /// <summary>Extension that adds support for various API-based image generation services.</summary>
@@ -39,7 +43,9 @@ public class SwarmUIAPIBackends : Extension
     public static T2IParamGroup DallE2Group;
     public static T2IParamGroup DallE3Group;
     public static T2IParamGroup GPTImage1Group;
+    public static T2IParamGroup GrokParamGroup;
 
+    public static T2IParamGroup Grok2ImageGroup;
     public static T2IParamGroup IdeogramParamGroup;
     public static T2IParamGroup IdeogramGeneralGroup;
     public static T2IParamGroup IdeogramAdvancedGroup;
@@ -97,6 +103,12 @@ public class SwarmUIAPIBackends : Extension
             Description: "Core parameters for Ideogram image generation.");
         IdeogramAdvancedGroup = new("Ideogram Advanced Settings", Toggles: true, Open: false, OrderPriority: 21,
             Description: "Additional options for fine-tuning Ideogram generations.");
+
+        GrokParamGroup = new("Grok API", Toggles: false, Open: true, OrderPriority: 30,
+            Description: "API access to Grok's image generation models.");
+        
+        Grok2ImageGroup = new("Grok 2 Image Settings", Toggles: false, Open: true, OrderPriority: 37,
+            Description: "Parameters specific to Grok's 2 Image model generation.");
 
         BlackForestGroup = new("Black Forest Labs API", Toggles: false, Open: true, OrderPriority: 40,
             Description: "API access to Black Forest Labs' high quality Flux image generation models.");
@@ -315,6 +327,7 @@ public class SwarmUIAPIBackends : Extension
         T2IEngine.DisregardedFeatureFlags.Add("openai_api");
         T2IEngine.DisregardedFeatureFlags.Add("ideogram_api");
         T2IEngine.DisregardedFeatureFlags.Add("bfl_api");
+        T2IEngine.DisregardedFeatureFlags.Add("grok_api");
 
         // Register model-specific feature flags
         T2IEngine.DisregardedFeatureFlags.Add("dalle2_params");
@@ -328,6 +341,7 @@ public class SwarmUIAPIBackends : Extension
         T2IEngine.DisregardedFeatureFlags.Add("flux_dev_params");
         T2IEngine.DisregardedFeatureFlags.Add("flux_kontext_pro_params");
         T2IEngine.DisregardedFeatureFlags.Add("flux_kontext_max_params");
+        T2IEngine.DisregardedFeatureFlags.Add("grok_2_image_params");
 
         // Hard to remove parameters from the global registry, so we keep them in memory
         // Basic feature flags for all API backends - disable anything not needed
@@ -357,7 +371,7 @@ public class SwarmUIAPIBackends : Extension
         Program.Backends.RegisterBackendType<DynamicAPIBackend>("dynamic_api_backend", "3rd Party Paid API Backends",
             "Generate images using various API services (OpenAI, Ideogram, Black Forest Labs)", true);
         // All key types must be added to the accepted list first
-        string[] keyTypes = ["openai_api", "bfl_api", "ideogram_api"];
+        string[] keyTypes = ["openai_api", "bfl_api", "ideogram_api", "grok_api"];
         foreach (string keyType in keyTypes)
         {
             BasicAPIFeatures.AcceptedAPIKeyTypes.Add(keyType);
@@ -371,6 +385,8 @@ public class SwarmUIAPIBackends : Extension
             new HtmlString("To use Black Forest in SwarmUI (via Hartsy extensions), you must set your Black Forest API key."));
         RegisterApiKeyIfNeeded("ideogram_api", "ideogram", "Ideogram", "https://developer.ideogram.ai/ideogram-api/api-setup",
             new HtmlString("To use Ideogram in SwarmUI (via Hartsy extensions), you must set your Ideogram API key."));
+        RegisterApiKeyIfNeeded("grok_api", "grok", "Grok", "https://accounts.x.ai/sign-up?redirect=grok-com",
+            new HtmlString("To use Grok in SwarmUI (via Hartsy extensions), you must set your Grok API key."));
         Logs.Init("Hartsy's APIBackends extension V1.0 has successfully started.");
     }
 
