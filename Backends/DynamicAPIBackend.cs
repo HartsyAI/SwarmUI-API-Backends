@@ -58,9 +58,9 @@ namespace Hartsy.Extensions.APIBackends.Backends
         /// <summary>Settings for the dynamic API backend.</summary>
         public class DynamicAPISettings : AutoConfiguration
         {
-            [ManualSettingsOptions(Impl = null, Vals = ["", "bfl_api", "ideogram_api", "openai_api"],
-                ManualNames = ["Select a provider...", "Black Forest Labs (Flux)", "Ideogram", "OpenAI (DALL-E)"])]
-                        [ConfigComment("Choose the backend API provider to use for image generation.")]
+            [ManualSettingsOptions(Impl = null, Vals = ["", "bfl_api", "ideogram_api", "openai_api", "grok_api"],
+                ManualNames = ["Select a provider...", "Black Forest Labs (Flux)", "Ideogram", "OpenAI (DALL-E)", "Grok"])]
+            [ConfigComment("Choose the backend API provider to use for image generation.")]
             public string SelectedProvider = "";
 
             [ConfigComment("Custom Base URL (optional) This value will override the hardcoded base URL.")]
@@ -110,7 +110,8 @@ namespace Hartsy.Extensions.APIBackends.Backends
         {
             ["bfl_api"] = APIBackendsPermissions.PermUseBlackForest,
             ["openai_api"] = APIBackendsPermissions.PermUseOpenAI,
-            ["ideogram_api"] = APIBackendsPermissions.PermUseIdeogram
+            ["ideogram_api"] = APIBackendsPermissions.PermUseIdeogram,
+            ["grok_api"] = APIBackendsPermissions.PermUseGrok
         };
 
         protected override PermInfo GetRequiredPermission() =>

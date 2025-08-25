@@ -14,14 +14,16 @@ featureSetChangers.push(() => {
     const isOpenAIModel = curModelArch === 'openai_api';
     const isIdeogramModel = curModelArch === 'ideogram_api';
     const isBlackForestModel = curModelArch === 'bfl_api';
-    const isApiModel = isOpenAIModel || isIdeogramModel || isBlackForestModel;
+    const isGrokModel = curModelArch === 'grok_api';
+    const isApiModel = isOpenAIModel || isIdeogramModel || isBlackForestModel || isGrokModel;
 
     // If not using any API model, just remove API-specific feature flags
     if (!isApiModel) {
-        return [[], ['openai_api', 'ideogram_api', 'bfl_api',
+        return [[], ['openai_api', 'ideogram_api', 'bfl_api', 'grok_api',
             'dalle2_params', 'dalle3_params', 'gpt-image-1_params',
             'ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params',
-            'flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params']];
+            'flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params',
+            'grok_2_image_params']];
     }
 
     // These features should be REMOVED for all API backends as they're incompatible
@@ -45,6 +47,9 @@ featureSetChangers.push(() => {
     } else if (isBlackForestModel) {
         addFlags.push('bfl_api');
         addFlags.push('flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params');
+    } else if (isGrokModel) {
+        addFlags.push('grok_api');
+        addFlags.push('grok_2_image_params');
     }
 
     console.log(`[api-backends] Adding feature flags: ${addFlags.join(', ')}`);
@@ -59,7 +64,7 @@ hideParamCallbacks.push(() => {
     if (!curModelArch) return;
 
     // Check if current model is from one of our API providers
-    const isApiModel = ['openai_api', 'ideogram_api', 'bfl_api'].includes(curModelArch);
+    const isApiModel = ['openai_api', 'ideogram_api', 'bfl_api', 'grok_api'].includes(curModelArch);
 
     // If this isn't an API model, don't modify anything
     if (!isApiModel) return;
@@ -115,6 +120,7 @@ hideParamCallbacks.push(() => {
     const isOpenAIModel = curModelArch === 'openai_api';
     const isIdeogramModel = curModelArch === 'ideogram_api';
     const isBlackForestModel = curModelArch === 'bfl_api';
+    const isGrokModel = curModelArch === 'grok_api';
 
     // Hide provider-specific groups and parameters
     document.querySelectorAll('.input-group').forEach(group => {
@@ -138,6 +144,13 @@ hideParamCallbacks.push(() => {
         } else if (isBlackForestModel) {
             // When using Black Forest, hide OpenAI and Ideogram groups
             if (groupName.includes('DALL-E') || groupName.includes('Ideogram')) {
+                group.style.display = 'none';
+                group.dataset.visible_controlled = 'true';
+            }
+        }
+        else if(isGrokModel) {
+            // When using Grok, hide OpenAI, Ideogram and Flux groups
+            if (groupName.includes('DALL-E') || groupName.includes('Ideogram') || groupName.includes('Flux')) {
                 group.style.display = 'none';
                 group.dataset.visible_controlled = 'true';
             }

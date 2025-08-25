@@ -55,6 +55,7 @@ namespace Hartsy.Extensions.APIBackends
             Providers["bfl_api"] = InitializeBlackForestProvider();
             Providers["openai_api"] = InitializeOpenAIProvider();
             Providers["ideogram_api"] = InitializeIdeogramProvider();
+            Providers["grok_api"] = InitializeGrokProvider();
         }
 
         public APIProviderMetadata InitializeOpenAIProvider()
@@ -686,6 +687,114 @@ namespace Hartsy.Extensions.APIBackends
             catch (Exception ex)
             {
                 Logs.Error($"[APIProviderInit] Failed to initialize Black Forest Labs provider: {ex.Message}");
+                throw;
+            }
+        }
+
+        public APIProviderMetadata InitializeGrokProvider()
+        {
+            try
+            {
+                Dictionary<string, string> grokModelFlags = new()
+                {
+                    ["grok-2-image"] = "grok_2_image_params",
+
+                };
+
+                APIProviderMetadata provider = new()
+                {
+                    Name = "Grok",
+                    Models = new Dictionary<string, T2IModel>
+                    {
+                        ["Grok/grok-2-image"] = new T2IModel(null, "Grok", "Grok/grok-2-image", "grok-2-image")
+                        {
+                            Title = "Grok 2 Image",
+                            Description = "Grok's Grok 2 Image model",
+                            ModelClass = CreateModelClass("grok_api", "Grok"),
+                            StandardWidth = 1024,
+                            StandardHeight = 1024,
+                            IsSupportedModelType = true,
+                            PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/grok-2-image.png"))}",
+                            Metadata = new T2IModelHandler.ModelMetadataStore
+                            {
+                                ModelName = "Grok/grok-2-image",
+                                Title = "Grok 2 Image",
+                                Author = "Grok",
+                                Description = "Advanced text-to-image generation model by Grok",
+                                PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/grok-2-image.png"))}",
+                                StandardWidth = 1024,
+                                StandardHeight = 1024,
+                                License = "Commercial",
+                                UsageHint = "High-quality image generation from text prompts",
+                                Date = "2024",
+                                ModelClassType = "grok_api",
+                                Tags = ["grok", "generative", grokModelFlags["grok-2-image"]],
+                                TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                                TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                            },
+                        }
+                    },
+
+                    RequestConfig = new RequestConfig
+                    {
+                        BaseUrl = "https://api.x.ai/v1/images/generations",
+                        AuthHeader = "Bearer",
+                        BuildRequest = input =>
+                        {
+                            string modelName = input.Get(T2IParamTypes.Model).Name.Replace("Grok/", "");
+                            JObject requestBody = new()
+                            {
+                                ["prompt"] = input.Get(T2IParamTypes.Prompt),
+                                ["model"] = modelName,
+                                ["n"] = input.TryGet(T2IParamTypes.Images, out int numImages) && numImages > 0 ? numImages : 1,
+                                ["response_format"] = "b64_json"
+                            };
+                            return requestBody;
+                        },
+                        ProcessResponse = async response =>
+                        {
+                            JArray dataArray = response["data"] as JArray;
+                            if (dataArray == null || dataArray.Count == 0)
+                            {
+                                Logs.Error("[APIProviderInit] Grok API response missing 'data' array or array is empty");
+                                throw new Exception("Grok API response missing image data");
+                            }
+                            JToken imageData = dataArray[0];
+                            if (imageData["b64_json"] != null)
+                            {
+                                string b64 = imageData["b64_json"].ToString();
+                                return Convert.FromBase64String(b64);
+                            }
+                            else if (imageData["url"] != null)
+                            {
+                                string imageUrl = imageData["url"].ToString();
+                                try
+                                {
+                                    byte[] imageBytes = await HttpClient.GetByteArrayAsync(imageUrl);
+                                    return imageBytes;
+                                }
+                                catch (Exception ex)
+                                {
+                                    Logs.Error($"[APIProviderInit] Grok ProcessResponse - Failed to download image: {ex.Message}");
+                                    throw new Exception($"Failed to download Grok image: {ex.Message}", ex);
+                                }
+                            }
+                            else
+                            {
+                                Logs.Error("[APIProviderInit] Grok API response missing both 'b64_json' and 'url' fields");
+                                throw new Exception("Grok API response missing image data");
+                            }
+                        }
+                    }
+                };
+
+                Logs.Verbose("[APIProviderInit] Grok provider successfully initialized with 1 model");
+                return provider;
+
+            }
+            catch (Exception ex)
+            {
+                Logs.Error($"[APIProviderInit] Failed to initialize Grok provider: {ex.Message}");
                 throw;
             }
         }
