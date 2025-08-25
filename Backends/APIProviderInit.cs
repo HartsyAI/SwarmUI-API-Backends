@@ -738,16 +738,16 @@ namespace Hartsy.Extensions.APIBackends
                     RequestConfig = new RequestConfig
                     {
                         BaseUrl = "https://api.x.ai/v1/images/generations",
-                        AuthHeader = "Api-Key",
+                        AuthHeader = "Bearer",
                         BuildRequest = input =>
                         {
                             string modelName = input.Get(T2IParamTypes.Model).Name.Replace("Grok/", "");
                             JObject requestBody = new()
                             {
-                                ["prompt"] = input.Get(T2IParamTypes.Prompt).ToString(),
+                                ["prompt"] = input.Get(T2IParamTypes.Prompt),
                                 ["model"] = modelName,
                                 ["n"] = input.TryGet(T2IParamTypes.Images, out int numImages) && numImages > 0 ? numImages : 1,
-                                ["response_format"] = "b64_json",
+                                ["response_format"] = "b64_json"
                             };
                             return requestBody;
                         },
