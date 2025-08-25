@@ -639,7 +639,7 @@ namespace Hartsy.Extensions.APIBackends
                     },
                     RequestConfig = new RequestConfig
                     {
-                        BaseUrl = "https://api.us1.bfl.ai",
+                       BaseUrl = "https://api.us1.bfl.ai",
                         AuthHeader = "x-key",
                         BuildRequest = input => BuildBlackForestRequest(input),
                         ProcessResponse = async response =>
@@ -836,7 +836,6 @@ namespace Hartsy.Extensions.APIBackends
             // Kontext and Ultra uses aspect ratio
             if (baseModelName.Contains("flux-pro-1.1-ultra") || baseModelName.Contains("flux-kontext"))
             {
-
                 if (input.TryGet(T2IParamTypes.AspectRatio, out string aspectRatio))
                 {
                     request["aspect_ratio"] = aspectRatio;
@@ -844,6 +843,15 @@ namespace Hartsy.Extensions.APIBackends
                 else
                 {
                     request["aspect_ratio"] = "16:9";
+                }
+
+                // Add edit support for kontext models
+                if (baseModelName.Contains("flux-kontext"))
+                {
+                    if (input.TryGet(SwarmUIAPIBackends.ImagePromptParam_BlackForest, out Image inputImg) && inputImg?.ImageData != null)
+                    {
+                        request["input_image"] = Convert.ToBase64String(inputImg.ImageData);
+                    }
                 }
 
                 if (baseModelName.Contains("flux-pro-1.1-ultra"))
