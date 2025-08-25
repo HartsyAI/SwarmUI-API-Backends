@@ -639,7 +639,7 @@ namespace Hartsy.Extensions.APIBackends
                     },
                     RequestConfig = new RequestConfig
                     {
-                       BaseUrl = "https://api.us1.bfl.ai",
+                        BaseUrl = "https://api.us1.bfl.ai",
                         AuthHeader = "x-key",
                         BuildRequest = input => BuildBlackForestRequest(input),
                         ProcessResponse = async response =>
