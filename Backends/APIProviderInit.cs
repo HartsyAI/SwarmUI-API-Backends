@@ -428,12 +428,41 @@ namespace Hartsy.Extensions.APIBackends
                                 requestBody.Remove("model");
                                 return requestBody;
                             }
-                            JObject finalPayload = new()
+                            bool isEditRequest = input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Ideogram, out Image editImg) && editImg?.ImageData != null;
+                            // edit only support for v2, v2 turbo and v3
+                            if (isEditRequest)
                             {
-                                ["aspect_ratio"] = aspectRatioForRequest,
-                                ["image_request"] = requestBody,
-                            };
-                            return finalPayload;
+                                // not wrapped into image_request
+                                JObject flatPayload = new()
+                                {
+                                    ["model"] = ideogramModelName,
+                                    ["prompt"] = requestBody["prompt"],
+                                    ["aspect_ratio"] = aspectRatioForRequest,
+                                    ["num_images"] = requestBody["num_images"]
+                                };
+
+                                if (requestBody["seed"] != null)
+                                    flatPayload["seed"] = requestBody["seed"];
+                                if (requestBody["magic_prompt_option"] != null)
+                                    flatPayload["magic_prompt_option"] = requestBody["magic_prompt_option"];
+                                if (requestBody["style_type"] != null)
+                                    flatPayload["style_type"] = requestBody["style_type"];
+                                if (requestBody["color_palette"] != null)
+                                    flatPayload["color_palette"] = requestBody["color_palette"];
+                                if (requestBody["output_format"] != null)
+                                    flatPayload["output_format"] = requestBody["output_format"];
+
+                                return flatPayload;
+                            }
+                            else
+                            {
+                                JObject finalPayload = new()
+                                {
+                                    ["aspect_ratio"] = aspectRatioForRequest,
+                                    ["image_request"] = requestBody,
+                                };
+                                return finalPayload;
+                            }
                         },
                         ProcessResponse = async responseJson =>
                         {
