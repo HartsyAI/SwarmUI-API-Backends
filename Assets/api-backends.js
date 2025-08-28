@@ -15,15 +15,16 @@ featureSetChangers.push(() => {
     const isIdeogramModel = curModelArch === 'ideogram_api';
     const isBlackForestModel = curModelArch === 'bfl_api';
     const isGrokModel = curModelArch === 'grok_api';
-    const isApiModel = isOpenAIModel || isIdeogramModel || isBlackForestModel || isGrokModel;
+    const isGoogleImagenModel = curModelArch === 'google_imagen_api';
+    const isApiModel = isOpenAIModel || isIdeogramModel || isBlackForestModel || isGrokModel || isGoogleImagenModel;
 
     // If not using any API model, just remove API-specific feature flags
     if (!isApiModel) {
-        return [[], ['openai_api', 'ideogram_api', 'bfl_api', 'grok_api',
+        return [[], ['openai_api', 'ideogram_api', 'bfl_api', 'grok_api', 'google_imagen_api',
             'dalle2_params', 'dalle3_params', 'gpt-image-1_params',
             'ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params',
             'flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params',
-            'grok_2_image_params']];
+            'grok_2_image_params', 'imagen_4_0_params']];
     }
 
     // These features should be REMOVED for all API backends as they're incompatible
@@ -50,6 +51,9 @@ featureSetChangers.push(() => {
     } else if (isGrokModel) {
         addFlags.push('grok_api');
         addFlags.push('grok_2_image_params');
+    } else if(isGoogleImagenModel) {
+        addFlags.push('google_imagen_api');
+        addFlags.push('imagen_4_0_params');
     }
 
     console.log(`[api-backends] Adding feature flags: ${addFlags.join(', ')}`);
@@ -121,6 +125,7 @@ hideParamCallbacks.push(() => {
     const isIdeogramModel = curModelArch === 'ideogram_api';
     const isBlackForestModel = curModelArch === 'bfl_api';
     const isGrokModel = curModelArch === 'grok_api';
+    const isGoogleImagenModel = curModelArch === 'google_imagen_api';
 
     // Hide provider-specific groups and parameters
     document.querySelectorAll('.input-group').forEach(group => {
@@ -151,6 +156,13 @@ hideParamCallbacks.push(() => {
         else if(isGrokModel) {
             // When using Grok, hide OpenAI, Ideogram and Flux groups
             if (groupName.includes('DALL-E') || groupName.includes('Ideogram') || groupName.includes('Flux')) {
+                group.style.display = 'none';
+                group.dataset.visible_controlled = 'true';
+            }
+        }
+        else if(isGoogleImagenModel) {
+            // When using Google Imagen, hide OpenAI, Ideogram, Flux and Grok groups
+            if (groupName.includes('DALL-E') || groupName.includes('Ideogram') || groupName.includes('Flux') || groupName.includes('Grok')) {
                 group.style.display = 'none';
                 group.dataset.visible_controlled = 'true';
             }
