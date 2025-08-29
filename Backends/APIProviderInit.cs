@@ -56,6 +56,7 @@ namespace Hartsy.Extensions.APIBackends
             Providers["openai_api"] = InitializeOpenAIProvider();
             Providers["ideogram_api"] = InitializeIdeogramProvider();
             Providers["grok_api"] = InitializeGrokProvider();
+            Providers["google_imagen_api"] = InitializeGoogleImagenProvider();
         }
 
         public APIProviderMetadata InitializeOpenAIProvider()
@@ -799,6 +800,152 @@ namespace Hartsy.Extensions.APIBackends
             }
         }
 
+        public APIProviderMetadata InitializeGoogleImagenProvider()
+        {
+            try
+            {
+                T2IModel imagen4 = new(null, null, null, "Google Imagen/imagen-4.0-generate-001")
+                {
+                    Title = "Google Imagen 4.0",
+                    Description = "Google's Imagen 4.0 text-to-image generation model",
+                    ModelClass = CreateModelClass("google_imagen_api", "GoogleImagen"),
+                    StandardWidth = 1024,
+                    StandardHeight = 1024,
+                    IsSupportedModelType = true,
+                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/imagen-4.0.png"))}",
+                    Metadata = new T2IModelHandler.ModelMetadataStore
+                    {
+                        ModelName = "Google Imagen/imagen-4.0-generate-001",
+                        Title = "Google Imagen 4.0",
+                        Author = "Google",
+                        Description = "Google's Imagen 4.0 text-to-image generation model",
+                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/imagen-4.0.png"))}",
+                        StandardWidth = 1024,
+                        StandardHeight = 1024,
+                        License = "Commercial",
+                        UsageHint = "High-quality image generation from text prompts",
+                        Date = "2025",
+                        ModelClassType = "google_imagen_api",
+                        Tags = ["google", "imagen", "generative", "imagen_4_0_params"],
+                        TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                        TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    },
+                };
+                T2IModel imagen4ultra = new(null, null, null, "Google Imagen/imagen-4.0-ultra-generate-001")
+                {
+                    Title = "Google Imagen 4.0 Ultra",
+                    Description = "Google's Imagen 4.0 Ultra text-to-image generation model",
+                    ModelClass = CreateModelClass("google_imagen_api", "GoogleImagen"),
+                    StandardWidth = 1024,
+                    StandardHeight = 1024,
+                    IsSupportedModelType = true,
+                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/imagen-4.0.png"))}",
+                    Metadata = new T2IModelHandler.ModelMetadataStore
+                    {
+                        ModelName = "Google Imagen/imagen-4.0-ultra-generate-001",
+                        Title = "Google Imagen 4.0 Ultra",
+                        Author = "Google",
+                        Description = "Google's Imagen 4.0 Ultra text-to-image generation model",
+                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/imagen-4.0.png"))}",
+                        StandardWidth = 1024,
+                        StandardHeight = 1024,
+                        License = "Commercial",
+                        UsageHint = "High-quality image generation from text prompts",
+                        Date = "2025",
+                        ModelClassType = "google_imagen_api",
+                        Tags = ["google", "imagen", "generative", "imagen_4_0_params"],
+                        TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                        TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    },
+                };
+                T2IModel imagen4fast = new(null, null, null, "Google Imagen/imagen-4.0-fast-generate-001")
+                {
+                    Title = "Google Imagen 4.0 Fast",
+                    Description = "Google's Imagen 4.0 Fast text-to-image generation model",
+                    ModelClass = CreateModelClass("google_imagen_api", "GoogleImagen"),
+                    StandardWidth = 1024,
+                    StandardHeight = 1024,
+                    IsSupportedModelType = true,
+                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/imagen-4.0.png"))}",
+                    Metadata = new T2IModelHandler.ModelMetadataStore
+                    {
+                        ModelName = "Google Imagen/imagen-4.0-fast-generate-001",
+                        Title = "Google Imagen 4.0 Fast",
+                        Author = "Google",
+                        Description = "Google's Imagen 4.0 Fast text-to-image generation model",
+                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/imagen-4.0.png"))}",
+                        StandardWidth = 1024,
+                        StandardHeight = 1024,
+                        License = "Commercial",
+                        UsageHint = "High-quality image generation from text prompts",
+                        Date = "2025",
+                        ModelClassType = "google_imagen_api",
+                        Tags = ["google", "imagen", "generative", "imagen_4_0_params"],
+                        TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                        TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    },
+                };
+
+                APIProviderMetadata provider = new()
+                {
+                    Name = "Google Imagen",
+                    Models = new Dictionary<string, T2IModel>
+                    {
+                        ["Google Imagen/imagen-4.0-generate-001"] = imagen4,
+                        ["Google Imagen/imagen-4.0-ultra-generate-001"] = imagen4ultra,
+                        ["Google Imagen/imagen-4.0-fast-generate-001"] = imagen4fast
+                    },
+                    RequestConfig = new RequestConfig
+                    {
+                        BaseUrl = "https://generativelanguage.googleapis.com/v1beta/models",
+                        AuthHeader = "Bearer",
+                        BuildRequest = input =>
+                        {
+                            string modelName = input.Get(T2IParamTypes.Model).Name.Replace("Google Imagen/", "");
+                            JObject requestBody = new()
+                            {
+                                ["instances"] = new JArray
+                                {
+                                    new JObject
+                                    {
+                                        ["prompt"] = input.Get(T2IParamTypes.Prompt)?.ToString()
+                                    }
+                                },
+                                ["parameters"] = new JObject
+                                {
+                                    ["sampleCount"] = 1, // Default to 1 image
+                                }
+                            };
+                            return requestBody;
+                        },
+                        ProcessResponse = async response =>
+                        {
+                            JArray predictions = response["predictions"] as JArray;
+                            if (predictions == null || predictions.Count == 0)
+                            {
+                                Logs.Error("[APIProviderInit] Google Imagen API response missing 'predictions' array or array is empty");
+                                throw new Exception("Google Imagen API response missing image data");
+                            }
+                            JToken firstPrediction = predictions[0];
+                            string b64 = firstPrediction["bytesBase64Encoded"]?.ToString();
+                            if (string.IsNullOrEmpty(b64))
+                            {
+                                Logs.Error("[APIProviderInit] Google Imagen API response missing 'bytesBase64Encoded' field");
+                                throw new Exception("Google Imagen API response missing image data");
+                            }
+                            return Convert.FromBase64String(b64);
+                        }
+                    }
+                };
+                Logs.Verbose("[APIProviderInit] Google Imagen provider successfully initialized with 3 models");
+                return provider;
+            }
+            catch (Exception ex)
+            {
+                Logs.Error($"[APIProviderInit] Failed to initialize Google Imagen provider: {ex.Message}");
+                return null;
+            }
+        }
         private static JObject BuildBlackForestRequest(T2IParamInput input)
         {
             string modelName = input.Get(T2IParamTypes.Model).Name;
