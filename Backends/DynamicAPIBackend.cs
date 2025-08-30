@@ -58,8 +58,8 @@ namespace Hartsy.Extensions.APIBackends.Backends
         /// <summary>Settings for the dynamic API backend.</summary>
         public class DynamicAPISettings : AutoConfiguration
         {
-            [ManualSettingsOptions(Impl = null, Vals = ["", "bfl_api", "ideogram_api", "openai_api", "grok_api"],
-                ManualNames = ["Select a provider...", "Black Forest Labs (Flux)", "Ideogram", "OpenAI (DALL-E)", "Grok"])]
+            [ManualSettingsOptions(Impl = null, Vals = ["", "bfl_api", "ideogram_api", "openai_api", "grok_api", "google_imagen_api"],
+                ManualNames = ["Select a provider...", "Black Forest Labs (Flux)", "Ideogram", "OpenAI (DALL-E)", "Grok", "Google Imagen"])]
             [ConfigComment("Choose the backend API provider to use for image generation.")]
             public string SelectedProvider = "";
 
@@ -111,7 +111,8 @@ namespace Hartsy.Extensions.APIBackends.Backends
             ["bfl_api"] = APIBackendsPermissions.PermUseBlackForest,
             ["openai_api"] = APIBackendsPermissions.PermUseOpenAI,
             ["ideogram_api"] = APIBackendsPermissions.PermUseIdeogram,
-            ["grok_api"] = APIBackendsPermissions.PermUseGrok
+            ["grok_api"] = APIBackendsPermissions.PermUseGrok,
+            ["google_imagen_api"] = APIBackendsPermissions.PermUseGoogleImagen
         };
 
         private bool CheckIdeogramEdit(T2IParamInput input)
@@ -158,6 +159,11 @@ namespace Hartsy.Extensions.APIBackends.Backends
                     return baseUrl;
                 }
 
+            }
+            else if (Settings.SelectedProvider == "google_imagen_api")
+            {
+                string modelName = input.Get(T2IParamTypes.Model).Name.Replace("Google Imagen/", "");
+                return $"{baseUrl}/{modelName}:predict";
             }
             Logs.Verbose($"[DynamicAPIBackend] Using base URL: {baseUrl}");
             return baseUrl;
@@ -221,6 +227,10 @@ namespace Hartsy.Extensions.APIBackends.Backends
             else if (provider == "ideogram_api")
             {
                 request.Headers.Add("Api-Key", apiKey);
+            }
+            else if (provider == "google_imagen_api")
+            {
+                request.Headers.Add("x-goog-api-key", apiKey);
             }
             else
             {
