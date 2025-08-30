@@ -170,7 +170,7 @@ namespace Hartsy.Extensions.APIBackends.Backends
             string provider = Settings.SelectedProvider;
             if (CheckIdeogramEdit(input))
             {
-                var formData = new MultipartFormDataContent();
+                MultipartFormDataContent formData = new MultipartFormDataContent();
                 string modelName = input.Get(T2IParamTypes.Model).Name;
                 foreach (var property in requestBody.Properties())
                 {
@@ -189,14 +189,14 @@ namespace Hartsy.Extensions.APIBackends.Backends
                     {
                         requestImageType = "image";
                     }
-                    var imageContent = new ByteArrayContent(inputImg.ImageData);
+                    ByteArrayContent imageContent = new ByteArrayContent(inputImg.ImageData);
                     imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
                     formData.Add(imageContent, requestImageType, "input.png");
                 }
 
                 if (input.TryGet(SwarmUIAPIBackends.ImageMaskPromptParam_Ideogram, out Image maskImg) && maskImg?.ImageData != null)
                 {
-                    var maskContent = new ByteArrayContent(maskImg.ImageData);
+                    ByteArrayContent maskContent = new ByteArrayContent(maskImg.ImageData);
                     maskContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
                     formData.Add(maskContent, "mask", "mask.png");
                 }
