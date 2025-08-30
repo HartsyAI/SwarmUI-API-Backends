@@ -115,6 +115,10 @@ namespace Hartsy.Extensions.APIBackends.Backends
             ["google_imagen_api"] = APIBackendsPermissions.PermUseGoogleImagen
         };
 
+        private bool CheckIdeogramEdit(T2IParamInput input)
+        {
+            return input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Ideogram, out Image inputImg) && inputImg?.ImageData != null;
+        }
         protected override PermInfo GetRequiredPermission() =>
             _providerToPermission.TryGetValue(Settings.SelectedProvider, out PermInfo permission)
                 ? permission
@@ -135,11 +139,26 @@ namespace Hartsy.Extensions.APIBackends.Backends
             else if (Settings.SelectedProvider == "ideogram_api")
             {
                 string modelName = input.Get(T2IParamTypes.Model).Name;
+                bool hasInputImage = CheckIdeogramEdit(input);
+
                 if (modelName.Contains("v3"))
                 {
                     // Different Base URL for ideogram v3 model
+                    if (hasInputImage)
+                    {
+                        return "https://api.ideogram.ai/v1/ideogram-v3/edit";
+                    }
                     return "https://api.ideogram.ai/v1/ideogram-v3/generate";
                 }
+                else
+                {
+                    if (hasInputImage)
+                    {
+                        return "https://api.ideogram.ai/edit";
+                    }
+                    return baseUrl;
+                }
+
             }
             else if (Settings.SelectedProvider == "google_imagen_api")
             {
@@ -153,12 +172,48 @@ namespace Hartsy.Extensions.APIBackends.Backends
         /// <summary>Create an HTTP request for the specified API</summary>
         protected override HttpRequestMessage CreateHttpRequest(string baseUrl, JObject requestBody, T2IParamInput input)
         {
-            HttpRequestMessage request = new(HttpMethod.Post, baseUrl) // TODO: Check swarm code to see if we can use a different method
-            {
-                Content = new StringContent(requestBody.ToString(), Encoding.UTF8, "application/json")
-            };
+            HttpRequestMessage request = new(HttpMethod.Post, baseUrl);
             string provider = Settings.SelectedProvider;
-            string apiKey = input.SourceSession.User.GetGenericData(provider, "key")?.Trim(); // Trim to remove trailing space
+            if (CheckIdeogramEdit(input))
+            {
+                MultipartFormDataContent formData = new MultipartFormDataContent();
+                string modelName = input.Get(T2IParamTypes.Model).Name;
+                foreach (var property in requestBody.Properties())
+                {
+                    if (property.Value != null &&
+                        property.Name != "image" &&
+                        property.Name != "mask" && property.Name != "image_file")
+                    {
+                        formData.Add(new StringContent(property.Value.ToString()), property.Name);
+                    }
+                }
+                if (input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Ideogram, out Image inputImg) && inputImg?.ImageData != null)
+                {
+
+                    string requestImageType = "image_file";
+                    if (modelName.Contains("v3"))
+                    {
+                        requestImageType = "image";
+                    }
+                    ByteArrayContent imageContent = new ByteArrayContent(inputImg.ImageData);
+                    imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+                    formData.Add(imageContent, requestImageType, "input.png");
+                }
+
+                if (input.TryGet(SwarmUIAPIBackends.ImageMaskPromptParam_Ideogram, out Image maskImg) && maskImg?.ImageData != null)
+                {
+                    ByteArrayContent maskContent = new ByteArrayContent(maskImg.ImageData);
+                    maskContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+                    formData.Add(maskContent, "mask", "mask.png");
+                }
+
+                request.Content = formData;
+            }
+            else
+            {
+                request.Content = new StringContent(requestBody.ToString(), Encoding.UTF8, "application/json");
+            }
+            string apiKey = input.SourceSession.User.GetGenericData(provider, "key")?.Trim();
             if (string.IsNullOrEmpty(apiKey))
             {
                 throw new Exception($"API key not found for {provider}. Please set up your API key in the User tab");
