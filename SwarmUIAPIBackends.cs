@@ -74,6 +74,9 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<string> MagicPromptParam_Ideogram;
     public static T2IRegisteredParam<int> SeedParam_Ideogram;
     public static T2IRegisteredParam<string> ColorPaletteParam_Ideogram;
+    public static T2IRegisteredParam<Image> ImagePromptParam_Ideogram;
+    public static T2IRegisteredParam<Image> ImageMaskPromptParam_Ideogram;
+
 
     // Black Forest Labs API Parameters
     public static T2IRegisteredParam<double> GuidanceParam_BlackForest;
@@ -239,6 +242,20 @@ public class SwarmUIAPIBackends : Extension
             "Useful for iterating on specific images or sharing exact settings.", "-1",
             Min: -1, Max: 2147483647, ViewType: ParamViewType.SEED, OrderPriority: -4,
             Group: IdeogramAdvancedGroup, FeatureFlag: "ideogram_api"));
+
+        ImagePromptParam_Ideogram = T2IParamTypes.Register<Image>(new("Input Image Prompt",
+            "Optional input image (JPEG, PNG, or WebP, max 10MB) to use as a starting point or reference.\n" +
+            "Serves as a visual guide for generation.\n" +
+            "Useful for variations, style matching, or guided compositions.\n" +
+            null, null, OrderPriority: -2,
+            IsAdvanced: true, Group: IdeogramAdvancedGroup, FeatureFlag: "ideogram_api"));
+
+        ImageMaskPromptParam_Ideogram = T2IParamTypes.Register<Image>(new("Mask Image Prompt",
+            "Optional input image (JPEG, PNG, or WebP, max 10MB) to use as a mask provided to the input image.\n" +
+            "Serves as a visual guide for generation.\n" +
+            "Useful for variations, style matching, or guided compositions.\n" +
+            null, null, OrderPriority: -2,
+            IsAdvanced: true, Group: IdeogramAdvancedGroup, FeatureFlag: "ideogram_api"));
 
         ColorPaletteParam_Ideogram = T2IParamTypes.Register<string>(new("Color Theme",
             "Apply a predefined color palette to influence image colors (V2 & V2_TURBO only):\n" +
