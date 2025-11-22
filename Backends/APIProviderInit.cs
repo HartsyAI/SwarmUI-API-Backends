@@ -36,7 +36,7 @@ namespace Hartsy.Extensions.APIBackends
                 {
                     ID = id,
                     Name = name,
-                    CompatClass = id,
+                    CompatClass = default,
                     StandardWidth = 1024,
                     StandardHeight = 1024,
                     IsThisModelOfClass = (model, header) => true

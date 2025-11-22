@@ -357,7 +357,7 @@ namespace Hartsy.Extensions.APIBackends.Backends
                 ["loaded"] = true,
                 ["architecture"] = model.ModelClass?.ID ?? "stable-diffusion",
                 ["class"] = model.ModelClass?.Name ?? Settings.SelectedProvider,
-                ["compat_class"] = model.ModelClass?.CompatClass ?? "stable-diffusion",
+                ["compat_class"] = model.ModelClass?.ID ?? "stable-diffusion",
                 ["standard_width"] = model.StandardWidth > 0 ? model.StandardWidth : 1024,
                 ["standard_height"] = model.StandardHeight > 0 ? model.StandardHeight : 1024,
                 ["is_supported_model_format"] = true,
