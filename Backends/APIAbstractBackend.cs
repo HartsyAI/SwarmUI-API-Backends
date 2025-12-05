@@ -2,6 +2,7 @@ using Newtonsoft.Json.Linq;
 using SwarmUI.Core;
 using SwarmUI.Text2Image;
 using SwarmUI.Utils;
+using SwarmUI.Media;
 using SwarmUI.Accounts;
 using SwarmUI.Backends;
 using Hartsy.Extensions.APIBackends.Models;
@@ -192,7 +193,7 @@ namespace Hartsy.Extensions.APIBackends.Backends
                 Logs.Verbose($"[APIAbstractBackend] {GetType().Name} - Received successful response: {response.StatusCode}");
                 JObject responseJson = JObject.Parse(await response.Content.ReadAsStringAsync());
                 byte[] imageData = await ProcessResponse(responseJson);
-                return [new Image(imageData, Image.ImageType.IMAGE, "png")];
+                return [new Image(imageData, MediaType.ImagePng)];
             }
             catch (Exception ex)
             {
