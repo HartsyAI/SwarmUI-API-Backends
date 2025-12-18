@@ -429,7 +429,7 @@ namespace Hartsy.Extensions.APIBackends
                                 requestBody.Remove("model");
                                 return requestBody;
                             }
-                            bool isEditRequest = input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Ideogram, out Image editImg) && editImg?.ImageData != null;
+                            bool isEditRequest = input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Ideogram, out Image editImg) && editImg?.RawData != null;
                             // edit only support for v2, v2 turbo and v3
                             if (isEditRequest)
                             {
@@ -1024,9 +1024,9 @@ namespace Hartsy.Extensions.APIBackends
                 // Add edit support for kontext models
                 if (baseModelName.Contains("flux-kontext"))
                 {
-                    if (input.TryGet(SwarmUIAPIBackends.ImagePromptParam_BlackForest, out Image inputImg) && inputImg?.ImageData != null)
+                    if (input.TryGet(SwarmUIAPIBackends.ImagePromptParam_BlackForest, out Image inputImg) && inputImg?.RawData != null)
                     {
-                        request["input_image"] = Convert.ToBase64String(inputImg.ImageData);
+                        request["input_image"] = Convert.ToBase64String(inputImg.RawData);
                     }
                 }
 

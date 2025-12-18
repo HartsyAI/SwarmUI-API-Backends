@@ -5,6 +5,7 @@
  */
 
 // 1. Feature set changer - Add required features for API models and remove unsupported ones
+// Also modifies param objects to add synthetic feature flags for proper visibility control
 featureSetChangers.push(() => {
     if (!gen_param_types) {
         return [[], []];
@@ -17,6 +18,40 @@ featureSetChangers.push(() => {
     const isGrokModel = curModelArch === 'grok_api';
     const isGoogleImagenModel = curModelArch === 'google_imagen_api';
     const isApiModel = isOpenAIModel || isIdeogramModel || isBlackForestModel || isGrokModel || isGoogleImagenModel;
+
+    // List of core parameters that don't have feature flags but shouldn't show for API models
+    const coreParamsToHideForAPI = [
+        'steps', 'cfgscale', 'width', 'height', 'sidelength', 'aspectratio',
+        'seed', 'batchsize', 'initimagecreativity', 'initimageresettonorm',
+        'initimagenoise', 'maskblur', 'maskgrow', 'maskshrinkgrow',
+        'useinpaintingencode', 'initimagerecompositemask', 'zeronegative',
+        'seamlesstileable', 'cascadelatentcompression', 'sd3textencs',
+        'fluxguidancescale', 'fluxdisableguidance', 'clipstopatlayer',
+        'vaetilesize', 'vaetileoverlap', 'removebackground', 'automaticvae',
+        'modelspecificenhancements'
+    ];
+
+    // Modify param objects to add/remove synthetic feature flag
+    // This ensures SwarmUI's core visibility system properly handles these params
+    for (let param of gen_param_types) {
+        if (coreParamsToHideForAPI.includes(param.id)) {
+            if (isApiModel) {
+                // Store original feature_flag if we haven't already
+                if (!param.hasOwnProperty('original_feature_flag_api')) {
+                    param.original_feature_flag_api = param.feature_flag;
+                }
+                // Add synthetic feature flag that won't be in currentBackendFeatureSet
+                // This makes SwarmUI's core system think this param is unsupported
+                param.feature_flag = param.original_feature_flag_api
+                    ? `${param.original_feature_flag_api},__api_incompatible__`
+                    : '__api_incompatible__';
+            } else if (param.hasOwnProperty('original_feature_flag_api')) {
+                // Restore original feature flag when switching away from API models
+                param.feature_flag = param.original_feature_flag_api;
+                delete param.original_feature_flag_api;
+            }
+        }
+    }
 
     // If not using any API model, just remove API-specific feature flags
     if (!isApiModel) {
@@ -32,7 +67,14 @@ featureSetChangers.push(() => {
         'sampling', 'refiners', 'controlnet', 'variation_seed',
         'video', 'autowebui', 'comfyui', 'frameinterps', 'ipadapter',
         'sdxl', 'cascade', 'sd3', 'seamless', 'freeu', 'teacache',
-        'text2video', 'yolov8', 'aitemplate', 'endstepsearly'
+        'text2video', 'yolov8', 'aitemplate', 'endstepsearly',
+        'dynamic_thresholding', 'flux-dev', 'zero_negative',
+        // Also remove model-specific feature flags when switching away
+        'dalle2_params', 'dalle3_params', 'gpt-image-1_params',
+        'ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params',
+        'flux_ultra_params', 'flux_pro_params', 'flux_dev_params',
+        'flux_kontext_pro_params', 'flux_kontext_max_params',
+        'grok_2_image_params', 'imagen_4_0_params'
     ];
 
     // These are features that should always be enabled for API models
@@ -62,148 +104,7 @@ featureSetChangers.push(() => {
     return [addFlags, commonRemoveFlags];
 });
 
-// 2. Additional parameter visibility handling
-hideParamCallbacks.push(() => {
-    // Only run this logic if we have a valid model
-    if (!curModelArch) return;
-
-    // Check if current model is from one of our API providers
-    const isApiModel = ['openai_api', 'ideogram_api', 'bfl_api', 'grok_api'].includes(curModelArch);
-
-    // If this isn't an API model, don't modify anything
-    if (!isApiModel) return;
-
-    console.log('[api-backends] Performing additional UI cleanups for API models');
-
-    // Parameters to hide for ALL API models, regardless of type
-    const paramsToHide = [
-        // Specific params without feature flags that don't apply to API models
-        'zeronegative',
-        'initimage', 'initimagecreativity', 'initimageresettonorm', 'initimagenoise',
-        'maskimage', 'maskshrinkgrow', 'maskblur', 'maskgrow', 'maskbehavior',
-        'initimagerecompositemask', 'useinpaintingencode', 'unsamplerprompt',
-
-        // Advanced sampling params that are irrelevant for APIs
-        'samplersigmamin', 'samplersigmamax', 'samplerrho', 'sigmashift',
-        'ip2pcfg2', 'clipstopatlayer', 'vaetilesize', 'vaetileoverlap',
-        'colorationcorrectionbehavior', 'removebackground'
-    ];
-
-    // Hide specific parameters
-    paramsToHide.forEach(paramId => {
-        const elem = document.getElementById(`input_${paramId}`);
-        if (elem) {
-            const box = findParentOfClass(elem, 'auto-input');
-            if (box) {
-                box.style.display = 'none';
-                box.dataset.visible_controlled = 'true';
-
-                // Mark param as hidden for group visibility check
-                box.dataset.api_hidden = 'true';
-            }
-        }
-    });
-
-    // Groups to hide completely for ALL API models
-    const groupsToHide = [
-        'sampling', 'initimage', 'variationseed', 'controlnet', 'video',
-        'texttovideo', 'advancedvideo', 'videoextend', 'advancedsampling',
-        'freeu', 'regionalobject', 'regionalprompting'
-    ];
-
-    // Hide entire groups
-    groupsToHide.forEach(groupId => {
-        const group = document.getElementById(`auto-group-${groupId}`);
-        if (group) {
-            group.style.display = 'none';
-            group.dataset.visible_controlled = 'true';
-        }
-    });
-
-    // Provider-specific hiding
-    const isOpenAIModel = curModelArch === 'openai_api';
-    const isIdeogramModel = curModelArch === 'ideogram_api';
-    const isBlackForestModel = curModelArch === 'bfl_api';
-    const isGrokModel = curModelArch === 'grok_api';
-    const isGoogleImagenModel = curModelArch === 'google_imagen_api';
-
-    // Hide provider-specific groups and parameters
-    document.querySelectorAll('.input-group').forEach(group => {
-        const headerLabel = group.querySelector('.header-label');
-        if (!headerLabel) return;
-
-        const groupName = headerLabel.textContent.trim();
-
-        if (isOpenAIModel) {
-            // When using OpenAI, hide Ideogram and Flux groups
-            if (groupName.includes('Ideogram') || groupName.includes('Flux')) {
-                group.style.display = 'none';
-                group.dataset.visible_controlled = 'true';
-            }
-        } else if (isIdeogramModel) {
-            // When using Ideogram, hide OpenAI and Flux groups
-            if (groupName.includes('DALL-E') || groupName.includes('Flux')) {
-                group.style.display = 'none';
-                group.dataset.visible_controlled = 'true';
-            }
-        } else if (isBlackForestModel) {
-            // When using Black Forest, hide OpenAI and Ideogram groups
-            if (groupName.includes('DALL-E') || groupName.includes('Ideogram')) {
-                group.style.display = 'none';
-                group.dataset.visible_controlled = 'true';
-            }
-        }
-        else if(isGrokModel) {
-            // When using Grok, hide OpenAI, Ideogram and Flux groups
-            if (groupName.includes('DALL-E') || groupName.includes('Ideogram') || groupName.includes('Flux')) {
-                group.style.display = 'none';
-                group.dataset.visible_controlled = 'true';
-            }
-        }
-        else if(isGoogleImagenModel) {
-            // When using Google Imagen, hide OpenAI, Ideogram, Flux and Grok groups
-            if (groupName.includes('DALL-E') || groupName.includes('Ideogram') || groupName.includes('Flux') || groupName.includes('Grok')) {
-                group.style.display = 'none';
-                group.dataset.visible_controlled = 'true';
-            }
-        }
-    });
-
-    // Now check for groups with all parameters hidden and hide those groups too
-    document.querySelectorAll('.input-group').forEach(group => {
-        // Skip groups we've already explicitly hidden
-        if (group.style.display === 'none' || group.dataset.visible_controlled === 'true') {
-            return;
-        }
-
-        // Check if the group has any visible parameters
-        const groupContent = group.querySelector('.input-group-content');
-        if (groupContent) {
-            const autoInputs = groupContent.querySelectorAll('.auto-input');
-            let allHidden = true;
-
-            // Check each parameter in the group
-            for (const autoInput of autoInputs) {
-                // If it's not hidden by our script or by SwarmUI's normal mechanism, the group has visible content
-                if (autoInput.style.display !== 'none' && !autoInput.dataset.api_hidden && !autoInput.dataset.visible_controlled) {
-                    allHidden = false;
-                    break;
-                }
-            }
-
-            // If all parameters are hidden, hide the whole group
-            if (allHidden && autoInputs.length > 0) {
-                group.style.display = 'none';
-                group.dataset.visible_controlled = 'true';
-                console.log(`[api-backends] Hiding empty group: ${group.querySelector('.header-label')?.textContent || group.id}`);
-            }
-        }
-    });
-    // Force another visibility update to catch any changes
-    scheduleParamUnsupportUpdate();
-});
-
-// 3. Run setup when model changes
+// 2. Run setup when model changes
 if (typeof addModelChangeCallback === 'function') {
     addModelChangeCallback(() => {
         console.log(`[api-backends] Model changed to: ${curModelArch}`);
@@ -214,14 +115,9 @@ if (typeof addModelChangeCallback === 'function') {
     });
 }
 
-// 4. Initial setup
+// 3. Initial setup
 setTimeout(() => {
     console.log('[api-backends] Initial parameter setup starting');
     reviseBackendFeatureSet();
     hideUnsupportableParams();
-
-    // Run multiple cleanup passes to ensure everything is properly hidden
-    setTimeout(() => {
-        hideUnsupportableParams();
-    }, 1000);
 }, 500);

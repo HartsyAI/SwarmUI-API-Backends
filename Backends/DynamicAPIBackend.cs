@@ -117,7 +117,7 @@ namespace Hartsy.Extensions.APIBackends.Backends
 
         private bool CheckIdeogramEdit(T2IParamInput input)
         {
-            return input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Ideogram, out Image inputImg) && inputImg?.ImageData != null;
+            return input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Ideogram, out Image inputImg) && inputImg?.RawData != null;
         }
         protected override PermInfo GetRequiredPermission() =>
             _providerToPermission.TryGetValue(Settings.SelectedProvider, out PermInfo permission)
@@ -187,7 +187,7 @@ namespace Hartsy.Extensions.APIBackends.Backends
                         formData.Add(new StringContent(property.Value.ToString()), property.Name);
                     }
                 }
-                if (input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Ideogram, out Image inputImg) && inputImg?.ImageData != null)
+                if (input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Ideogram, out Image inputImg) && inputImg?.RawData != null)
                 {
 
                     string requestImageType = "image_file";
@@ -195,14 +195,14 @@ namespace Hartsy.Extensions.APIBackends.Backends
                     {
                         requestImageType = "image";
                     }
-                    ByteArrayContent imageContent = new ByteArrayContent(inputImg.ImageData);
+                    ByteArrayContent imageContent = new ByteArrayContent(inputImg.RawData);
                     imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
                     formData.Add(imageContent, requestImageType, "input.png");
                 }
 
-                if (input.TryGet(SwarmUIAPIBackends.ImageMaskPromptParam_Ideogram, out Image maskImg) && maskImg?.ImageData != null)
+                if (input.TryGet(SwarmUIAPIBackends.ImageMaskPromptParam_Ideogram, out Image maskImg) && maskImg?.RawData != null)
                 {
-                    ByteArrayContent maskContent = new ByteArrayContent(maskImg.ImageData);
+                    ByteArrayContent maskContent = new ByteArrayContent(maskImg.RawData);
                     maskContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
                     formData.Add(maskContent, "mask", "mask.png");
                 }
