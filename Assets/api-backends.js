@@ -58,7 +58,7 @@ featureSetChangers.push(() => {
         return [[], ['openai_api', 'ideogram_api', 'bfl_api', 'grok_api', 'google_imagen_api',
             'dalle2_params', 'dalle3_params', 'gpt-image-1_params', 'gpt-image-1.5_params',
             'ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params',
-            'flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params',
+            'flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params', 'flux_2_max_params', 'flux_2_pro_params',
             'grok_2_image_params', 'imagen_4_0_params']];
     }
 
@@ -72,7 +72,7 @@ featureSetChangers.push(() => {
         // Also remove model-specific feature flags when switching away
         'dalle2_params', 'dalle3_params', 'gpt-image-1_params', 'gpt-image-1.5_params',
         'ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params',
-        'flux_ultra_params', 'flux_pro_params', 'flux_dev_params',
+        'flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_2_pro_params', 'flux_2_max_params',
         'flux_kontext_pro_params', 'flux_kontext_max_params',
         'grok_2_image_params', 'imagen_4_0_params'
     ];
@@ -89,7 +89,7 @@ featureSetChangers.push(() => {
         addFlags.push('ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params');
     } else if (isBlackForestModel) {
         addFlags.push('bfl_api');
-        addFlags.push('flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params');
+        addFlags.push('flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params', 'flux_2_max_params', 'flux_2_pro_params');
     } else if (isGrokModel) {
         addFlags.push('grok_api');
         addFlags.push('grok_2_image_params');
