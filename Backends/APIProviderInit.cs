@@ -121,7 +121,7 @@ namespace Hartsy.Extensions.APIBackends
                 {
                     Title = "GPT Image 1",
                     Description = "OpenAI's GPT Image 1 model",
-                    ModelClass = CreateModelClass("openai_api", "DALL-E"),
+                    ModelClass = CreateModelClass("openai_api", "GPT Image"),
                     StandardWidth = 1024,
                     StandardHeight = 1024,
                     IsSupportedModelType = true,
@@ -144,6 +144,33 @@ namespace Hartsy.Extensions.APIBackends
                         TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                     },
                 };
+                T2IModel image1_5 = new(null, null, null, "OpenAI/gpt-image-1.5")
+                {
+                    Title = "GPT Image 1.5",
+                    Description = "OpenAI's GPT Image 1.5 model",
+                    ModelClass = CreateModelClass("openai_api", "GPT Image"),
+                    StandardWidth = 1024,
+                    StandardHeight = 1024,
+                    IsSupportedModelType = true,
+                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/gpt-image-1.5.png"))}",
+                    Metadata = new T2IModelHandler.ModelMetadataStore
+                    {
+                        ModelName = "OpenAI/gpt-image-1.5",
+                        Title = "GPT Image 1.5",
+                        Author = "OpenAI",
+                        Description = "Generates high-fidelity images with strong instruction following, contextual understanding, and accurate visual details.",
+                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/gpt-image-1.5.png"))}",
+                        StandardWidth = 1024,
+                        StandardHeight = 1024,
+                        License = "Commercial",
+                        UsageHint = "Best for context-aware image generation and edits requiring strong instruction following",
+                        Date = "2025",
+                        ModelClassType = "openai_api",
+                        Tags = ["openai", "high-quality", "text-accurate", "gpt-image-1.5_params"],
+                        TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                        TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    },
+                };
                 APIProviderMetadata provider = new()
                 {
                     Name = "OpenAI",
@@ -151,7 +178,8 @@ namespace Hartsy.Extensions.APIBackends
                     {
                         ["OpenAI/dall-e-2"] = dallE2,
                         ["OpenAI/dall-e-3"] = dallE3,
-                        ["OpenAI/gpt-image-1"] = image1
+                        ["OpenAI/gpt-image-1"] = image1,
+                        ["OpenAI/gpt-image-1.5"] = image1_5
                     },
                     RequestConfig = new RequestConfig
                     {
@@ -168,7 +196,7 @@ namespace Hartsy.Extensions.APIBackends
                                 ["size"] = input.Get(SwarmUIAPIBackends.SizeParam_OpenAI)
                             };
 
-                            if (modelName == "gpt-image-1")
+                            if (modelName == "gpt-image-1" || modelName == "gpt-image-1.5")
                             {
                                 request["quality"] = input.Get(SwarmUIAPIBackends.QualityParam_GPTImage1);
                                 request["background"] = input.Get(SwarmUIAPIBackends.BackgroundParam_GPTImage1);

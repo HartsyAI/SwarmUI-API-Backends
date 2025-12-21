@@ -56,7 +56,7 @@ featureSetChangers.push(() => {
     // If not using any API model, just remove API-specific feature flags
     if (!isApiModel) {
         return [[], ['openai_api', 'ideogram_api', 'bfl_api', 'grok_api', 'google_imagen_api',
-            'dalle2_params', 'dalle3_params', 'gpt-image-1_params',
+            'dalle2_params', 'dalle3_params', 'gpt-image-1_params', 'gpt-image-1.5_params',
             'ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params',
             'flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params',
             'grok_2_image_params', 'imagen_4_0_params']];
@@ -70,7 +70,7 @@ featureSetChangers.push(() => {
         'text2video', 'yolov8', 'aitemplate', 'endstepsearly',
         'dynamic_thresholding', 'flux-dev', 'zero_negative',
         // Also remove model-specific feature flags when switching away
-        'dalle2_params', 'dalle3_params', 'gpt-image-1_params',
+        'dalle2_params', 'dalle3_params', 'gpt-image-1_params', 'gpt-image-1.5_params',
         'ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params',
         'flux_ultra_params', 'flux_pro_params', 'flux_dev_params',
         'flux_kontext_pro_params', 'flux_kontext_max_params',
@@ -83,7 +83,7 @@ featureSetChangers.push(() => {
     // Add provider-specific features only
     if (isOpenAIModel) {
         addFlags.push('openai_api');
-        addFlags.push('dalle2_params', 'dalle3_params', 'gpt-image-1_params');
+        addFlags.push('dalle2_params', 'dalle3_params', 'gpt-image-1_params', 'gpt-image-1.5_params');
     } else if (isIdeogramModel) {
         addFlags.push('ideogram_api');
         addFlags.push('ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params');

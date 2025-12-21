@@ -69,6 +69,15 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<string> ModerationParam_GPTImage1;
     public static T2IRegisteredParam<string> OutputFormatParam_GPTImage1;
     public static T2IRegisteredParam<int> OutputCompressionParam_GPTImage1;
+
+    // GPT Image 1.5 Parameter
+    // (Uses the same parameters as GPT Image 1)
+    public static T2IRegisteredParam<string> QualityParam_GPTImage1_5 => QualityParam_GPTImage1;
+    public static T2IRegisteredParam<string> BackgroundParam_GPTImage1_5 => BackgroundParam_GPTImage1;
+    public static T2IRegisteredParam<string> ModerationParam_GPTImage1_5 => ModerationParam_GPTImage1;
+    public static T2IRegisteredParam<string> OutputFormatParam_GPTImage1_5 => OutputFormatParam_GPTImage1;
+    public static T2IRegisteredParam<int> OutputCompressionParam_GPTImage1_5 => OutputCompressionParam_GPTImage1;
+
     // Ideogram Parameters
     public static T2IRegisteredParam<string> StyleParam_Ideogram;
     public static T2IRegisteredParam<string> MagicPromptParam_Ideogram;
@@ -354,6 +363,7 @@ public class SwarmUIAPIBackends : Extension
         T2IEngine.DisregardedFeatureFlags.Add("dalle2_params");
         T2IEngine.DisregardedFeatureFlags.Add("dalle3_params");
         T2IEngine.DisregardedFeatureFlags.Add("gpt-image-1_params");
+        T2IEngine.DisregardedFeatureFlags.Add("gpt-image-1.5_params");
         T2IEngine.DisregardedFeatureFlags.Add("ideogram_v1_params");
         T2IEngine.DisregardedFeatureFlags.Add("ideogram_v2_params");
         T2IEngine.DisregardedFeatureFlags.Add("ideogram_v3_params");
