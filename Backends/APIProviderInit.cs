@@ -121,7 +121,7 @@ namespace Hartsy.Extensions.APIBackends
                 {
                     Title = "GPT Image 1",
                     Description = "OpenAI's GPT Image 1 model",
-                    ModelClass = CreateModelClass("openai_api", "DALL-E"),
+                    ModelClass = CreateModelClass("openai_api", "GPT Image"),
                     StandardWidth = 1024,
                     StandardHeight = 1024,
                     IsSupportedModelType = true,
@@ -144,6 +144,33 @@ namespace Hartsy.Extensions.APIBackends
                         TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                     },
                 };
+                T2IModel image1_5 = new(null, null, null, "OpenAI/gpt-image-1.5")
+                {
+                    Title = "GPT Image 1.5",
+                    Description = "OpenAI's GPT Image 1.5 model",
+                    ModelClass = CreateModelClass("openai_api", "GPT Image"),
+                    StandardWidth = 1024,
+                    StandardHeight = 1024,
+                    IsSupportedModelType = true,
+                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/gpt-image-1.5.png"))}",
+                    Metadata = new T2IModelHandler.ModelMetadataStore
+                    {
+                        ModelName = "OpenAI/gpt-image-1.5",
+                        Title = "GPT Image 1.5",
+                        Author = "OpenAI",
+                        Description = "Generates high-fidelity images with strong instruction following, contextual understanding, and accurate visual details.",
+                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/gpt-image-1.5.png"))}",
+                        StandardWidth = 1024,
+                        StandardHeight = 1024,
+                        License = "Commercial",
+                        UsageHint = "Best for context-aware image generation and edits requiring strong instruction following",
+                        Date = "2025",
+                        ModelClassType = "openai_api",
+                        Tags = ["openai", "high-quality", "text-accurate", "gpt-image-1.5_params"],
+                        TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                        TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    },
+                };
                 APIProviderMetadata provider = new()
                 {
                     Name = "OpenAI",
@@ -151,7 +178,8 @@ namespace Hartsy.Extensions.APIBackends
                     {
                         ["OpenAI/dall-e-2"] = dallE2,
                         ["OpenAI/dall-e-3"] = dallE3,
-                        ["OpenAI/gpt-image-1"] = image1
+                        ["OpenAI/gpt-image-1"] = image1,
+                        ["OpenAI/gpt-image-1.5"] = image1_5
                     },
                     RequestConfig = new RequestConfig
                     {
@@ -168,7 +196,7 @@ namespace Hartsy.Extensions.APIBackends
                                 ["size"] = input.Get(SwarmUIAPIBackends.SizeParam_OpenAI)
                             };
 
-                            if (modelName == "gpt-image-1")
+                            if (modelName == "gpt-image-1" || modelName == "gpt-image-1.5")
                             {
                                 request["quality"] = input.Get(SwarmUIAPIBackends.QualityParam_GPTImage1);
                                 request["background"] = input.Get(SwarmUIAPIBackends.BackgroundParam_GPTImage1);
@@ -524,7 +552,9 @@ namespace Hartsy.Extensions.APIBackends
                     ["flux-pro-1.1"] = "flux_pro_params",
                     ["flux-dev"] = "flux_dev_params",
                     ["flux-kontext-pro"] = "flux_kontext_pro_params",
-                    ["flux-kontext-max"] = "flux_kontext_max_params"
+                    ["flux-kontext-max"] = "flux_kontext_max_params",
+                    ["flux-2-max"] = "flux_2_max_params",
+                    ["flux-2-pro"] = "flux_2_pro_params"
                 };
                 APIProviderMetadata provider = new()
                 {
@@ -665,20 +695,75 @@ namespace Hartsy.Extensions.APIBackends
                                 TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                                 TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                             },
+                        },
+                        ["BFL/flux-2-max"] = new T2IModel(null, "BFL", "BFL/flux-2-max", "flux-2-max")
+                        {
+                            Title = "FLUX.2",
+                            Description = "Black Forest Labs' Flux 2 Max model",
+                            ModelClass = CreateModelClass("bfl_api", "Flux"),
+                            IsSupportedModelType = true,
+                            StandardWidth = 1024,
+                            StandardHeight = 1024,
+                            PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/flux-2-max.png"))}",
+                            Metadata = new T2IModelHandler.ModelMetadataStore
+                            {
+                                ModelName = "BFL/flux-2-max",
+                                Title = "FLUX.2",
+                                Author = "Black Forest Labs",
+                                Description = "FLUX.2 creates highly realistic 4MP images with accurate fine details, ideal for photography, e-commerce, and product marketing",
+                                PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/flux-2-max.png"))}",
+                                StandardWidth = 1024,
+                                StandardHeight = 1024,
+                                License = "Commercial",
+                                UsageHint = "Ideal for fast, consistent image editing and generation with context-aware prompts.",
+                                Date = "2025",
+                                ModelClassType = "bfl_api",
+                                Tags = ["flux", "high-quality", fluxModelFlags["flux-2-max"]],
+                                TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                                TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                            },
+                        },
+                        ["BFL/flux-2-pro"] = new T2IModel(null, "BFL", "BFL/flux-2-pro", "flux-2-pro")
+                        {
+                            Title = "FLUX.2",
+                            Description = "Black Forest Labs' Flux 2 Pro model",
+                            ModelClass = CreateModelClass("bfl_api", "Flux"),
+                            IsSupportedModelType = true,
+                            StandardWidth = 1024,
+                            StandardHeight = 1024,
+                            PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/flux-2-pro.png"))}",
+                            Metadata = new T2IModelHandler.ModelMetadataStore
+                            {
+                                ModelName = "BFL/flux-2-pro",
+                                Title = "FLUX.2",
+                                Author = "Black Forest Labs",
+                                Description = "FLUX.2 creates highly realistic 4MP images with accurate fine details, ideal for photography, e-commerce, and product marketing",
+                                PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/flux-2-pro.png"))}",
+                                StandardWidth = 1024,
+                                StandardHeight = 1024,
+                                License = "Commercial",
+                                UsageHint = "Ideal for fast, consistent image editing and generation with context-aware prompts.",
+                                Date = "2025",
+                                ModelClassType = "bfl_api",
+                                Tags = ["flux", "high-quality", fluxModelFlags["flux-2-pro"]],
+                                TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                                TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                            },
                         }
                     },
                     RequestConfig = new RequestConfig
                     {
-                        BaseUrl = "https://api.us1.bfl.ai",
+                        BaseUrl = "https://api.us.bfl.ai",
                         AuthHeader = "x-key",
                         BuildRequest = input => BuildBlackForestRequest(input),
                         ProcessResponse = async response =>
                         {
                             string taskId = (string)response["id"];
                             Logs.Verbose($"BFL Task ID: {taskId}");
+                            string pollingUrl = (string)response["polling_url"];  
                             while (true)
                             {
-                                HttpResponseMessage result = await HttpClient.GetAsync($"https://api.us1.bfl.ai/v1/get_result?id={taskId}");
+                                HttpResponseMessage result = await HttpClient.GetAsync(pollingUrl);
                                 JObject resultJson = JObject.Parse(await result.Content.ReadAsStringAsync());
                                 string status = (string)resultJson["status"];
                                 if (status == "Ready" || status == "completed")
@@ -693,14 +778,18 @@ namespace Hartsy.Extensions.APIBackends
                     }
                 };
                 // Register parameters for all Flux models supported by Black Forest Labs API
-                foreach (string modelName in new[] { "BFL/flux-pro-1.1-ultra", "BFL/flux-pro-1.1", "BFL/flux-dev", "BFL/flux-kontext-pro", "BFL/flux-kontext-max" })
+                foreach (string modelName in new[] { "BFL/flux-pro-1.1-ultra", "BFL/flux-pro-1.1", "BFL/flux-dev", "BFL/flux-kontext-pro", "BFL/flux-kontext-max", "BFL/flux-2-max", "BFL/flux-2-pro" })
                 {
-                    provider.AddParameterToModel(modelName, "prompt_upsampling", SwarmUIAPIBackends.PromptEnhanceParam_BlackForest);
                     provider.AddParameterToModel(modelName, "safety_tolerance", SwarmUIAPIBackends.SafetyParam_BlackForest);
                     provider.AddParameterToModel(modelName, "output_format", SwarmUIAPIBackends.OutputFormatParam_BlackForest);
                 }
+                // prompt_unsampling method is not supported by flux 2 models
+                foreach (string modelName in new[] { "BFL/flux-pro-1.1-ultra", "BFL/flux-pro-1.1", "BFL/flux-dev", "BFL/flux-kontext-pro", "BFL/flux-kontext-max" })
+                {
+                    provider.AddParameterToModel(modelName, "prompt_upsampling", SwarmUIAPIBackends.PromptEnhanceParam_BlackForest);
+                }
                 // guidance paramter not supported on flux-kontext models
-                foreach (string modelName in new[] { "BFL/flux-pro-1.1-ultra", "BFL/flux-pro-1.1", "BFL/flux-dev" })
+                foreach (string modelName in new[] { "BFL/flux-pro-1.1-ultra", "BFL/flux-pro-1.1", "BFL/flux-dev", "BFL/flux-2-pro" })
                 {
                     provider.AddParameterToModel(modelName, "guidance", SwarmUIAPIBackends.GuidanceParam_BlackForest);
                 }
@@ -711,7 +800,7 @@ namespace Hartsy.Extensions.APIBackends
                 }
                 // Raw mode is only supported on ultra model
                 provider.AddParameterToModel("BFL/flux-pro-1.1-ultra", "raw", SwarmUIAPIBackends.RawModeParam_BlackForest);
-                Logs.Verbose("[APIProviderInit] Black Forest Labs provider successfully initialized with 3 models");
+                Logs.Verbose("[APIProviderInit] Black Forest Labs provider successfully initialized with 7 models");
                 return provider;
             }
             catch (Exception ex)
