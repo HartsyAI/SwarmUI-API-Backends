@@ -16,8 +16,8 @@ featureSetChangers.push(() => {
     const isIdeogramModel = curModelArch === 'ideogram_api';
     const isBlackForestModel = curModelArch === 'bfl_api';
     const isGrokModel = curModelArch === 'grok_api';
-    const isGoogleImagenModel = curModelArch === 'google_imagen_api';
-    const isApiModel = isOpenAIModel || isIdeogramModel || isBlackForestModel || isGrokModel || isGoogleImagenModel;
+    const isGoogleModel = curModelArch === 'google_api';
+    const isApiModel = isOpenAIModel || isIdeogramModel || isBlackForestModel || isGrokModel || isGoogleModel;
 
     // List of core parameters that don't have feature flags but shouldn't show for API models
     const coreParamsToHideForAPI = [
@@ -55,11 +55,11 @@ featureSetChangers.push(() => {
 
     // If not using any API model, just remove API-specific feature flags
     if (!isApiModel) {
-        return [[], ['openai_api', 'ideogram_api', 'bfl_api', 'grok_api', 'google_imagen_api',
+        return [[], ['openai_api', 'ideogram_api', 'bfl_api', 'grok_api', 'google_api',
             'dalle2_params', 'dalle3_params', 'gpt-image-1_params', 'gpt-image-1.5_params',
             'ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params',
             'flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params', 'flux_2_max_params', 'flux_2_pro_params',
-            'grok_2_image_params', 'imagen_4_0_params']];
+            'grok_2_image_params', 'google_api']];
     }
 
     // These features should be REMOVED for all API backends as they're incompatible
@@ -74,7 +74,7 @@ featureSetChangers.push(() => {
         'ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params',
         'flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_2_pro_params', 'flux_2_max_params',
         'flux_kontext_pro_params', 'flux_kontext_max_params',
-        'grok_2_image_params', 'imagen_4_0_params'
+        'grok_2_image_params', 'google_api'
     ];
 
     // These are features that should always be enabled for API models
@@ -93,9 +93,8 @@ featureSetChangers.push(() => {
     } else if (isGrokModel) {
         addFlags.push('grok_api');
         addFlags.push('grok_2_image_params');
-    } else if(isGoogleImagenModel) {
-        addFlags.push('google_imagen_api');
-        addFlags.push('imagen_4_0_params');
+    } else if(isGoogleModel) {
+        addFlags.push('google_api');
     }
 
     console.log(`[api-backends] Adding feature flags: ${addFlags.join(', ')}`);

@@ -163,6 +163,14 @@ namespace Hartsy.Extensions.APIBackends.Backends
             else if (Settings.SelectedProvider == "google_imagen_api")
             {
                 string modelName = input.Get(T2IParamTypes.Model).Name.Replace("Google Imagen/", "");
+                
+                // Gemini models use a different endpoint (generateContent)
+                if (modelName.StartsWith("gemini-"))
+                {
+                    return $"{baseUrl}/{modelName}:generateContent";
+                }
+                
+                // Imagen models use the predict endpoint
                 return $"{baseUrl}/{modelName}:predict";
             }
             Logs.Verbose($"[DynamicAPIBackend] Using base URL: {baseUrl}");
