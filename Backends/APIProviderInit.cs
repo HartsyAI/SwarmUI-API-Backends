@@ -1068,7 +1068,7 @@ namespace Hartsy.Extensions.APIBackends
                         ["Google/imagen-4.0-generate-001"] = imagen4,
                         ["Google/imagen-4.0-ultra-generate-001"] = imagen4ultra,
                         ["Google/imagen-4.0-fast-generate-001"] = imagen4fast,
-                        ["Google/gemini-2.5-flash-preview-image-generation"] = gemini25Flash,
+                        ["Google/gemini-2.5-flash-image"] = gemini25Flash,
                         ["Google/gemini-3-pro-image-preview"] = gemini3Pro
                     },
                     RequestConfig = new RequestConfig
@@ -1155,13 +1155,8 @@ namespace Hartsy.Extensions.APIBackends
             {
                 imageConfig["aspectRatio"] = "1:1";
             }
-            
-            if (input.TryGet(T2IParamTypes.Images, out int numImages) && numImages > 1)
-            {
-                imageConfig["numberOfImages"] = numImages;
-            }
-            
-            generationConfig["imageGenerationConfig"] = imageConfig;
+
+            generationConfig["imageConfig"] = imageConfig;
             
             JObject requestBody = new()
             {
