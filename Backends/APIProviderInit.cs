@@ -1104,7 +1104,7 @@ namespace Hartsy.Extensions.APIBackends
                         },
                         ProcessResponse = async response =>
                         {
-                            if (response["candidates"] != null)
+                            if (response["candidates"] is not null)
                             {
                                 return await ProcessGeminiResponse(response);
                             }
@@ -1186,7 +1186,7 @@ namespace Hartsy.Extensions.APIBackends
             if (candidates == null || candidates.Count == 0)
             {
                 // Check for safety block
-                if (response["promptFeedback"]?["blockReason"] != null)
+                if (response["promptFeedback"]?["blockReason"] is not null)
                 {
                     string blockReason = response["promptFeedback"]["blockReason"].ToString();
                     Logs.Error($"[APIProviderInit] Gemini API blocked request: {blockReason}");
@@ -1215,7 +1215,7 @@ namespace Hartsy.Extensions.APIBackends
             foreach (JToken part in parts)
             {
                 JToken inlineData = part["inlineData"];
-                if (inlineData != null)
+                if (inlineData is not null)
                 {
                     string b64 = inlineData["data"]?.ToString();
                     if (!string.IsNullOrEmpty(b64))
