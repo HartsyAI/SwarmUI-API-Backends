@@ -12,11 +12,11 @@ featureSetChangers.push(() => {
     }
 
     // Determine current API backend type
-    const isOpenAIModel = curModelArch === 'openai_api';
-    const isIdeogramModel = curModelArch === 'ideogram_api';
-    const isBlackForestModel = curModelArch === 'bfl_api';
-    const isGrokModel = curModelArch === 'grok_api';
-    const isGoogleModel = curModelArch === 'google_api';
+    const isOpenAIModel = currentModelHelper.curArch === 'openai_api';
+    const isIdeogramModel = currentModelHelper.curArch === 'ideogram_api';
+    const isBlackForestModel = currentModelHelper.curArch === 'bfl_api';
+    const isGrokModel = currentModelHelper.curArch === 'grok_api';
+    const isGoogleModel = currentModelHelper.curArch === 'google_api';
     const isApiModel = isOpenAIModel || isIdeogramModel || isBlackForestModel || isGrokModel || isGoogleModel;
 
     // List of core parameters that don't have feature flags but shouldn't show for API models
@@ -106,7 +106,7 @@ featureSetChangers.push(() => {
 // 2. Run setup when model changes
 if (typeof addModelChangeCallback === 'function') {
     addModelChangeCallback(() => {
-        console.log(`[api-backends] Model changed to: ${curModelArch}`);
+        console.log(`[api-backends] Model changed to: ${currentModelHelper.curArch}`);
 
         // Update the feature set and parameter visibility
         reviseBackendFeatureSet();
