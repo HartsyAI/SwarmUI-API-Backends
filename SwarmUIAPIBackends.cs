@@ -30,8 +30,8 @@ public static class APIBackendsPermissions
     public static readonly PermInfo PermUseGrok = Permissions.Register(new("use_grok", "Use Grok API",
         "Allows using Grok's API for image generation.",
         PermissionDefault.POWERUSERS, APIBackendsPermGroup));
-    public static readonly PermInfo PermUseGoogleImagen = Permissions.Register(new("use_google_imagen", "Use Google Imagen API",
-        "Allows using Google's Imagen model API for image generation.",
+    public static readonly PermInfo PermUseGoogleImagen = Permissions.Register(new("use_google_api", "Use Google API",
+        "Allows using Google's image generation models (Imagen, Gemini) for image generation.",
         PermissionDefault.POWERUSERS, APIBackendsPermGroup));
 }
 
@@ -357,7 +357,7 @@ public class SwarmUIAPIBackends : Extension
         T2IEngine.DisregardedFeatureFlags.Add("ideogram_api");
         T2IEngine.DisregardedFeatureFlags.Add("bfl_api");
         T2IEngine.DisregardedFeatureFlags.Add("grok_api");
-        T2IEngine.DisregardedFeatureFlags.Add("google_imagen_api");
+        T2IEngine.DisregardedFeatureFlags.Add("google_api");
 
         // Register model-specific feature flags
         T2IEngine.DisregardedFeatureFlags.Add("dalle2_params");
@@ -404,7 +404,7 @@ public class SwarmUIAPIBackends : Extension
         Program.Backends.RegisterBackendType<DynamicAPIBackend>("dynamic_api_backend", "3rd Party Paid API Backends",
             "Generate images using various API services (OpenAI, Ideogram, Black Forest Labs)", true);
         // All key types must be added to the accepted list first
-        string[] keyTypes = ["openai_api", "bfl_api", "ideogram_api", "grok_api", "google_imagen_api"];
+        string[] keyTypes = ["openai_api", "bfl_api", "ideogram_api", "grok_api", "google_api"];
         foreach (string keyType in keyTypes)
         {
             BasicAPIFeatures.AcceptedAPIKeyTypes.Add(keyType);
@@ -420,8 +420,8 @@ public class SwarmUIAPIBackends : Extension
             new HtmlString("To use Ideogram in SwarmUI (via Hartsy extensions), you must set your Ideogram API key."));
         RegisterApiKeyIfNeeded("grok_api", "grok", "Grok", "https://accounts.x.ai/sign-up?redirect=grok-com",
             new HtmlString("To use Grok in SwarmUI (via Hartsy extensions), you must set your Grok API key."));
-        RegisterApiKeyIfNeeded("google_imagen_api", "google_imagen", "Google Imagen", "https://ai.google.dev/gemini-api/docs/api-key",
-            new HtmlString("To use Google Imagen in SwarmUI (via Hartsy extensions), you must set your Google Gemini API key."));
+        RegisterApiKeyIfNeeded("google_api", "google", "Google (Imagen, Gemini)", "https://ai.google.dev/gemini-api/docs/api-key",
+            new HtmlString("To use Google models in SwarmUI (via Hartsy extensions), you must set your Google API key."));
         Logs.Init("Hartsy's APIBackends extension V1.0 has successfully started.");
     }
 
