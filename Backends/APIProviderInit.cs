@@ -56,7 +56,7 @@ namespace Hartsy.Extensions.APIBackends
             Providers["openai_api"] = InitializeOpenAIProvider();
             Providers["ideogram_api"] = InitializeIdeogramProvider();
             Providers["grok_api"] = InitializeGrokProvider();
-            Providers["google_imagen_api"] = InitializeGoogleImagenProvider();
+            Providers["google_api"] = InitializeGoogleProvider();
         }
 
         public APIProviderMetadata InitializeOpenAIProvider()
@@ -918,23 +918,23 @@ namespace Hartsy.Extensions.APIBackends
             }
         }
 
-        public APIProviderMetadata InitializeGoogleImagenProvider()
+        public APIProviderMetadata InitializeGoogleProvider()
         {
             try
             {
-                T2IModel imagen4 = new(null, null, null, "Google Imagen/imagen-4.0-generate-001")
+                T2IModel imagen4 = new(null, null, null, "Google/imagen-4.0-generate-001")
                 {
-                    Title = "Google Imagen 4.0",
+                    Title = "Imagen 4.0",
                     Description = "Google's Imagen 4.0 text-to-image generation model",
-                    ModelClass = CreateModelClass("google_imagen_api", "GoogleImagen"),
+                    ModelClass = CreateModelClass("google_api", "Google"),
                     StandardWidth = 1024,
                     StandardHeight = 1024,
                     IsSupportedModelType = true,
                     PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/imagen-4.0.png"))}",
                     Metadata = new T2IModelHandler.ModelMetadataStore
                     {
-                        ModelName = "Google Imagen/imagen-4.0-generate-001",
-                        Title = "Google Imagen 4.0",
+                        ModelName = "Google/imagen-4.0-generate-001",
+                        Title = "Imagen 4.0",
                         Author = "Google",
                         Description = "Google's Imagen 4.0 text-to-image generation model",
                         PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/imagen-4.0.png"))}",
@@ -943,25 +943,25 @@ namespace Hartsy.Extensions.APIBackends
                         License = "Commercial",
                         UsageHint = "High-quality image generation from text prompts",
                         Date = "2025",
-                        ModelClassType = "google_imagen_api",
-                        Tags = ["google", "imagen", "generative", "imagen_4_0_params"],
+                        ModelClassType = "google_api",
+                        Tags = ["google", "imagen", "generative", "google_api"],
                         TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                         TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                     },
                 };
-                T2IModel imagen4ultra = new(null, null, null, "Google Imagen/imagen-4.0-ultra-generate-001")
+                T2IModel imagen4ultra = new(null, null, null, "Google/imagen-4.0-ultra-generate-001")
                 {
-                    Title = "Google Imagen 4.0 Ultra",
+                    Title = "Imagen 4.0 Ultra",
                     Description = "Google's Imagen 4.0 Ultra text-to-image generation model",
-                    ModelClass = CreateModelClass("google_imagen_api", "GoogleImagen"),
+                    ModelClass = CreateModelClass("google_api", "Google"),
                     StandardWidth = 1024,
                     StandardHeight = 1024,
                     IsSupportedModelType = true,
                     PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/imagen-4.0.png"))}",
                     Metadata = new T2IModelHandler.ModelMetadataStore
                     {
-                        ModelName = "Google Imagen/imagen-4.0-ultra-generate-001",
-                        Title = "Google Imagen 4.0 Ultra",
+                        ModelName = "Google/imagen-4.0-ultra-generate-001",
+                        Title = "Imagen 4.0 Ultra",
                         Author = "Google",
                         Description = "Google's Imagen 4.0 Ultra text-to-image generation model",
                         PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/imagen-4.0.png"))}",
@@ -970,25 +970,25 @@ namespace Hartsy.Extensions.APIBackends
                         License = "Commercial",
                         UsageHint = "High-quality image generation from text prompts",
                         Date = "2025",
-                        ModelClassType = "google_imagen_api",
-                        Tags = ["google", "imagen", "generative", "imagen_4_0_params"],
+                        ModelClassType = "google_api",
+                        Tags = ["google", "imagen", "generative", "google_api"],
                         TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                         TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                     },
                 };
-                T2IModel imagen4fast = new(null, null, null, "Google Imagen/imagen-4.0-fast-generate-001")
+                T2IModel imagen4fast = new(null, null, null, "Google/imagen-4.0-fast-generate-001")
                 {
-                    Title = "Google Imagen 4.0 Fast",
+                    Title = "Imagen 4.0 Fast",
                     Description = "Google's Imagen 4.0 Fast text-to-image generation model",
-                    ModelClass = CreateModelClass("google_imagen_api", "GoogleImagen"),
+                    ModelClass = CreateModelClass("google_api", "Google"),
                     StandardWidth = 1024,
                     StandardHeight = 1024,
                     IsSupportedModelType = true,
                     PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/imagen-4.0.png"))}",
                     Metadata = new T2IModelHandler.ModelMetadataStore
                     {
-                        ModelName = "Google Imagen/imagen-4.0-fast-generate-001",
-                        Title = "Google Imagen 4.0 Fast",
+                        ModelName = "Google/imagen-4.0-fast-generate-001",
+                        Title = "Imagen 4.0 Fast",
                         Author = "Google",
                         Description = "Google's Imagen 4.0 Fast text-to-image generation model",
                         PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/imagen-4.0.png"))}",
@@ -997,8 +997,64 @@ namespace Hartsy.Extensions.APIBackends
                         License = "Commercial",
                         UsageHint = "High-quality image generation from text prompts",
                         Date = "2025",
-                        ModelClassType = "google_imagen_api",
-                        Tags = ["google", "imagen", "generative", "imagen_4_0_params"],
+                        ModelClassType = "google_api",
+                        Tags = ["google", "imagen", "generative", "google_api"],
+                        TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                        TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    },
+                };
+
+                T2IModel gemini25Flash = new(null, null, null, "Google/gemini-2.5-flash-preview-image-generation")
+                {
+                    Title = "Gemini 2.5 Flash Image",
+                    Description = "Google's Gemini 2.5 Flash model for conversational image generation with text-to-image and editing capabilities",
+                    ModelClass = CreateModelClass("google_api", "Google"),
+                    StandardWidth = 1024,
+                    StandardHeight = 1024,
+                    IsSupportedModelType = true,
+                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/imagen-4.0.png"))}",
+                    Metadata = new T2IModelHandler.ModelMetadataStore
+                    {
+                        ModelName = "Google/gemini-2.5-flash-preview-image-generation",
+                        Title = "Gemini 2.5 Flash Image",
+                        Author = "Google",
+                        Description = "Conversational image generation with text-to-image and editing capabilities",
+                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/imagen-4.0.png"))}",
+                        StandardWidth = 1024,
+                        StandardHeight = 1024,
+                        License = "Commercial",
+                        UsageHint = "Best for conversational image generation and editing",
+                        Date = "2025",
+                        ModelClassType = "google_api",
+                        Tags = ["google", "gemini", "flash", "generative", "google_api"],
+                        TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                        TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    },
+                };
+
+                T2IModel gemini3Pro = new(null, null, null, "Google/gemini-3-pro-image-preview")
+                {
+                    Title = "Gemini 3.0 Pro Preview Image",
+                    Description = "Google's Gemini 3 Pro for image generation",
+                    ModelClass = CreateModelClass("google_api", "Google"),
+                    StandardWidth = 1024,
+                    StandardHeight = 1024,
+                    IsSupportedModelType = true,
+                    PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/imagen-4.0.png"))}",
+                    Metadata = new T2IModelHandler.ModelMetadataStore
+                    {
+                        ModelName = "Google/gemini-3-pro-image-preview",
+                        Title = "Gemini 3 Pro Image",
+                        Author = "Google",
+                        Description = "Google's Gemini 3.0 Pro (Nano Banana) model for image generation",
+                        PreviewImage = $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes("src/Extensions/SwarmUI-API-Backends/Images/ModelPreviews/imagen-4.0.png"))}",
+                        StandardWidth = 1024,
+                        StandardHeight = 1024,
+                        License = "Commercial",
+                        UsageHint = "Fast image generation with Gemini 3.0",
+                        Date = "2025",
+                        ModelClassType = "google_api",
+                        Tags = ["google", "gemini", "flash", "generative", "google_api"],
                         TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                         TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                     },
@@ -1006,12 +1062,14 @@ namespace Hartsy.Extensions.APIBackends
 
                 APIProviderMetadata provider = new()
                 {
-                    Name = "Google Imagen",
+                    Name = "Google",
                     Models = new Dictionary<string, T2IModel>
                     {
-                        ["Google Imagen/imagen-4.0-generate-001"] = imagen4,
-                        ["Google Imagen/imagen-4.0-ultra-generate-001"] = imagen4ultra,
-                        ["Google Imagen/imagen-4.0-fast-generate-001"] = imagen4fast
+                        ["Google/imagen-4.0-generate-001"] = imagen4,
+                        ["Google/imagen-4.0-ultra-generate-001"] = imagen4ultra,
+                        ["Google/imagen-4.0-fast-generate-001"] = imagen4fast,
+                        ["Google/gemini-2.5-flash-image"] = gemini25Flash,
+                        ["Google/gemini-3-pro-image-preview"] = gemini3Pro
                     },
                     RequestConfig = new RequestConfig
                     {
@@ -1019,7 +1077,15 @@ namespace Hartsy.Extensions.APIBackends
                         AuthHeader = "Bearer",
                         BuildRequest = input =>
                         {
-                            string modelName = input.Get(T2IParamTypes.Model).Name.Replace("Google Imagen/", "");
+                            string modelName = input.Get(T2IParamTypes.Model).Name.Replace("Google/", "");
+                            
+                            // Check if this is a Gemini model (uses different API format)
+                            if (modelName.StartsWith("gemini-"))
+                            {
+                                return BuildGeminiRequest(input, modelName);
+                            }
+                            
+                            // Imagen models use the predict endpoint format
                             JObject requestBody = new()
                             {
                                 ["instances"] = new JArray
@@ -1038,32 +1104,131 @@ namespace Hartsy.Extensions.APIBackends
                         },
                         ProcessResponse = async response =>
                         {
+                            if (response["candidates"] is not null)
+                            {
+                                return await ProcessGeminiResponse(response);
+                            }
+                            
+                            // Imagen response format (has "predictions" array)
                             JArray predictions = response["predictions"] as JArray;
                             if (predictions == null || predictions.Count == 0)
                             {
-                                Logs.Error("[APIProviderInit] Google Imagen API response missing 'predictions' array or array is empty");
-                                throw new Exception("Google Imagen API response missing image data");
+                                Logs.Error("[APIProviderInit] Google API response missing 'predictions' array or array is empty");
+                                throw new Exception("Google API response missing image data");
                             }
                             JToken firstPrediction = predictions[0];
                             string b64 = firstPrediction["bytesBase64Encoded"]?.ToString();
                             if (string.IsNullOrEmpty(b64))
                             {
-                                Logs.Error("[APIProviderInit] Google Imagen API response missing 'bytesBase64Encoded' field");
-                                throw new Exception("Google Imagen API response missing image data");
+                                Logs.Error("[APIProviderInit] Google API response missing 'bytesBase64Encoded' field");
+                                throw new Exception("Google API response missing image data");
                             }
                             return Convert.FromBase64String(b64);
                         }
                     }
                 };
-                Logs.Verbose("[APIProviderInit] Google Imagen provider successfully initialized with 3 models");
+                Logs.Verbose("[APIProviderInit] Google provider successfully initialized with 5 models");
                 return provider;
             }
             catch (Exception ex)
             {
-                Logs.Error($"[APIProviderInit] Failed to initialize Google Imagen provider: {ex.Message}");
+                Logs.Error($"[APIProviderInit] Failed to initialize Google provider: {ex.Message}");
                 return null;
             }
         }
+        /// <summary>Builds a request body for Gemini image generation models.</summary>
+        private static JObject BuildGeminiRequest(T2IParamInput input, string modelName)
+        {
+            string prompt = input.Get(T2IParamTypes.Prompt)?.ToString() ?? "";
+            
+            JObject generationConfig = new()
+            {
+                ["responseModalities"] = new JArray { "TEXT", "IMAGE" }
+            };
+            
+            JObject imageConfig = new();
+            if (input.TryGet(T2IParamTypes.AspectRatio, out string aspectRatio) && !string.IsNullOrEmpty(aspectRatio))
+            {
+                imageConfig["aspectRatio"] = aspectRatio;
+            }
+            else
+            {
+                imageConfig["aspectRatio"] = "1:1";
+            }
+
+            generationConfig["imageConfig"] = imageConfig;
+            
+            JObject requestBody = new()
+            {
+                ["contents"] = new JArray
+                {
+                    new JObject
+                    {
+                        ["parts"] = new JArray
+                        {
+                            new JObject
+                            {
+                                ["text"] = prompt
+                            }
+                        }
+                    }
+                },
+                ["generationConfig"] = generationConfig
+            };
+            
+            return requestBody;
+        }
+        
+        /// <summary>Processes a Gemini API response and extracts the generated image.</summary>
+        private static Task<byte[]> ProcessGeminiResponse(JObject response)
+        {
+            JArray candidates = response["candidates"] as JArray;
+            if (candidates == null || candidates.Count == 0)
+            {
+                // Check for safety block
+                if (response["promptFeedback"]?["blockReason"] is not null)
+                {
+                    string blockReason = response["promptFeedback"]["blockReason"].ToString();
+                    Logs.Error($"[APIProviderInit] Gemini API blocked request: {blockReason}");
+                    throw new Exception($"Gemini API blocked request due to: {blockReason}");
+                }
+                Logs.Error("[APIProviderInit] Gemini API response missing 'candidates' array or array is empty");
+                throw new Exception("Gemini API response missing image data");
+            }
+            
+            JToken firstCandidate = candidates[0];
+            
+            string finishReason = firstCandidate["finishReason"]?.ToString();
+            if (finishReason == "SAFETY")
+            {
+                Logs.Error("[APIProviderInit] Gemini API blocked generation due to safety filters");
+                throw new Exception("Gemini API blocked generation due to safety filters");
+            }
+            
+            JArray parts = firstCandidate["content"]?["parts"] as JArray;
+            if (parts == null || parts.Count == 0)
+            {
+                Logs.Error("[APIProviderInit] Gemini API response missing 'parts' array in candidate");
+                throw new Exception("Gemini API response missing image data");
+            }
+            
+            foreach (JToken part in parts)
+            {
+                JToken inlineData = part["inlineData"];
+                if (inlineData is not null)
+                {
+                    string b64 = inlineData["data"]?.ToString();
+                    if (!string.IsNullOrEmpty(b64))
+                    {
+                        return Task.FromResult(Convert.FromBase64String(b64));
+                    }
+                }
+            }
+            
+            Logs.Error("[APIProviderInit] Gemini API response missing 'inlineData' in parts");
+            throw new Exception("Gemini API response missing image data");
+        }
+
         private static JObject BuildBlackForestRequest(T2IParamInput input)
         {
             string modelName = input.Get(T2IParamTypes.Model).Name;
