@@ -12,22 +12,25 @@
 4. [Installation](#installation)
 5. [Usage](#usage)
 6. [Configuration](#configuration)
-7. [Troubleshooting](#troubleshooting)
-8. [Changelog](#changelog)
-9. [License](#license)
-10. [Contributing](#contributing)
-11. [Acknowledgments](#acknowledgments)
+7. [Architecture](#architecture)
+8. [API](#api)
+9. [Troubleshooting](#troubleshooting)
+10. [Changelog](#changelog)
+11. [License](#license)
+12. [Contributing](#contributing)
+13. [Acknowledgments](#acknowledgments)
 
 ## Introduction
 ---------------
 
-The APIBackends Extension for SwarmUI enables integration with various commercial image generation APIs, including OpenAI's DALL-E, Anthropic's Claude, Black Forest Labs' Flux, and Ideogram. This extension allows you to use these services directly within the SwarmUI interface, providing a seamless experience for generating images using different AI models.
+The APIBackends Extension for SwarmUI enables integration with multiple commercial image generation APIs. It registers API-hosted models into SwarmUI's normal model list so they can be selected and used from the **Generate** tab like local models.
 
 * Usage Example:
 - Generate images using DALL-E 3
-- Use Anthropic's Claude 3 for image generation
 - Access Black Forest Labs' Flux models
 - Generate with Ideogram's AI
+- Use OpenAI GPT Image models
+- Use Grok, Google (Imagen / Gemini), and Fal.ai models
 - Seamlessly switch between different API providers
 
 > [!WARNING]
@@ -38,10 +41,12 @@ The APIBackends Extension for SwarmUI enables integration with various commercia
 ------------
 
 * Support for multiple API providers:
-  - OpenAI (DALL-E 2 & 3)
-  - Anthropic (Claude 3 Opus & Sonnet)
-  - Black Forest Labs (Flux models)
+  - OpenAI (DALL-E 2, DALL-E 3, GPT Image models)
   - Ideogram
+  - Black Forest Labs (FLUX)
+  - Grok
+  - Google (Imagen / Gemini)
+  - Fal.ai
 * Integrated parameter controls for each provider
 * Automatic model switching and parameter adjustment
 * Secure API key management
@@ -89,26 +94,34 @@ If you prefer to install manually:
 ## Usage
 --------
 
-1. Configure your API keys in the settings
-2. Select your desired API provider model
-3. Adjust provider-specific parameters
-4. Generate images as normal using SwarmUI's interface
-5. Images will be generated using the selected API service
+1. Enable the **3rd Party Paid API Backends** backend in SwarmUI
+2. In that backend's settings, enable one or more provider checkboxes (OpenAI / Ideogram / BFL / Grok / Google / Fal)
+3. Add the corresponding API key(s) in the **User** tab (API key manager)
+4. Go to **Generate** and pick a model under:
+   - `API Models/<Provider>/<Model>`
+5. Adjust the provider-specific parameters (they appear automatically based on the selected model)
+6. Generate as normal
 
 ## Configuration
 ----------------
 
-Each API provider requires specific configuration:
+This extension uses two configuration surfaces:
+
+- **Backend settings** (Server-side)
+  - Enable/disable providers via checkboxes
+  - Optional: set a custom base URL override
+- **User API keys** (Per-user)
+  - Each provider has a dedicated API key entry
+  - Keys are stored in SwarmUI user data (never hardcode keys in code)
+
+### Providers
+
+Each API provider requires an API key:
 
 * OpenAI:
   - API Key
-  - Model selection (DALL-E 2 or 3)
+  - Model selection (DALL-E 2, DALL-E 3, GPT Image)
   - Quality and style parameters
-
-* Anthropic:
-  - API Key
-  - Model selection (Opus/Sonnet)
-  - Quality settings
 
 * Black Forest Labs:
   - API Key
@@ -119,6 +132,84 @@ Each API provider requires specific configuration:
   - API Key
   - Style preferences
   - Resolution settings
+
+* Grok:
+  - API Key
+  - Model selection
+
+* Google:
+  - API Key
+  - Model selection (Imagen / Gemini)
+
+* Fal.ai:
+  - API Key
+  - Model selection
+
+## Architecture
+---------------
+
+This extension uses a data-driven factory pattern to keep providers modular and scalable (including providers with hundreds of models).
+
+- **Provider definitions**
+  - `Providers/ProviderDefinitions.cs` defines providers and their model catalogs via `ProviderDefinition` + `ModelDefinition`.
+- **Model factory**
+  - `Models/ModelFactory.cs` converts `ModelDefinition` to SwarmUI `T2IModel` instances.
+- **Request builders**
+  - `Providers/RequestBuilders.cs` contains provider-specific request/response implementations.
+- **Provider initialization/registry**
+  - `Backends/APIProviderInit.cs` initializes provider metadata and models.
+  - `APIProviderRegistry.Instance` exposes the initialized providers.
+- **Runtime backend**
+  - `Backends/DynamicAPIBackend.cs` is the Swarm backend that executes requests against the active provider.
+
+### Model naming / UI grouping
+
+API models are registered with names like:
+
+- `API Models/<Provider>/<ModelId>`
+
+This groups all API-backed models under a single top-level folder in the model selector.
+
+## API
+------
+
+This extension does **not** add brand-new HTTP routes. Instead, it integrates into SwarmUI's existing WebAPI in two places:
+
+### 1) Model listing and metadata (ModelsAPI)
+
+The backend registers an extra model provider via `ModelsAPI.ExtraModelProviders["dynamic_api_backends"]`. This makes API models appear as **remote models** in the normal model browser.
+
+Relevant Swarm API calls (names as registered by SwarmUI; typically available at `/API/<CallName>`):
+
+- **`ListModels`**
+  - Purpose: list models in folders (includes API models when `allowRemote=true`)
+  - Key inputs:
+    - `path` (folder)
+    - `depth`
+    - `subtype` (usually `Stable-Diffusion`)
+    - `allowRemote` (must be `true` to include API models)
+- **`DescribeModel`**
+  - Purpose: get metadata for a single model (works for API models too)
+  - Key inputs:
+    - `modelName`
+    - `subtype`
+
+### 2) Generate tab params + generation (T2IAPI)
+
+Provider-specific parameters are registered into SwarmUI's parameter system and are returned through:
+
+- **`ListT2IParams`**
+  - Purpose: returns all T2I parameters, param groups, and model lists used by the Generate tab.
+
+Actual generation uses SwarmUI's standard generation endpoints. This extension participates by providing a backend that can service requests for models under `API Models/...`:
+
+- **`GenerateText2Image`**
+- **`GenerateText2ImageWS`** (WebSocket live updates)
+
+In requests, set the `model` parameter to an API model name, for example:
+
+- `model: "API Models/Ideogram/V_3"`
+- `model: "API Models/BFL/flux-2-max"`
 
 ## Troubleshooting
 -----------------
@@ -135,9 +226,7 @@ Common issues and solutions:
 ## Changelog
 ------------
 
-* Version 0.1: Initial release with OpenAI and Anthropic support
-* Version 0.2: Added Black Forest Labs integration
-* Version 0.3: Added Ideogram support and parameter optimization
+* Version 1.1: Modular provider/model factory architecture, unified `API Models/<Provider>/...` model naming
 
 ## License
 ----------
