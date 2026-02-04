@@ -178,6 +178,28 @@ namespace Hartsy.Extensions.APIBackends.Providers
 
     public sealed class IdeogramRequestBuilder : BaseRequestBuilder
     {
+        private static readonly Dictionary<string, string> AspectRatioMap = new()
+        {
+            ["1:1"] = "ASPECT_1_1",
+            ["10:16"] = "ASPECT_10_16",
+            ["16:10"] = "ASPECT_16_10",
+            ["9:16"] = "ASPECT_9_16",
+            ["16:9"] = "ASPECT_16_9",
+            ["3:2"] = "ASPECT_3_2",
+            ["2:3"] = "ASPECT_2_3",
+            ["4:3"] = "ASPECT_4_3",
+            ["3:4"] = "ASPECT_3_4",
+            ["1:3"] = "ASPECT_1_3",
+            ["3:1"] = "ASPECT_3_1"
+        };
+
+        private static string MapAspectRatio(string aspect)
+        {
+            if (string.IsNullOrEmpty(aspect)) return "ASPECT_1_1";
+            if (aspect.StartsWith("ASPECT_")) return aspect;
+            return AspectRatioMap.TryGetValue(aspect, out string mapped) ? mapped : "ASPECT_1_1";
+        }
+
         public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
         {
             bool hasInputImage = input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Ideogram, out Image inputImg) 
@@ -191,7 +213,7 @@ namespace Hartsy.Extensions.APIBackends.Providers
             };
 
             if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Ideogram, out string aspect))
-                imageRequest["aspect_ratio"] = aspect;
+                imageRequest["aspect_ratio"] = MapAspectRatio(aspect);
             if (input.TryGet(SwarmUIAPIBackends.StyleTypeParam_Ideogram, out string style))
                 imageRequest["style_type"] = style;
             if (input.TryGet(SwarmUIAPIBackends.NegativePromptParam_Ideogram, out string negPrompt) && !string.IsNullOrEmpty(negPrompt))

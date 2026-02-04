@@ -147,6 +147,13 @@ namespace Hartsy.Extensions.APIBackends.Backends
             return input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Ideogram, out Image inputImg) && inputImg?.RawData != null;
         }
 
+        private static bool IsIdeogramV3Model(string modelName)
+        {
+            if (string.IsNullOrEmpty(modelName)) return false;
+            string lower = modelName.ToLowerInvariant();
+            return lower.Contains("/v_3") || lower.Contains("/v3") || lower.Contains("v_3") || lower.Contains("v3");
+        }
+
         /// <summary>Determines the provider ID from a model name.</summary>
         private string GetProviderIdFromModel(string modelName)
         {
@@ -176,21 +183,12 @@ namespace Hartsy.Extensions.APIBackends.Backends
 
         protected override PermInfo GetRequiredPermission()
         {
-            string providerId = _currentGenerationProvider?.Name?.ToLowerInvariant() switch
-            {
-                "black forest labs" => "bfl_api",
-                "openai" => "openai_api",
-                "ideogram" => "ideogram_api",
-                "grok" => "grok_api",
-                "google" => "google_api",
-                "fal.ai" => "fal_api",
-                _ => null
-            };
+            string providerId = GetProviderIdFromModel(CurrentModelName);
             if (providerId != null && _providerToPermission.TryGetValue(providerId, out PermInfo permission))
             {
                 return permission;
             }
-            throw new Exception($"Unknown provider: {_currentGenerationProvider?.Name}");
+            throw new Exception($"Unknown provider for model: {CurrentModelName}");
         }
 
         /// <summary>Get the base URL for the API request</summary>
@@ -209,7 +207,8 @@ namespace Hartsy.Extensions.APIBackends.Backends
             else if (providerId == "ideogram_api")
             {
                 bool hasInputImage = CheckIdeogramEdit(input);
-                string baseUrlForIdeogram = modelName.Contains("v3") ? 
+                bool isV3 = IsIdeogramV3Model(modelName);
+                string baseUrlForIdeogram = isV3 ? 
                     hasInputImage ? "https://api.ideogram.ai/v1/ideogram-v3/edit" : "https://api.ideogram.ai/v1/ideogram-v3/generate" 
                     : hasInputImage ? "https://api.ideogram.ai/edit" : baseUrl;
                 return baseUrlForIdeogram;
@@ -248,7 +247,7 @@ namespace Hartsy.Extensions.APIBackends.Backends
                 {
 
                     string requestImageType = "image_file";
-                    if (modelName.Contains("v3"))
+                    if (IsIdeogramV3Model(modelName))
                     {
                         requestImageType = "image";
                     }
@@ -377,11 +376,13 @@ namespace Hartsy.Extensions.APIBackends.Backends
         /// <summary>Registers models for a specific provider.</summary>
         private async Task RegisterModelsForProvider(APIProviderMetadata provider)
         {
+            Logs.Debug($"[DynamicAPIBackend] RegisterModelsForProvider called for {provider.Name}, provider.Models.Count = {provider.Models?.Count ?? 0}");
             List<string> modelNames = new List<string>();
             foreach (KeyValuePair<string, T2IModel> kvp in provider.Models)
             {
                 string name = kvp.Key;
                 T2IModel model = kvp.Value;
+                Logs.Debug($"[DynamicAPIBackend] Processing model: {name}");
                 model.Handler = Program.MainSDModels;
                 model.Metadata ??= new T2IModelHandler.ModelMetadataStore
                 {
@@ -403,17 +404,21 @@ namespace Hartsy.Extensions.APIBackends.Backends
                 if (!Program.MainSDModels.Models.ContainsKey(name))
                 {
                     Program.MainSDModels.Models[name] = model;
+                    Logs.Debug($"[DynamicAPIBackend] Added model to MainSDModels: {name}");
                 }
                 RegisteredApiModels[name] = model;
             }
+            Logs.Debug($"[DynamicAPIBackend] Total modelNames collected: {modelNames.Count}");
 
             if (Models.TryGetValue("Stable-Diffusion", out List<string> existingModels))
             {
                 existingModels.AddRange(modelNames);
+                Logs.Debug($"[DynamicAPIBackend] Added {modelNames.Count} models to existing SD list, total now: {existingModels.Count}");
             }
             else
             {
                 Models.TryAdd("Stable-Diffusion", modelNames);
+                Logs.Debug($"[DynamicAPIBackend] Created new SD model list with {modelNames.Count} models");
             }
         }
 
