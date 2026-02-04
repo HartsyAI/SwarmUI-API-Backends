@@ -71,6 +71,6 @@ namespace Hartsy.Extensions.APIBackends.Models
         public Func<T2IParamInput, JObject> BuildRequest { get; set; }
 
         /// <summary>Function to process the API response into a byte array of image data.</summary>
-        public Func<JObject, Task<byte[]>> ProcessResponse { get; set; }
+        public Func<JObject, string, Task<byte[]>> ProcessResponse { get; set; }
     }
 }

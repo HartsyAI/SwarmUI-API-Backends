@@ -72,9 +72,9 @@ namespace Hartsy.Extensions.APIBackends
                         ModelDefinition modelDef = FindModelDefinition(providerDef, modelName);
                         return requestBuilder.BuildRequest(input, modelDef, providerDef);
                     },
-                    ProcessResponse = async response =>
+                    ProcessResponse = async (response, apiKey) =>
                     {
-                        return await requestBuilder.ProcessResponse(response, providerDef);
+                        return await requestBuilder.ProcessResponse(response, providerDef, apiKey);
                     }
                 }
             };

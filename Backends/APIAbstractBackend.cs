@@ -38,6 +38,9 @@ namespace Hartsy.Extensions.APIBackends.Backends
         /// <summary>Create an HTTP request for the specified API</summary>
         protected abstract HttpRequestMessage CreateHttpRequest(string baseUrl, JObject requestBody, T2IParamInput input);
 
+        /// <summary>Gets the API key for the current provider from the user session</summary>
+        protected abstract string GetApiKey(T2IParamInput input);
+
         /// <summary>Check if the user has permission to use this provider</summary>
         protected void CheckPermissions(T2IParamInput input)
         {
@@ -74,11 +77,11 @@ namespace Hartsy.Extensions.APIBackends.Backends
         }
 
         /// <summary>Process the API response to extract image data</summary>
-        protected virtual async Task<byte[]> ProcessResponse(JObject responseJson)
+        protected virtual async Task<byte[]> ProcessResponse(JObject responseJson, string apiKey)
         {
             try
             {
-                return await ActiveProvider.RequestConfig.ProcessResponse(responseJson);
+                return await ActiveProvider.RequestConfig.ProcessResponse(responseJson, apiKey);
             }
             catch (Exception ex)
             {
@@ -136,7 +139,8 @@ namespace Hartsy.Extensions.APIBackends.Backends
                 }
                 Logs.Verbose($"[APIAbstractBackend] {GetType().Name} - Received successful response: {response.StatusCode}");
                 JObject responseJson = JObject.Parse(await response.Content.ReadAsStringAsync());
-                byte[] imageData = await ProcessResponse(responseJson);
+                string apiKey = GetApiKey(input);
+                byte[] imageData = await ProcessResponse(responseJson, apiKey);
                 return [new Image(imageData, MediaType.ImagePng)];
             }
             catch (Exception ex)

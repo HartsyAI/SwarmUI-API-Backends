@@ -153,7 +153,7 @@ namespace Hartsy.Extensions.APIBackends.Providers
             .WithId("bfl_api")
             .WithName("Black Forest Labs")
             .WithModelPrefix("BFL")
-            .WithBaseUrl("https://api.bfl.ml")
+            .WithBaseUrl("https://api.bfl.ai")
             .WithAuthHeader("Bearer", "x-key")
             .WithModelClass("bfl_api", "FLUX")
             .AddModels(BlackForestModels)

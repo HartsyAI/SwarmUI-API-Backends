@@ -278,6 +278,14 @@ namespace Hartsy.Extensions.APIBackends.Backends
             return request;
         }
 
+        /// <summary>Gets the API key for the current provider from the user session.</summary>
+        protected override string GetApiKey(T2IParamInput input)
+        {
+            string providerId = GetProviderIdFromModel(CurrentModelName);
+            string apiKey = input.SourceSession.User.GetGenericData(providerId, "key")?.Trim();
+            return apiKey ?? "";
+        }
+
         /// <summary>Adds the appropriate authentication header for the provider.</summary>
         private static void AddAuthHeader(HttpRequestMessage request, string providerId, string apiKey)
         {

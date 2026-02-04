@@ -17,7 +17,7 @@ namespace Hartsy.Extensions.APIBackends.Providers
         JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider);
 
         /// <summary>Processes the API response and extracts image data.</summary>
-        Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider);
+        Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null);
 
         /// <summary>Gets the endpoint URL for the specific model.</summary>
         string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input);
@@ -62,7 +62,7 @@ namespace Hartsy.Extensions.APIBackends.Providers
         protected static readonly HttpClient HttpClient = NetworkBackendUtils.MakeHttpClient();
 
         public abstract JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider);
-        public abstract Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider);
+        public abstract Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null);
 
         public virtual string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input)
         {
@@ -150,7 +150,7 @@ namespace Hartsy.Extensions.APIBackends.Providers
             return request;
         }
 
-        public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider)
+        public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
         {
             JArray data = response["data"] as JArray;
             if (data == null || data.Count == 0)
@@ -178,7 +178,7 @@ namespace Hartsy.Extensions.APIBackends.Providers
 
     public sealed class IdeogramRequestBuilder : BaseRequestBuilder
     {
-        private static readonly Dictionary<string, string> AspectRatioMap = new()
+        private static readonly Dictionary<string, string> LegacyAspectRatioMap = new()
         {
             ["1:1"] = "ASPECT_1_1",
             ["10:16"] = "ASPECT_10_16",
@@ -193,41 +193,86 @@ namespace Hartsy.Extensions.APIBackends.Providers
             ["3:1"] = "ASPECT_3_1"
         };
 
-        private static string MapAspectRatio(string aspect)
+        private static readonly Dictionary<string, string> V3AspectRatioMap = new()
+        {
+            ["1:1"] = "1x1",
+            ["10:16"] = "10x16",
+            ["16:10"] = "16x10",
+            ["9:16"] = "9x16",
+            ["16:9"] = "16x9",
+            ["3:2"] = "3x2",
+            ["2:3"] = "2x3",
+            ["4:3"] = "4x3",
+            ["3:4"] = "3x4",
+            ["1:3"] = "1x3",
+            ["3:1"] = "3x1",
+            ["1:2"] = "1x2",
+            ["2:1"] = "2x1",
+            ["4:5"] = "4x5",
+            ["5:4"] = "5x4"
+        };
+
+        private static string MapAspectRatioLegacy(string aspect)
         {
             if (string.IsNullOrEmpty(aspect)) return "ASPECT_1_1";
             if (aspect.StartsWith("ASPECT_")) return aspect;
-            return AspectRatioMap.TryGetValue(aspect, out string mapped) ? mapped : "ASPECT_1_1";
+            return LegacyAspectRatioMap.TryGetValue(aspect, out string mapped) ? mapped : "ASPECT_1_1";
+        }
+
+        private static string MapAspectRatioV3(string aspect)
+        {
+            if (string.IsNullOrEmpty(aspect)) return "1x1";
+            if (aspect.Contains("x")) return aspect;
+            return V3AspectRatioMap.TryGetValue(aspect, out string mapped) ? mapped : "1x1";
+        }
+
+        private static bool IsV3Model(ModelDefinition model)
+        {
+            string id = model.Id?.ToLowerInvariant() ?? "";
+            return id.Contains("v_3") || id.Contains("v3");
         }
 
         public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
         {
             bool hasInputImage = input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Ideogram, out Image inputImg) 
                 && inputImg?.RawData != null;
+            bool isV3 = IsV3Model(model);
 
-            JObject imageRequest = new()
+            JObject requestBody = new()
             {
-                ["prompt"] = input.Get(T2IParamTypes.Prompt),
-                ["model"] = model.Id,
-                ["magic_prompt_option"] = input.TryGet(SwarmUIAPIBackends.MagicPromptParam_Ideogram, out string magic) ? magic : "AUTO"
+                ["prompt"] = input.Get(T2IParamTypes.Prompt)
             };
 
+            if (!isV3)
+            {
+                requestBody["model"] = model.Id;
+            }
+
+            if (input.TryGet(SwarmUIAPIBackends.MagicPromptParam_Ideogram, out string magic))
+                requestBody["magic_prompt_option"] = magic;
+            else
+                requestBody["magic_prompt_option"] = "AUTO";
+
             if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Ideogram, out string aspect))
-                imageRequest["aspect_ratio"] = MapAspectRatio(aspect);
-            if (input.TryGet(SwarmUIAPIBackends.StyleTypeParam_Ideogram, out string style))
-                imageRequest["style_type"] = style;
+                requestBody["aspect_ratio"] = isV3 ? MapAspectRatioV3(aspect) : MapAspectRatioLegacy(aspect);
+            if (input.TryGet(SwarmUIAPIBackends.StyleTypeParam_Ideogram, out string style) && !string.IsNullOrEmpty(style))
+                requestBody["style_type"] = style;
             if (input.TryGet(SwarmUIAPIBackends.NegativePromptParam_Ideogram, out string negPrompt) && !string.IsNullOrEmpty(negPrompt))
-                imageRequest["negative_prompt"] = negPrompt;
+                requestBody["negative_prompt"] = negPrompt;
 
             if (hasInputImage)
             {
                 string base64Image = Convert.ToBase64String(inputImg.RawData);
-                imageRequest["image"] = base64Image;
+                requestBody["image"] = base64Image;
                 if (input.TryGet(SwarmUIAPIBackends.ImageWeightParam_Ideogram, out double weight))
-                    imageRequest["image_weight"] = weight;
+                    requestBody["image_weight"] = weight;
             }
 
-            return new JObject { ["image_request"] = imageRequest };
+            if (isV3)
+            {
+                return requestBody;
+            }
+            return new JObject { ["image_request"] = requestBody };
         }
 
         public override string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input)
@@ -247,7 +292,7 @@ namespace Hartsy.Extensions.APIBackends.Providers
             request.Headers.TryAddWithoutValidation("Api-Key", apiKey);
         }
 
-        public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider)
+        public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
         {
             JArray data = response["data"] as JArray;
             if (data == null || data.Count == 0)
@@ -310,23 +355,65 @@ namespace Hartsy.Extensions.APIBackends.Providers
             request.Headers.TryAddWithoutValidation("x-key", apiKey);
         }
 
-        public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider)
+        public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
         {
-            // BFL uses async polling - check for result URL
+            string pollingUrl = response["polling_url"]?.ToString();
+            if (!string.IsNullOrEmpty(pollingUrl) && !string.IsNullOrEmpty(apiKey))
+            {
+                return await PollForResult(pollingUrl, apiKey);
+            }
+
             string resultUrl = response["result"]?["sample"]?.ToString();
             if (!string.IsNullOrEmpty(resultUrl))
             {
                 return await DownloadImageFromUrl(resultUrl);
             }
 
-            // Check for direct image data
             if (response["sample"] != null)
             {
                 string sampleUrl = response["sample"].ToString();
                 return await DownloadImageFromUrl(sampleUrl);
             }
 
-            throw new Exception("Black Forest Labs response missing image data");
+            throw new Exception($"Black Forest Labs response missing image data. Response: {response}");
+        }
+
+        private async Task<byte[]> PollForResult(string pollingUrl, string apiKey)
+        {
+            int maxAttempts = 120;
+            int delayMs = 1000;
+
+            for (int i = 0; i < maxAttempts; i++)
+            {
+                await Task.Delay(delayMs);
+
+                using HttpRequestMessage pollRequest = new(HttpMethod.Get, pollingUrl);
+                pollRequest.Headers.TryAddWithoutValidation("x-key", apiKey);
+                pollRequest.Headers.TryAddWithoutValidation("accept", "application/json");
+
+                HttpResponseMessage pollResponse = await HttpClient.SendAsync(pollRequest);
+                string content = await pollResponse.Content.ReadAsStringAsync();
+                JObject result = JObject.Parse(content);
+
+                string status = result["status"]?.ToString();
+                Logs.Verbose($"[BFL] Polling status: {status}");
+
+                if (status == "Ready")
+                {
+                    string sampleUrl = result["result"]?["sample"]?.ToString();
+                    if (!string.IsNullOrEmpty(sampleUrl))
+                    {
+                        return await DownloadImageFromUrl(sampleUrl);
+                    }
+                    throw new Exception("BFL result ready but missing sample URL");
+                }
+                else if (status == "Error" || status == "Failed")
+                {
+                    throw new Exception($"BFL generation failed: {result}");
+                }
+            }
+
+            throw new Exception("BFL polling timed out after 120 seconds");
         }
     }
 
@@ -347,7 +434,7 @@ namespace Hartsy.Extensions.APIBackends.Providers
             };
         }
 
-        public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider)
+        public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
         {
             JArray data = response["data"] as JArray;
             if (data == null || data.Count == 0)
@@ -422,7 +509,7 @@ namespace Hartsy.Extensions.APIBackends.Providers
                 : $"{provider.BaseUrl}/{model.Id}:predict";
         }
 
-        public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider)
+        public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
         {
             // Try Gemini format first
             JArray candidates = response["candidates"] as JArray;
@@ -508,7 +595,7 @@ namespace Hartsy.Extensions.APIBackends.Providers
             return $"{provider.BaseUrl}/{model.Id}";
         }
 
-        public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider)
+        public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
         {
             JArray images = response["images"] as JArray;
             if (images == null || images.Count == 0)
