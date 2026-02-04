@@ -83,7 +83,18 @@ namespace Hartsy.Extensions.APIBackends
         /// <summary>Finds the ModelDefinition for a given model name.</summary>
         private static ModelDefinition FindModelDefinition(ProviderDefinition provider, string fullModelName)
         {
-            string modelId = fullModelName.Replace($"{provider.ModelPrefix}/", "");
+            string normalized = fullModelName;
+            string prefix = $"API Models/{provider.ModelPrefix}/";
+            if (normalized.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                normalized = normalized[prefix.Length..];
+            }
+            else
+            {
+                normalized = normalized.Replace($"{provider.ModelPrefix}/", "");
+            }
+
+            string modelId = normalized;
             
             foreach (ModelDefinition model in provider.Models)
             {

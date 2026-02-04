@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using SwarmUI.Backends;
 using SwarmUI.Text2Image;
 using SwarmUI.Utils;
 using Hartsy.Extensions.APIBackends.Models;
@@ -458,7 +459,7 @@ namespace Hartsy.Extensions.APIBackends.Providers
 
             request["num_images"] = GetNumImages(input);
 
-            if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out int seed) && seed >= 0)
+            if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0)
                 request["seed"] = seed;
 
             if (input.TryGet(SwarmUIAPIBackends.GuidanceScaleParam_Fal, out double guidance))

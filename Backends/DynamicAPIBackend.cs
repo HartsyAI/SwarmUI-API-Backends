@@ -4,15 +4,16 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
+using FreneticUtilities.FreneticDataSyntax;
 using FreneticUtilities.FreneticExtensions;
+using Hartsy.Extensions.APIBackends.Models;
+using Newtonsoft.Json.Linq;
 using SwarmUI.Accounts;
 using SwarmUI.Backends;
 using SwarmUI.Core;
 using SwarmUI.Text2Image;
 using SwarmUI.Utils;
 using SwarmUI.WebAPI;
-using Hartsy.Extensions.APIBackends.Models;
 
 namespace Hartsy.Extensions.APIBackends.Backends
 {
@@ -149,12 +150,12 @@ namespace Hartsy.Extensions.APIBackends.Backends
         /// <summary>Determines the provider ID from a model name.</summary>
         private string GetProviderIdFromModel(string modelName)
         {
-            if (modelName.StartsWith("BFL/")) return "bfl_api";
-            if (modelName.StartsWith("OpenAI/")) return "openai_api";
-            if (modelName.StartsWith("Ideogram/")) return "ideogram_api";
-            if (modelName.StartsWith("Grok/")) return "grok_api";
-            if (modelName.StartsWith("Google/")) return "google_api";
-            if (modelName.StartsWith("Fal/")) return "fal_api";
+            if (modelName.StartsWith("API Models/BFL/")) return "bfl_api";
+            if (modelName.StartsWith("API Models/OpenAI/")) return "openai_api";
+            if (modelName.StartsWith("API Models/Ideogram/")) return "ideogram_api";
+            if (modelName.StartsWith("API Models/Grok/")) return "grok_api";
+            if (modelName.StartsWith("API Models/Google/")) return "google_api";
+            if (modelName.StartsWith("API Models/Fal/")) return "fal_api";
             return null;
         }
 
@@ -202,26 +203,23 @@ namespace Hartsy.Extensions.APIBackends.Backends
 
             if (providerId == "bfl_api")
             {
-                string cleanName = modelName.Replace("BFL/", "").Replace(".safetensors", "");
+                string cleanName = modelName.Replace("API Models/BFL/", "").Replace(".safetensors", "");
                 return $"{baseUrl}/v1/{cleanName}";
             }
             else if (providerId == "ideogram_api")
             {
                 bool hasInputImage = CheckIdeogramEdit(input);
-                if (modelName.Contains("v3"))
-                {
-                    return hasInputImage 
-                        ? "https://api.ideogram.ai/v1/ideogram-v3/edit" 
-                        : "https://api.ideogram.ai/v1/ideogram-v3/generate";
-                }
-                return hasInputImage ? "https://api.ideogram.ai/edit" : baseUrl;
+                string baseUrlForIdeogram = modelName.Contains("v3") ? 
+                    hasInputImage ? "https://api.ideogram.ai/v1/ideogram-v3/edit" : "https://api.ideogram.ai/v1/ideogram-v3/generate" 
+                    : hasInputImage ? "https://api.ideogram.ai/edit" : baseUrl;
+                return baseUrlForIdeogram;
             }
             else if (providerId == "google_api")
             {
-                string cleanName = modelName.Replace("Google/", "");
-                return cleanName.StartsWith("gemini-") 
-                    ? $"{baseUrl}/{cleanName}:generateContent" 
-                    : $"{baseUrl}/{cleanName}:predict";
+                string cleanName = modelName.Replace("API Models/Google/", "");
+                string baseUrlForGoogle = cleanName.StartsWith("gemini-") ? 
+                    $"{baseUrl}/{cleanName}:generateContent" : $"{baseUrl}/{cleanName}:predict";
+                return baseUrlForGoogle;
             }
             Logs.Verbose($"[DynamicAPIBackend] Using base URL: {baseUrl}");
             return baseUrl;
@@ -397,7 +395,7 @@ namespace Hartsy.Extensions.APIBackends.Backends
                     License = "Commercial",
                     UsageHint = $"API-based generation via {provider.Name}",
                     ModelClassType = model.ModelClass?.ID,
-                    Tags = new List<string> { "api", provider.Name.ToLowerInvariant() },
+                    Tags = new string[] { "api", provider.Name.ToLowerInvariant() },
                     TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                     TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
                 };

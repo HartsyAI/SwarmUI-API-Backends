@@ -12,53 +12,30 @@ namespace Hartsy.Extensions.APIBackends;
 /// <summary>Permissions for the APIBackends extension.</summary>
 public static class APIBackendsPermissions
 {
-    public static readonly PermInfoGroup APIBackendsPermGroup = new("APIBackends",
-        "Permissions related to API-based image generation backends.");
-
-    public static readonly PermInfo PermUseOpenAI = Permissions.Register(new("use_openai", "Use OpenAI APIs",
-        "Allows using OpenAI's DALL-E models for image generation.",
-        PermissionDefault.POWERUSERS, APIBackendsPermGroup));
-
-    public static readonly PermInfo PermUseIdeogram = Permissions.Register(new("use_ideogram", "Use Ideogram API",
-        "Allows using Ideogram's API for image generation.",
-        PermissionDefault.POWERUSERS, APIBackendsPermGroup));
-
-    public static readonly PermInfo PermUseBlackForest = Permissions.Register(new("use_blackforest", "Use Black Forest Labs API",
-        "Allows using Black Forest Labs' Flux model APIs for image generation.",
-        PermissionDefault.POWERUSERS, APIBackendsPermGroup));
-
-    public static readonly PermInfo PermUseGrok = Permissions.Register(new("use_grok", "Use Grok API",
-        "Allows using Grok's API for image generation.",
-        PermissionDefault.POWERUSERS, APIBackendsPermGroup));
-    public static readonly PermInfo PermUseGoogleImagen = Permissions.Register(new("use_google_api", "Use Google API",
-        "Allows using Google's image generation models (Imagen, Gemini) for image generation.",
-        PermissionDefault.POWERUSERS, APIBackendsPermGroup));
-
-    public static readonly PermInfo PermUseFal = Permissions.Register(new("use_fal_api", "Use Fal.ai API",
-        "Allows using Fal.ai's 600+ models for image and video generation.",
-        PermissionDefault.POWERUSERS, APIBackendsPermGroup));
+    public static readonly PermInfoGroup APIBackendsPermGroup = new("APIBackends", "Permissions related to API-based image generation backends.");
+    public static readonly PermInfo PermUseOpenAI = Permissions.Register(new("use_openai", "Use OpenAI APIs", "Allows using OpenAI's DALL-E models for image generation.", PermissionDefault.POWERUSERS, APIBackendsPermGroup));
+    public static readonly PermInfo PermUseIdeogram = Permissions.Register(new("use_ideogram", "Use Ideogram API", "Allows using Ideogram's API for image generation.", PermissionDefault.POWERUSERS, APIBackendsPermGroup));
+    public static readonly PermInfo PermUseBlackForest = Permissions.Register(new("use_blackforest", "Use Black Forest Labs API", "Allows using Black Forest Labs' Flux model APIs for image generation.", PermissionDefault.POWERUSERS, APIBackendsPermGroup));
+    public static readonly PermInfo PermUseGrok = Permissions.Register(new("use_grok", "Use Grok API", "Allows using Grok's API for image generation.", PermissionDefault.POWERUSERS, APIBackendsPermGroup));
+    public static readonly PermInfo PermUseGoogleImagen = Permissions.Register(new("use_google_api", "Use Google API", "Allows using Google's image generation models (Imagen, Gemini) for image generation.", PermissionDefault.POWERUSERS, APIBackendsPermGroup));
+    public static readonly PermInfo PermUseFal = Permissions.Register(new("use_fal_api", "Use Fal.ai API", "Allows using Fal.ai's 600+ models for image and video generation.", PermissionDefault.POWERUSERS, APIBackendsPermGroup));
 }
 
 /// <summary>Extension that adds support for various API-based image generation services.</summary>
 public class SwarmUIAPIBackends : Extension
 {
-
-    // Parameter Groups for each API service
     public static T2IParamGroup OpenAIParamGroup;
     public static T2IParamGroup DallE2Group;
     public static T2IParamGroup DallE3Group;
     public static T2IParamGroup GPTImage1Group;
     public static T2IParamGroup GrokParamGroup;
-
     public static T2IParamGroup Grok2ImageGroup;
     public static T2IParamGroup IdeogramParamGroup;
     public static T2IParamGroup IdeogramGeneralGroup;
     public static T2IParamGroup IdeogramAdvancedGroup;
-
     public static T2IParamGroup BlackForestGroup;
     public static T2IParamGroup BlackForestGeneralGroup;
     public static T2IParamGroup BlackForestAdvancedGroup;
-
     public static T2IParamGroup FalParamGroup;
     public static T2IParamGroup FalGeneralGroup;
     public static T2IParamGroup FalAdvancedGroup;
@@ -77,7 +54,6 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<int> OutputCompressionParam_GPTImage1;
 
     // GPT Image 1.5 Parameter
-    // (Uses the same parameters as GPT Image 1)
     public static T2IRegisteredParam<string> QualityParam_GPTImage1_5 => QualityParam_GPTImage1;
     public static T2IRegisteredParam<string> BackgroundParam_GPTImage1_5 => BackgroundParam_GPTImage1;
     public static T2IRegisteredParam<string> ModerationParam_GPTImage1_5 => ModerationParam_GPTImage1;
@@ -91,7 +67,10 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<string> ColorPaletteParam_Ideogram;
     public static T2IRegisteredParam<Image> ImagePromptParam_Ideogram;
     public static T2IRegisteredParam<Image> ImageMaskPromptParam_Ideogram;
-
+    public static T2IRegisteredParam<string> AspectRatioParam_Ideogram;
+    public static T2IRegisteredParam<string> StyleTypeParam_Ideogram => StyleParam_Ideogram;
+    public static T2IRegisteredParam<string> NegativePromptParam_Ideogram => T2IParamTypes.NegativePrompt;
+    public static T2IRegisteredParam<double> ImageWeightParam_Ideogram;
 
     // Black Forest Labs API Parameters
     public static T2IRegisteredParam<double> GuidanceParam_BlackForest;
@@ -102,13 +81,19 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<bool> RawModeParam_BlackForest;
     public static T2IRegisteredParam<Image> ImagePromptParam_BlackForest;
     public static T2IRegisteredParam<double> ImagePromptStrengthParam_BlackForest;
+    public static T2IRegisteredParam<int> WidthParam_BlackForest => T2IParamTypes.Width;
+    public static T2IRegisteredParam<int> HeightParam_BlackForest => T2IParamTypes.Height;
+    public static T2IRegisteredParam<bool> PromptUpsampling_BlackForest => PromptEnhanceParam_BlackForest;
+    public static T2IRegisteredParam<int> SafetyTolerance_BlackForest => SafetyParam_BlackForest;
+    public static T2IRegisteredParam<long> SeedParam_BlackForest => T2IParamTypes.Seed;
+    public static T2IRegisteredParam<int> StepsParam_BlackForest => T2IParamTypes.Steps;
 
     // Fal.ai Parameters
     public static T2IRegisteredParam<string> ImageSizeParam_Fal;
-    public static T2IRegisteredParam<int> SeedParam_Fal;
+    public static T2IRegisteredParam<long> SeedParam_Fal => T2IParamTypes.Seed;
     public static T2IRegisteredParam<double> GuidanceScaleParam_Fal;
     public static T2IRegisteredParam<int> NumInferenceStepsParam_Fal;
-    public static T2IRegisteredParam<string> OutputFormatParam_Fal;
+    public static T2IRegisteredParam<string> OutputFormatParam_Fal => OutputFormatParam_BlackForest;
     public static T2IRegisteredParam<bool> SafetyCheckerParam_Fal;
 
     public override void OnPreInit()
@@ -118,55 +103,31 @@ public class SwarmUIAPIBackends : Extension
 
     public override void OnInit()
     {
-        // Initialize Parameter Groups for all APIs
         OpenAIParamGroup = new("DALL-E API", Toggles: false, Open: true, OrderPriority: 10);
-        DallE2Group = new("DALL-E 2 Settings", Toggles: false, Open: true, OrderPriority: 10,
-            Description: "Parameters specific to OpenAI's DALL-E 2 model generation.");
-        DallE3Group = new("DALL-E 3 Settings", Toggles: false, Open: true, OrderPriority: 11,
-            Description: "Parameters specific to OpenAI's DALL-E 3 model, featuring enhanced quality and style options.");
-        GPTImage1Group = new("GPT Image 1 Settings", Toggles: false, Open: true, OrderPriority: 12,
-            Description: "Able to generate images with stronger instruction following, contextual awareness, and world knowledge.");
+        DallE2Group = new("DALL-E 2 Settings", Toggles: false, Open: true, OrderPriority: 10, Description: "Parameters specific to OpenAI's DALL-E 2 model generation.");
+        DallE3Group = new("DALL-E 3 Settings", Toggles: false, Open: true, OrderPriority: 11, Description: "Parameters specific to OpenAI's DALL-E 3 model, featuring enhanced quality and style options.");
+        GPTImage1Group = new("GPT Image 1 Settings", Toggles: false, Open: true, OrderPriority: 12, Description: "Able to generate images with stronger instruction following, contextual awareness, and world knowledge.");
 
         IdeogramParamGroup = new("Ideogram API", Toggles: false, Open: true, OrderPriority: 20);
-        IdeogramGeneralGroup = new("Ideogram Basic Settings", Toggles: false, Open: true, OrderPriority: 20,
-            Description: "Core parameters for Ideogram image generation.");
-        IdeogramAdvancedGroup = new("Ideogram Advanced Settings", Toggles: true, Open: false, OrderPriority: 21,
-            Description: "Additional options for fine-tuning Ideogram generations.");
+        IdeogramGeneralGroup = new("Ideogram Basic Settings", Toggles: false, Open: true, OrderPriority: 20, Description: "Core parameters for Ideogram image generation.");
+        IdeogramAdvancedGroup = new("Ideogram Advanced Settings", Toggles: true, Open: false, OrderPriority: 21, Description: "Additional options for fine-tuning Ideogram generations.");
 
-        GrokParamGroup = new("Grok API", Toggles: false, Open: true, OrderPriority: 30,
-            Description: "API access to Grok's image generation models.");
+        GrokParamGroup = new("Grok API", Toggles: false, Open: true, OrderPriority: 30, Description: "API access to Grok's image generation models.");
+        Grok2ImageGroup = new("Grok 2 Image Settings", Toggles: false, Open: true, OrderPriority: 37, Description: "Parameters specific to Grok's 2 Image model generation.");
 
-        Grok2ImageGroup = new("Grok 2 Image Settings", Toggles: false, Open: true, OrderPriority: 37,
-            Description: "Parameters specific to Grok's 2 Image model generation.");
+        BlackForestGroup = new("Black Forest Labs API", Toggles: false, Open: true, OrderPriority: 40, Description: "API access to Black Forest Labs' high quality Flux image generation models.");
+        BlackForestGeneralGroup = new("Flux Core Settings", Toggles: false, Open: true, OrderPriority: 40, Description: "Core parameters for Flux image generation.\nFlux models excel at high-quality image generation with strong artistic control.");
+        BlackForestAdvancedGroup = new("Flux Advanced Settings", Toggles: true, Open: false, OrderPriority: 41, Description: "Additional options for fine-tuning Flux generations and output processing.");
 
-        BlackForestGroup = new("Black Forest Labs API", Toggles: false, Open: true, OrderPriority: 40,
-            Description: "API access to Black Forest Labs' high quality Flux image generation models.");
-        BlackForestGeneralGroup = new("Flux Core Settings", Toggles: false, Open: true, OrderPriority: 40,
-            Description: "Core parameters for Flux image generation.\nFlux models excel at high-quality image generation with strong artistic control.");
-        BlackForestAdvancedGroup = new("Flux Advanced Settings", Toggles: true, Open: false, OrderPriority: 41,
-            Description: "Additional options for fine-tuning Flux generations and output processing.");
-
-        FalParamGroup = new("Fal.ai API", Toggles: false, Open: true, OrderPriority: 50,
-            Description: "API access to Fal.ai's 600+ production-ready AI models.");
-        FalGeneralGroup = new("Fal.ai Core Settings", Toggles: false, Open: true, OrderPriority: 50,
-            Description: "Core parameters for Fal.ai image generation.\nAccess to FLUX, Stable Diffusion, Recraft, and many more models.");
-        FalAdvancedGroup = new("Fal.ai Advanced Settings", Toggles: true, Open: false, OrderPriority: 51,
-            Description: "Additional options for fine-tuning Fal.ai generations.");
-
-        // Core Parameters for both models
-        SizeParam_OpenAI = T2IParamTypes.Register<string>(new("Output Resolution",
-            "Controls the dimensions of the generated image.\n" +
-            "DALL-E 2: 256x256, 512x512, or 1024x1024\n" +
-            "DALL-E 3: 1024x1024, 1792x1024, or 1024x1792\n" +
-            "GPT Image 1: auto, 1024x1024, 1536x1024, or 1024x1536",
-            "1024x1024", GetValues: model =>
+        FalParamGroup = new("Fal.ai API", Toggles: false, Open: true, OrderPriority: 50, Description: "API access to Fal.ai's 600+ production-ready AI models.");
+        FalGeneralGroup = new("Fal.ai Core Settings", Toggles: false, Open: true, OrderPriority: 50, Description: "Core parameters for Fal.ai image generation.\nAccess to FLUX, Stable Diffusion, Recraft, and many more models.");
+        FalAdvancedGroup = new("Fal.ai Advanced Settings", Toggles: true, Open: false, OrderPriority: 51, Description: "Additional options for fine-tuning Fal.ai generations.");
+        SizeParam_OpenAI = T2IParamTypes.Register<string>(new("Output Resolution", "Controls the dimensions of the generated image.\n" + "DALL-E 2: 256x256, 512x512, or 1024x1024\n" + "DALL-E 3: 1024x1024, 1792x1024, or 1024x1792\n" +
+            "GPT Image 1: auto, 1024x1024, 1536x1024, or 1024x1536", "1024x1024", GetValues: model =>
             {
-                if (model.ID.Contains("dall-e-2"))
-                    return ["256x256", "512x512", "1024x1024"];
-                else if (model.ID.Contains("gpt-image-1"))
-                    return ["auto///Auto (Recommended)", "1024x1024///Square", "1536x1024///Landscape", "1024x1536///Portrait"];
-                else
-                    return ["1024x1024", "1792x1024", "1024x1792"];
+                if (model.ID.Contains("dall-e-2")) return ["256x256", "512x512", "1024x1024"];
+                else if (model.ID.Contains("gpt-image-1")) return ["auto///Auto (Recommended)", "1024x1024///Square", "1536x1024///Landscape", "1024x1536///Portrait"];
+                else return ["1024x1024", "1792x1024", "1024x1792"];
             },
             OrderPriority: -10, ViewType: ParamViewType.POT_SLIDER,
             Group: DallE3Group, FeatureFlag: "openai_api"));
@@ -256,6 +217,11 @@ public class SwarmUIAPIBackends : Extension
             OrderPriority: -10, Group: IdeogramGeneralGroup, FeatureFlag: "ideogram_api"
             ));
 
+        AspectRatioParam_Ideogram = T2IParamTypes.Register<string>(new("Ideogram Aspect Ratio",
+            "Sets the desired aspect ratio for the generated image.",
+            "1:1", GetValues: _ => ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"],
+            OrderPriority: -9, Group: IdeogramGeneralGroup, FeatureFlag: "ideogram_api"));
+
         // Advanced Parameters
         MagicPromptParam_Ideogram = T2IParamTypes.Register<string>(new("Magic Prompt Enhancement",
             "Controls Ideogram's prompt optimization system:\n" +
@@ -286,6 +252,11 @@ public class SwarmUIAPIBackends : Extension
             "Useful for variations, style matching, or guided compositions.\n" +
             null, null, OrderPriority: -2,
             IsAdvanced: true, Group: IdeogramAdvancedGroup, FeatureFlag: "ideogram_api"));
+
+        ImageWeightParam_Ideogram = T2IParamTypes.Register<double>(new("Image Weight",
+            "Controls how strongly the input image influences the generation (when using image edit/mix).",
+            "0.5", Min: 0.0, Max: 1.0, Step: 0.05, ViewType: ParamViewType.SLIDER,
+            OrderPriority: -1, IsAdvanced: true, Group: IdeogramAdvancedGroup, FeatureFlag: "ideogram_api"));
 
         ColorPaletteParam_Ideogram = T2IParamTypes.Register<string>(new("Color Theme",
             "Apply a predefined color palette to influence image colors (V2 & V2_TURBO only):\n" +
@@ -390,13 +361,6 @@ public class SwarmUIAPIBackends : Extension
             ],
             OrderPriority: -10, Group: FalGeneralGroup, FeatureFlag: "fal_api"));
 
-        SeedParam_Fal = T2IParamTypes.Register<int>(new("Seed",
-            "Random seed for reproducible generation.\n" +
-            "Use the same seed with the same prompt for identical results.\n" +
-            "Set to -1 for random seed each time.",
-            "-1", Min: -1, Max: int.MaxValue,
-            OrderPriority: -8, Group: FalGeneralGroup, FeatureFlag: "fal_api"));
-
         GuidanceScaleParam_Fal = T2IParamTypes.Register<double>(new("Guidance Scale",
             "Controls how closely the model follows your prompt:\n" +
             "Lower values (1-3): More creative, less literal\n" +
@@ -412,13 +376,6 @@ public class SwarmUIAPIBackends : Extension
             "Other models: 20-30 steps typical",
             "28", Min: 1, Max: 100, ViewType: ParamViewType.SLIDER,
             OrderPriority: -5, Group: FalAdvancedGroup, FeatureFlag: "fal_api"));
-
-        OutputFormatParam_Fal = T2IParamTypes.Register<string>(new("Output Format",
-            "Format for the generated image:\n" +
-            "JPEG: Smaller files, good for sharing\n" +
-            "PNG: Lossless quality, best for editing",
-            "jpeg", GetValues: _ => ["jpeg///JPEG (Smaller)", "png///PNG (Lossless)"],
-            OrderPriority: -4, Group: FalAdvancedGroup, FeatureFlag: "fal_api"));
 
         SafetyCheckerParam_Fal = T2IParamTypes.Register<bool>(new("Safety Checker",
             "Enable or disable the NSFW safety checker.\n" +
@@ -539,11 +496,8 @@ public class SwarmUIAPIBackends : Extension
         ];
 
         // Register all flags
-        foreach (string flag in providerFlags)
-            T2IEngine.DisregardedFeatureFlags.Add(flag);
-        foreach (string flag in modelFlags)
-            T2IEngine.DisregardedFeatureFlags.Add(flag);
-        foreach (string flag in incompatibleFlags)
-            T2IEngine.DisregardedFeatureFlags.Add(flag);
+        foreach (string flag in providerFlags) T2IEngine.DisregardedFeatureFlags.Add(flag);
+        foreach (string flag in modelFlags) T2IEngine.DisregardedFeatureFlags.Add(flag);
+        foreach (string flag in incompatibleFlags) T2IEngine.DisregardedFeatureFlags.Add(flag);
     }
 }

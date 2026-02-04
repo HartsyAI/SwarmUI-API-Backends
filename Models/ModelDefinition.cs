@@ -46,7 +46,7 @@ namespace Hartsy.Extensions.APIBackends.Models
         public string EndpointOverride { get; init; } = "";
 
         /// <summary>Creates the full model name with provider prefix.</summary>
-        public string GetFullName(string providerPrefix) => $"{providerPrefix}/{Id}";
+        public string GetFullName(string providerPrefix) => $"API Models/{providerPrefix}/{Id}";
     }
 
     /// <summary>Type-safe definition for an API provider.</summary>
