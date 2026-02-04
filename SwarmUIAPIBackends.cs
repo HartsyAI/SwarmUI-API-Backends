@@ -33,13 +33,15 @@ public static class APIBackendsPermissions
     public static readonly PermInfo PermUseGoogleImagen = Permissions.Register(new("use_google_api", "Use Google API",
         "Allows using Google's image generation models (Imagen, Gemini) for image generation.",
         PermissionDefault.POWERUSERS, APIBackendsPermGroup));
+
+    public static readonly PermInfo PermUseFal = Permissions.Register(new("use_fal_api", "Use Fal.ai API",
+        "Allows using Fal.ai's 600+ models for image and video generation.",
+        PermissionDefault.POWERUSERS, APIBackendsPermGroup));
 }
 
 /// <summary>Extension that adds support for various API-based image generation services.</summary>
 public class SwarmUIAPIBackends : Extension
 {
-    /// <summary>API provider initialization instance.</summary>
-    private static APIProviderInit _providerInit;
 
     // Parameter Groups for each API service
     public static T2IParamGroup OpenAIParamGroup;
@@ -56,6 +58,10 @@ public class SwarmUIAPIBackends : Extension
     public static T2IParamGroup BlackForestGroup;
     public static T2IParamGroup BlackForestGeneralGroup;
     public static T2IParamGroup BlackForestAdvancedGroup;
+
+    public static T2IParamGroup FalParamGroup;
+    public static T2IParamGroup FalGeneralGroup;
+    public static T2IParamGroup FalAdvancedGroup;
 
     // OpenAI Parameters
     public static T2IRegisteredParam<string> SizeParam_OpenAI;
@@ -97,6 +103,14 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<Image> ImagePromptParam_BlackForest;
     public static T2IRegisteredParam<double> ImagePromptStrengthParam_BlackForest;
 
+    // Fal.ai Parameters
+    public static T2IRegisteredParam<string> ImageSizeParam_Fal;
+    public static T2IRegisteredParam<int> SeedParam_Fal;
+    public static T2IRegisteredParam<double> GuidanceScaleParam_Fal;
+    public static T2IRegisteredParam<int> NumInferenceStepsParam_Fal;
+    public static T2IRegisteredParam<string> OutputFormatParam_Fal;
+    public static T2IRegisteredParam<bool> SafetyCheckerParam_Fal;
+
     public override void OnPreInit()
     {
         ScriptFiles.Add("Assets/api-backends.js");
@@ -131,6 +145,13 @@ public class SwarmUIAPIBackends : Extension
             Description: "Core parameters for Flux image generation.\nFlux models excel at high-quality image generation with strong artistic control.");
         BlackForestAdvancedGroup = new("Flux Advanced Settings", Toggles: true, Open: false, OrderPriority: 41,
             Description: "Additional options for fine-tuning Flux generations and output processing.");
+
+        FalParamGroup = new("Fal.ai API", Toggles: false, Open: true, OrderPriority: 50,
+            Description: "API access to Fal.ai's 600+ production-ready AI models.");
+        FalGeneralGroup = new("Fal.ai Core Settings", Toggles: false, Open: true, OrderPriority: 50,
+            Description: "Core parameters for Fal.ai image generation.\nAccess to FLUX, Stable Diffusion, Recraft, and many more models.");
+        FalAdvancedGroup = new("Fal.ai Advanced Settings", Toggles: true, Open: false, OrderPriority: 51,
+            Description: "Additional options for fine-tuning Fal.ai generations.");
 
         // Core Parameters for both models
         SizeParam_OpenAI = T2IParamTypes.Register<string>(new("Output Resolution",
@@ -352,64 +373,73 @@ public class SwarmUIAPIBackends : Extension
             "jpeg", GetValues: _ => ["jpeg///JPEG (Smaller)", "png///PNG (Lossless)"],
             OrderPriority: 0, Group: BlackForestAdvancedGroup, FeatureFlag: "bfl_api"));
 
-        // Register all API feature flags
-        T2IEngine.DisregardedFeatureFlags.Add("openai_api");
-        T2IEngine.DisregardedFeatureFlags.Add("ideogram_api");
-        T2IEngine.DisregardedFeatureFlags.Add("bfl_api");
-        T2IEngine.DisregardedFeatureFlags.Add("grok_api");
-        T2IEngine.DisregardedFeatureFlags.Add("google_api");
+        // Fal.ai Parameters
+        ImageSizeParam_Fal = T2IParamTypes.Register<string>(new("Image Size",
+            "Controls the dimensions of the generated image:\n" +
+            "Square HD: 1024x1024 high definition\n" +
+            "Square: 512x512 standard\n" +
+            "Portrait: 768x1024 or 832x1216\n" +
+            "Landscape: 1024x768 or 1216x832",
+            "landscape_4_3", GetValues: _ => [
+                "square_hd///Square HD (1024x1024)",
+                "square///Square (512x512)",
+                "portrait_4_3///Portrait 4:3",
+                "portrait_16_9///Portrait 16:9",
+                "landscape_4_3///Landscape 4:3",
+                "landscape_16_9///Landscape 16:9"
+            ],
+            OrderPriority: -10, Group: FalGeneralGroup, FeatureFlag: "fal_api"));
 
-        // Register model-specific feature flags
-        T2IEngine.DisregardedFeatureFlags.Add("dalle2_params");
-        T2IEngine.DisregardedFeatureFlags.Add("dalle3_params");
-        T2IEngine.DisregardedFeatureFlags.Add("gpt-image-1_params");
-        T2IEngine.DisregardedFeatureFlags.Add("gpt-image-1.5_params");
-        T2IEngine.DisregardedFeatureFlags.Add("ideogram_v1_params");
-        T2IEngine.DisregardedFeatureFlags.Add("ideogram_v2_params");
-        T2IEngine.DisregardedFeatureFlags.Add("ideogram_v3_params");
-        T2IEngine.DisregardedFeatureFlags.Add("flux_ultra_params");
-        T2IEngine.DisregardedFeatureFlags.Add("flux_pro_params");
-        T2IEngine.DisregardedFeatureFlags.Add("flux_dev_params");
-        T2IEngine.DisregardedFeatureFlags.Add("flux_kontext_pro_params");
-        T2IEngine.DisregardedFeatureFlags.Add("flux_kontext_max_params");
-        T2IEngine.DisregardedFeatureFlags.Add("flux_2_max_params");
-        T2IEngine.DisregardedFeatureFlags.Add("flux_2_pro_params");
-        T2IEngine.DisregardedFeatureFlags.Add("grok_2_image_params");
+        SeedParam_Fal = T2IParamTypes.Register<int>(new("Seed",
+            "Random seed for reproducible generation.\n" +
+            "Use the same seed with the same prompt for identical results.\n" +
+            "Set to -1 for random seed each time.",
+            "-1", Min: -1, Max: int.MaxValue,
+            OrderPriority: -8, Group: FalGeneralGroup, FeatureFlag: "fal_api"));
 
-        // Hard to remove parameters from the global registry, so we keep them in memory
-        // Basic feature flags for all API backends - disable anything not needed
-        T2IEngine.DisregardedFeatureFlags.Add("sampling");
-        T2IEngine.DisregardedFeatureFlags.Add("zero_negative");
-        T2IEngine.DisregardedFeatureFlags.Add("refiners");
-        T2IEngine.DisregardedFeatureFlags.Add("controlnet");
-        T2IEngine.DisregardedFeatureFlags.Add("variation_seed");
-        T2IEngine.DisregardedFeatureFlags.Add("video");
-        T2IEngine.DisregardedFeatureFlags.Add("autowebui");
-        T2IEngine.DisregardedFeatureFlags.Add("comfyui");
-        T2IEngine.DisregardedFeatureFlags.Add("frameinterps");
-        T2IEngine.DisregardedFeatureFlags.Add("ipadapter");
-        T2IEngine.DisregardedFeatureFlags.Add("sdxl");
-        T2IEngine.DisregardedFeatureFlags.Add("dynamic_thresholding");
-        T2IEngine.DisregardedFeatureFlags.Add("cascade");
-        T2IEngine.DisregardedFeatureFlags.Add("sd3");
-        T2IEngine.DisregardedFeatureFlags.Add("flux-dev");
-        T2IEngine.DisregardedFeatureFlags.Add("seamless");
-        T2IEngine.DisregardedFeatureFlags.Add("freeu");
-        T2IEngine.DisregardedFeatureFlags.Add("teacache");
-        T2IEngine.DisregardedFeatureFlags.Add("text2video");
-        T2IEngine.DisregardedFeatureFlags.Add("yolov8");
-        T2IEngine.DisregardedFeatureFlags.Add("aitemplate");
+        GuidanceScaleParam_Fal = T2IParamTypes.Register<double>(new("Guidance Scale",
+            "Controls how closely the model follows your prompt:\n" +
+            "Lower values (1-3): More creative, less literal\n" +
+            "Medium values (3.5-7): Balanced\n" +
+            "Higher values (7-15): Stricter prompt adherence",
+            "3.5", Min: 1.0, Max: 20.0, Step: 0.5, ViewType: ParamViewType.SLIDER,
+            OrderPriority: -6, Group: FalGeneralGroup, FeatureFlag: "fal_api"));
+
+        NumInferenceStepsParam_Fal = T2IParamTypes.Register<int>(new("Inference Steps",
+            "Number of denoising steps. More steps = higher quality but slower.\n" +
+            "FLUX schnell: 1-4 steps (fast)\n" +
+            "FLUX dev: 20-50 steps (quality)\n" +
+            "Other models: 20-30 steps typical",
+            "28", Min: 1, Max: 100, ViewType: ParamViewType.SLIDER,
+            OrderPriority: -5, Group: FalAdvancedGroup, FeatureFlag: "fal_api"));
+
+        OutputFormatParam_Fal = T2IParamTypes.Register<string>(new("Output Format",
+            "Format for the generated image:\n" +
+            "JPEG: Smaller files, good for sharing\n" +
+            "PNG: Lossless quality, best for editing",
+            "jpeg", GetValues: _ => ["jpeg///JPEG (Smaller)", "png///PNG (Lossless)"],
+            OrderPriority: -4, Group: FalAdvancedGroup, FeatureFlag: "fal_api"));
+
+        SafetyCheckerParam_Fal = T2IParamTypes.Register<bool>(new("Safety Checker",
+            "Enable or disable the NSFW safety checker.\n" +
+            "When enabled, inappropriate content will be filtered.",
+            "true",
+            OrderPriority: -3, Group: FalAdvancedGroup, FeatureFlag: "fal_api"));
+
+        // Register all feature flags that should be disregarded for API backends
+        RegisterFeatureFlags();
 
         // Register the dynamic API backend type
         Program.Backends.RegisterBackendType<DynamicAPIBackend>("dynamic_api_backend", "3rd Party Paid API Backends",
-            "Generate images using various API services (OpenAI, Ideogram, Black Forest Labs)", true);
+            "Generate images using various API services (OpenAI, Ideogram, Black Forest Labs, Grok, Google, Fal.ai)", true);
         // All key types must be added to the accepted list first
-        string[] keyTypes = ["openai_api", "bfl_api", "ideogram_api", "grok_api", "google_api"];
+        string[] keyTypes = ["openai_api", "bfl_api", "ideogram_api", "grok_api", "google_api", "fal_api"];
         foreach (string keyType in keyTypes)
         {
             BasicAPIFeatures.AcceptedAPIKeyTypes.Add(keyType);
         }
-        _providerInit = new APIProviderInit();
+        // Initialize provider registry (singleton) and register models globally
+        _ = APIProviderRegistry.Instance; // Ensure registry is initialized
         RegisterApiModelsWithGlobalRegistry();
         // Register API Key tables for each backend - safely handle if already registered
         RegisterApiKeyIfNeeded("openai_api", "openai", "OpenAI (ChatGPT)", "https://platform.openai.com/api-keys",
@@ -422,7 +452,9 @@ public class SwarmUIAPIBackends : Extension
             new HtmlString("To use Grok in SwarmUI (via Hartsy extensions), you must set your Grok API key."));
         RegisterApiKeyIfNeeded("google_api", "google", "Google (Imagen, Gemini)", "https://ai.google.dev/gemini-api/docs/api-key",
             new HtmlString("To use Google models in SwarmUI (via Hartsy extensions), you must set your Google API key."));
-        Logs.Init("Hartsy's APIBackends extension V1.0 has successfully started.");
+        RegisterApiKeyIfNeeded("fal_api", "fal", "Fal.ai (600+ Models)", "https://fal.ai/dashboard/keys",
+            new HtmlString("To use Fal.ai models in SwarmUI (via Hartsy extensions), you must set your Fal.ai API key."));
+        Logs.Init("Hartsy's APIBackends extension V1.1 has successfully started.");
     }
 
     /// <summary>Safely registers an API key if it's not already registered</summary>
@@ -450,7 +482,7 @@ public class SwarmUIAPIBackends : Extension
     /// This ensures API models can be browsed, selected, and modified like standard local models.</summary>
     public static void RegisterApiModelsWithGlobalRegistry()
     {
-        foreach (APIProviderMetadata provider in _providerInit.Providers.Values)
+        foreach (APIProviderMetadata provider in APIProviderRegistry.Instance.Providers.Values)
         {
             foreach (KeyValuePair<string, T2IModel> entry in provider.Models)
             {
@@ -478,5 +510,40 @@ public class SwarmUIAPIBackends : Extension
                 Logs.Verbose($"Registered API model in global registry: {modelName}");
             }
         }
+    }
+
+    /// <summary>Registers all feature flags that should be disregarded for API backends.</summary>
+    private static void RegisterFeatureFlags()
+    {
+        // Provider-level feature flags
+        string[] providerFlags = ["openai_api", "ideogram_api", "bfl_api", "grok_api", "google_api", "fal_api"];
+
+        // Model-specific feature flags
+        string[] modelFlags = [
+            "dalle2_params", "dalle3_params", "gpt-image-1_params", "gpt-image-1.5_params",
+            "ideogram_v1_params", "ideogram_v2_params", "ideogram_v3_params",
+            "flux_ultra_params", "flux_pro_params", "flux_dev_params",
+            "flux_kontext_pro_params", "flux_kontext_max_params", "flux_2_max_params", "flux_2_pro_params",
+            "grok_2_image_params", "google_imagen_params", "google_gemini_params",
+            "fal_flux_params", "fal_flux_pro_params", "fal_flux_kontext_params", "fal_flux_2_params",
+            "fal_recraft_params", "fal_ideogram_params", "fal_sd_params", "fal_grok_params",
+            "fal_video_params", "fal_utility_params"
+        ];
+
+        // Features incompatible with API backends (local-only features)
+        string[] incompatibleFlags = [
+            "sampling", "zero_negative", "refiners", "controlnet", "variation_seed",
+            "video", "autowebui", "comfyui", "frameinterps", "ipadapter", "sdxl",
+            "dynamic_thresholding", "cascade", "sd3", "flux-dev", "seamless",
+            "freeu", "teacache", "text2video", "yolov8", "aitemplate"
+        ];
+
+        // Register all flags
+        foreach (string flag in providerFlags)
+            T2IEngine.DisregardedFeatureFlags.Add(flag);
+        foreach (string flag in modelFlags)
+            T2IEngine.DisregardedFeatureFlags.Add(flag);
+        foreach (string flag in incompatibleFlags)
+            T2IEngine.DisregardedFeatureFlags.Add(flag);
     }
 }

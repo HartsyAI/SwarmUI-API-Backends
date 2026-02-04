@@ -34,7 +34,7 @@ namespace Hartsy.Extensions.APIBackends.Models
         public Dictionary<string, T2IModel> Models { get; set; }
 
         /// <summary>Parameters specific to each model.</summary>
-        public Dictionary<string, Dictionary<string, IParameterHandler>> ModelParameters { get; private set; } = [];
+        public Dictionary<string, Dictionary<string, IParameterHandler>> ModelParameters { get; private set; } = new Dictionary<string, Dictionary<string, IParameterHandler>>();
 
         /// <summary>Configuration for making API requests.</summary>
         public RequestConfig RequestConfig { get; set; }
@@ -42,9 +42,9 @@ namespace Hartsy.Extensions.APIBackends.Models
         /// <summary>Get the parameters registered for a specific model.</summary>
         public Dictionary<string, IParameterHandler> GetParametersForModel(string modelName)
         {
-            if (!ModelParameters.TryGetValue(modelName, out var parameters))
+            if (!ModelParameters.TryGetValue(modelName, out Dictionary<string, IParameterHandler> parameters))
             {
-                parameters = [];
+                parameters = new Dictionary<string, IParameterHandler>();
                 ModelParameters[modelName] = parameters;
             }
             return parameters;
@@ -53,7 +53,7 @@ namespace Hartsy.Extensions.APIBackends.Models
         /// <summary>Register a parameter for a specific model.</summary>
         public void AddParameterToModel<T>(string modelName, string paramName, T2IRegisteredParam<T> param)
         {
-            var parameters = GetParametersForModel(modelName);
+            Dictionary<string, IParameterHandler> parameters = GetParametersForModel(modelName);
             parameters[paramName] = new ParameterHandler<T>(param);
         }
     }

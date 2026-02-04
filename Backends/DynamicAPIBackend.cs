@@ -1,22 +1,18 @@
+using System;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using FreneticUtilities.FreneticExtensions;
+using SwarmUI.Accounts;
+using SwarmUI.Backends;
 using SwarmUI.Core;
 using SwarmUI.Text2Image;
 using SwarmUI.Utils;
-using Hartsy.Extensions.APIBackends.Models;
-using FreneticUtilities.FreneticDataSyntax;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using SwarmUI.Accounts;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System;
-using SwarmUI.Backends;
 using SwarmUI.WebAPI;
-using FreneticUtilities.FreneticExtensions;
-using System.Net;
-using Microsoft.AspNetCore.Http;
-using System.Diagnostics.Eventing.Reader;
-using Microsoft.Extensions.Hosting;
+using Hartsy.Extensions.APIBackends.Models;
 
 namespace Hartsy.Extensions.APIBackends.Backends
 {
@@ -58,34 +54,63 @@ namespace Hartsy.Extensions.APIBackends.Backends
         /// <summary>Settings for the dynamic API backend.</summary>
         public class DynamicAPISettings : AutoConfiguration
         {
-            [ManualSettingsOptions(Impl = null, Vals = ["", "bfl_api", "ideogram_api", "openai_api", "grok_api", "google_api"],
-                ManualNames = ["Select a provider...", "Black Forest Labs (Flux)", "Ideogram", "OpenAI (DALL-E)", "Grok", "Google (Imagen, Gemini)"])]
-            [ConfigComment("Choose the backend API provider to use for image generation.")]
-            public string SelectedProvider = "";
+            [ConfigComment("Enable Black Forest Labs (Flux) API models.")]
+            public bool EnableBlackForest = false;
 
-            [ConfigComment("Custom Base URL (optional) This value will override the hardcoded base URL.")]
+            [ConfigComment("Enable Ideogram API models.")]
+            public bool EnableIdeogram = false;
+
+            [ConfigComment("Enable OpenAI (DALL-E, GPT Image) API models.")]
+            public bool EnableOpenAI = false;
+
+            [ConfigComment("Enable Grok API models.")]
+            public bool EnableGrok = false;
+
+            [ConfigComment("Enable Google (Imagen, Gemini) API models.")]
+            public bool EnableGoogle = false;
+
+            [ConfigComment("Enable Fal.ai API models (600+ models including FLUX, SD, Recraft, etc.).")]
+            public bool EnableFal = false;
+
+            [ConfigComment("Custom Base URL (optional). Overrides the default base URL for the selected provider during generation.")]
             public string CustomBaseUrl = "";
+        }
+
+        /// <summary>Maps setting properties to provider IDs.</summary>
+        private static readonly Dictionary<string, Func<DynamicAPISettings, bool>> ProviderSettingsMap = new()
+        {
+            ["bfl_api"] = s => s.EnableBlackForest,
+            ["ideogram_api"] = s => s.EnableIdeogram,
+            ["openai_api"] = s => s.EnableOpenAI,
+            ["grok_api"] = s => s.EnableGrok,
+            ["google_api"] = s => s.EnableGoogle,
+            ["fal_api"] = s => s.EnableFal
+        };
+
+        /// <summary>Gets the list of currently enabled provider IDs based on settings.</summary>
+        private List<string> GetEnabledProviderIds()
+        {
+            List<string> enabled = new List<string>();
+            foreach (KeyValuePair<string, Func<DynamicAPISettings, bool>> kvp in ProviderSettingsMap)
+            {
+                string providerId = kvp.Key;
+                Func<DynamicAPISettings, bool> isEnabled = kvp.Value;
+                if (isEnabled(Settings))
+                {
+                    enabled.Add(providerId);
+                }
+            }
+            return enabled;
         }
 
         /// <summary>Current backend settings</summary>
         public DynamicAPISettings Settings => SettingsRaw as DynamicAPISettings;
 
-        /// <summary>Access to the API provider service</summary>
-        private static readonly APIProviderInit _providerInit = new();
+        /// <summary>Gets the active provider metadata based on the model being used for generation.</summary>
+        protected override APIProviderMetadata ActiveProvider => _currentGenerationProvider;
 
-        /// <summary>Gets the active provider metadata</summary>
-        protected override APIProviderMetadata ActiveProvider
-        {
-            get
-            {
-                if (!_providerInit.Providers.TryGetValue(Settings.SelectedProvider, out APIProviderMetadata value))
-                {
-                    Logs.Error($"[DynamicAPIBackend] Provider key not found: {Settings.SelectedProvider}. Available providers: {string.Join(", ", _providerInit.Providers.Keys)}");
-                    return null;
-                }
-                return value;
-            }
-        }
+        /// <summary>Stores the provider being used for the current generation request.</summary>
+        private APIProviderMetadata _currentGenerationProvider;
 
         /// <summary>Gets the custom base URL if specified</summary>
         protected override string CustomBaseUrl => Settings.CustomBaseUrl;
@@ -94,10 +119,10 @@ namespace Hartsy.Extensions.APIBackends.Backends
         public override IEnumerable<string> SupportedFeatures => SupportedFeatureSet;
 
         /// <summary>Dictionary of remote models this backend provides, by type</summary>
-        public Dictionary<string, Dictionary<string, JObject>> RemoteModels { get; set; } = [];
+        public Dictionary<string, Dictionary<string, JObject>> RemoteModels { get; set; } = new Dictionary<string, Dictionary<string, JObject>>();
 
         /// <summary>Collection of all registered models, keyed by model name</summary>
-        private Dictionary<string, T2IModel> RegisteredApiModels { get; set; } = [];
+        private Dictionary<string, T2IModel> RegisteredApiModels { get; set; } = new Dictionary<string, T2IModel>();
 
         /// <summary>Constructor</summary>
         public DynamicAPIBackend()
@@ -112,66 +137,91 @@ namespace Hartsy.Extensions.APIBackends.Backends
             ["openai_api"] = APIBackendsPermissions.PermUseOpenAI,
             ["ideogram_api"] = APIBackendsPermissions.PermUseIdeogram,
             ["grok_api"] = APIBackendsPermissions.PermUseGrok,
-            ["google_api"] = APIBackendsPermissions.PermUseGoogleImagen
+            ["google_api"] = APIBackendsPermissions.PermUseGoogleImagen,
+            ["fal_api"] = APIBackendsPermissions.PermUseFal
         };
 
         private bool CheckIdeogramEdit(T2IParamInput input)
         {
             return input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Ideogram, out Image inputImg) && inputImg?.RawData != null;
         }
-        protected override PermInfo GetRequiredPermission() =>
-            _providerToPermission.TryGetValue(Settings.SelectedProvider, out PermInfo permission)
-                ? permission
-                : throw new Exception($"Unknown provider: {Settings.SelectedProvider}");
+
+        /// <summary>Determines the provider ID from a model name.</summary>
+        private string GetProviderIdFromModel(string modelName)
+        {
+            if (modelName.StartsWith("BFL/")) return "bfl_api";
+            if (modelName.StartsWith("OpenAI/")) return "openai_api";
+            if (modelName.StartsWith("Ideogram/")) return "ideogram_api";
+            if (modelName.StartsWith("Grok/")) return "grok_api";
+            if (modelName.StartsWith("Google/")) return "google_api";
+            if (modelName.StartsWith("Fal/")) return "fal_api";
+            return null;
+        }
+
+        /// <summary>Sets the current provider based on the model being used.</summary>
+        private void SetCurrentProviderFromModel(T2IParamInput input)
+        {
+            string modelName = input.Get(T2IParamTypes.Model)?.Name;
+            string providerId = GetProviderIdFromModel(modelName);
+            if (providerId != null && APIProviderRegistry.Instance.Providers.TryGetValue(providerId, out APIProviderMetadata provider))
+            {
+                _currentGenerationProvider = provider;
+            }
+            else
+            {
+                throw new Exception($"Could not determine provider for model: {modelName}");
+            }
+        }
+
+        protected override PermInfo GetRequiredPermission()
+        {
+            string providerId = _currentGenerationProvider?.Name?.ToLowerInvariant() switch
+            {
+                "black forest labs" => "bfl_api",
+                "openai" => "openai_api",
+                "ideogram" => "ideogram_api",
+                "grok" => "grok_api",
+                "google" => "google_api",
+                "fal.ai" => "fal_api",
+                _ => null
+            };
+            if (providerId != null && _providerToPermission.TryGetValue(providerId, out PermInfo permission))
+            {
+                return permission;
+            }
+            throw new Exception($"Unknown provider: {_currentGenerationProvider?.Name}");
+        }
 
         /// <summary>Get the base URL for the API request</summary>
         protected override string GetBaseUrl(T2IParamInput input)
         {
+            SetCurrentProviderFromModel(input);
             string baseUrl = !string.IsNullOrEmpty(CustomBaseUrl) ? CustomBaseUrl : ActiveProvider.RequestConfig.BaseUrl;
-            if (Settings.SelectedProvider == "bfl_api")
-            {
-                // Extract model name from input and clean it up
-                string modelName = input.Get(T2IParamTypes.Model).Name
-                    .Replace("BFL/", "") //TODO: Why is this done here and why only BFL? How do the others work? 
-                    .Replace(".safetensors", "");
-                return $"{baseUrl}/v1/{modelName}";
-            }
-            else if (Settings.SelectedProvider == "ideogram_api")
-            {
-                string modelName = input.Get(T2IParamTypes.Model).Name;
-                bool hasInputImage = CheckIdeogramEdit(input);
+            string modelName = input.Get(T2IParamTypes.Model).Name;
+            string providerId = GetProviderIdFromModel(modelName);
 
+            if (providerId == "bfl_api")
+            {
+                string cleanName = modelName.Replace("BFL/", "").Replace(".safetensors", "");
+                return $"{baseUrl}/v1/{cleanName}";
+            }
+            else if (providerId == "ideogram_api")
+            {
+                bool hasInputImage = CheckIdeogramEdit(input);
                 if (modelName.Contains("v3"))
                 {
-                    // Different Base URL for ideogram v3 model
-                    if (hasInputImage)
-                    {
-                        return "https://api.ideogram.ai/v1/ideogram-v3/edit";
-                    }
-                    return "https://api.ideogram.ai/v1/ideogram-v3/generate";
+                    return hasInputImage 
+                        ? "https://api.ideogram.ai/v1/ideogram-v3/edit" 
+                        : "https://api.ideogram.ai/v1/ideogram-v3/generate";
                 }
-                else
-                {
-                    if (hasInputImage)
-                    {
-                        return "https://api.ideogram.ai/edit";
-                    }
-                    return baseUrl;
-                }
-
+                return hasInputImage ? "https://api.ideogram.ai/edit" : baseUrl;
             }
-            else if (Settings.SelectedProvider == "google_api")
+            else if (providerId == "google_api")
             {
-                string modelName = input.Get(T2IParamTypes.Model).Name.Replace("Google/", "");
-                
-                // Gemini models use a different endpoint (generateContent)
-                if (modelName.StartsWith("gemini-"))
-                {
-                    return $"{baseUrl}/{modelName}:generateContent";
-                }
-                
-                // Imagen models use the predict endpoint
-                return $"{baseUrl}/{modelName}:predict";
+                string cleanName = modelName.Replace("Google/", "");
+                return cleanName.StartsWith("gemini-") 
+                    ? $"{baseUrl}/{cleanName}:generateContent" 
+                    : $"{baseUrl}/{cleanName}:predict";
             }
             Logs.Verbose($"[DynamicAPIBackend] Using base URL: {baseUrl}");
             return baseUrl;
@@ -181,12 +231,12 @@ namespace Hartsy.Extensions.APIBackends.Backends
         protected override HttpRequestMessage CreateHttpRequest(string baseUrl, JObject requestBody, T2IParamInput input)
         {
             HttpRequestMessage request = new(HttpMethod.Post, baseUrl);
-            string provider = Settings.SelectedProvider;
+            string modelName = input.Get(T2IParamTypes.Model).Name;
+            string providerId = GetProviderIdFromModel(modelName);
             if (CheckIdeogramEdit(input))
             {
                 MultipartFormDataContent formData = new MultipartFormDataContent();
-                string modelName = input.Get(T2IParamTypes.Model).Name;
-                foreach (var property in requestBody.Properties())
+                foreach (JProperty property in requestBody.Properties())
                 {
                     if (property.Value != null &&
                         property.Name != "image" &&
@@ -195,6 +245,7 @@ namespace Hartsy.Extensions.APIBackends.Backends
                         formData.Add(new StringContent(property.Value.ToString()), property.Name);
                     }
                 }
+
                 if (input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Ideogram, out Image inputImg) && inputImg?.RawData != null)
                 {
 
@@ -221,116 +272,150 @@ namespace Hartsy.Extensions.APIBackends.Backends
             {
                 request.Content = new StringContent(requestBody.ToString(), Encoding.UTF8, "application/json");
             }
-            string apiKey = input.SourceSession.User.GetGenericData(provider, "key")?.Trim();
+            string apiKey = input.SourceSession.User.GetGenericData(providerId, "key")?.Trim();
             if (string.IsNullOrEmpty(apiKey))
             {
-                throw new Exception($"API key not found for {provider}. Please set up your API key in the User tab");
+                throw new Exception($"API key not found for {providerId}. Please set up your API key in the User tab");
             }
-            // TODO: Is auth header already mapped in RequestConfig? If so we can use that instead of an if else
-            // BFL and Ideogram use different header names for API key
-            if (provider == "bfl_api")
-            {
-                request.Headers.Add("x-key", apiKey);
-            }
-            else if (provider == "ideogram_api")
-            {
-                request.Headers.Add("Api-Key", apiKey);
-            }
-            else if (provider == "google_api")
-            {
-                request.Headers.Add("x-goog-api-key", apiKey);
-            }
-            else
-            {
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-            }
+            AddAuthHeader(request, providerId, apiKey);
             return request;
         }
 
-        /// <summary>Validates the API key for the current provider</summary>
-        protected async Task<bool> ValidateApiKey()
+        /// <summary>Adds the appropriate authentication header for the provider.</summary>
+        private static void AddAuthHeader(HttpRequestMessage request, string providerId, string apiKey)
         {
-            string provider = Settings.SelectedProvider;
-            if (string.IsNullOrEmpty(provider))
+            switch (providerId)
             {
-                Logs.Warning("[DynamicAPIBackend] Cannot validate API key: No provider selected");
-                return false;
+                case "bfl_api":
+                    request.Headers.Add("x-key", apiKey);
+                    break;
+                case "ideogram_api":
+                    request.Headers.Add("Api-Key", apiKey);
+                    break;
+                case "google_api":
+                    request.Headers.Add("x-goog-api-key", apiKey);
+                    break;
+                default:
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+                    break;
             }
-            try
+        }
+
+        /// <summary>Validates API keys for all enabled providers using the local user.</summary>
+        protected bool ValidateApiKeysForEnabledProviders(List<string> enabledProviders)
+        {
+            // Use local user for backend initialization validation
+            User user = Program.Sessions.GetUser(SessionHandler.LocalUserID);
+            List<string> missingKeys = new List<string>();
+            foreach (string providerId in enabledProviders)
             {
-                string sessionId = null;
-                User sessionUser = null;
-                try
+                string apiKey = user.GetGenericData(providerId, "key");
+                if (string.IsNullOrWhiteSpace(apiKey))
                 {
-                    //TODO: There has to be a more efficient way to get the current user session without creating a new one
-                    // Create a new session to access the current user context
-                    using CancellationTokenSource timeout = Utilities.TimedCancel(TimeSpan.FromSeconds(10));
-                    string rawHost = Program.ServerSettings.Network.Host;
-                    string host = string.IsNullOrWhiteSpace(rawHost) || rawHost is "*" or "+" ? "localhost" : rawHost;
-                    string port = Program.ServerSettings.Network.Port.ToString();
-                    string url = $"http://{host}:{port}/API/GetNewSession";
-                    JObject sessData = await HttpClient.PostJson(url, [], null, timeout.Token);
-                    sessionId = sessData["session_id"].ToString();
-                    // Use the session ID to get the session object and user then check for the API key
-                    if (Program.Sessions.TryGetSession(sessionId, out Session session) && session?.User != null)
-                    {
-                        sessionUser = session.User;
-                        string apiKey = sessionUser.GetGenericData(provider, "key");
-                        // TODO: Check if the API key is valid. Maybe by making a simple test request to the API?
-                        if (!string.IsNullOrEmpty(apiKey))
-                        {
-                            return true;
-                        }
-                    }
+                    missingKeys.Add(providerId);
                 }
-                catch (Exception ex)
-                {
-                    Logs.Error($"[DynamicAPIBackend] Error creating test session: {ex.Message}");
-                }
-                Logs.Error($"[DynamicAPIBackend] API key validation failed: No API key found for {provider}. Have you saved your key?");
-                return false;
             }
-            catch (Exception ex)
+            if (missingKeys.Count > 0)
             {
-                Logs.Error($"[DynamicAPIBackend] API key validation error for {provider}: {ex.Message}");
-                AddLoadStatus($"API key validation failed: {ex.Message}");
+                string missing = string.Join(", ", missingKeys);
+                Logs.Warning($"[DynamicAPIBackend] Missing API keys for: {missing}. Add them in the User tab.");
+                AddLoadStatus($"Missing API keys for: {missing}. Add them in the User tab.");
                 return false;
             }
+            return true;
         }
 
         /// <summary>Initializes this backend, setting up client and configuration.</summary>
         public override async Task Init()
         {
             Status = BackendStatus.LOADING;
-            string provider = Settings.SelectedProvider;
             Models = new ConcurrentDictionary<string, List<string>>();
-            // Early exit if no provider selected or API key is invalid
-            if (string.IsNullOrEmpty(provider))
+            SupportedFeatureSet.Clear();
+            RegisteredApiModels.Clear();
+            RemoteModels.Clear();
+
+            List<string> enabledProviders = GetEnabledProviderIds();
+            if (enabledProviders.Count == 0)
             {
-                Logs.Warning("[DynamicAPIBackend] No API provider selected. Please choose a provider and save settings.");
+                Logs.Warning("[DynamicAPIBackend] No API providers enabled. Please enable at least one provider and save settings.");
                 Status = BackendStatus.DISABLED;
-                AddLoadStatus("Please select an API provider from the dropdown and click Save.");
+                AddLoadStatus("Please enable at least one API provider checkbox and click Save.");
                 return;
             }
-            if (!(await ValidateApiKey()))
+
+            if (!ValidateApiKeysForEnabledProviders(enabledProviders))
             {
                 Status = BackendStatus.ERRORED;
-                AddLoadStatus($"Please set up your {provider} API key in the User tab.");
                 return;
             }
+
             try
             {
-                // Add feature flag for this provider so params are displayed in the UI
-                SupportedFeatureSet.Add(provider);
-                // Register models and update remote models
-                await RegisterProviderModels();
+                // Register models for ALL enabled providers
+                foreach (string providerId in enabledProviders)
+                {
+                    if (!APIProviderRegistry.Instance.Providers.TryGetValue(providerId, out APIProviderMetadata providerMeta))
+                    {
+                        Logs.Warning($"[DynamicAPIBackend] Provider '{providerId}' not found in registry, skipping.");
+                        continue;
+                    }
+                    // Add feature flag for this provider so params are displayed in the UI
+                    SupportedFeatureSet.Add(providerId);
+                    // Register models from this provider
+                    await RegisterModelsForProvider(providerMeta);
+                    Logs.Verbose($"[DynamicAPIBackend] Registered models for provider: {providerId}");
+                }
                 UpdateRemoteModels();
                 Status = BackendStatus.RUNNING;
+                Logs.Info($"[DynamicAPIBackend] Initialized with {enabledProviders.Count} provider(s): {string.Join(", ", enabledProviders)}");
             }
             catch (Exception ex)
             {
-                Logs.Error($"Failed to initialize DynamicAPIBackend: {ex}");
+                Logs.Error($"[DynamicAPIBackend] Failed to initialize: {ex}");
                 Status = BackendStatus.ERRORED;
+            }
+        }
+
+        /// <summary>Registers models for a specific provider.</summary>
+        private async Task RegisterModelsForProvider(APIProviderMetadata provider)
+        {
+            List<string> modelNames = new List<string>();
+            foreach (KeyValuePair<string, T2IModel> kvp in provider.Models)
+            {
+                string name = kvp.Key;
+                T2IModel model = kvp.Value;
+                model.Handler = Program.MainSDModels;
+                model.Metadata ??= new T2IModelHandler.ModelMetadataStore
+                {
+                    ModelName = name,
+                    Title = model.Title,
+                    Author = provider.Name,
+                    Description = model.Description,
+                    PreviewImage = model.PreviewImage,
+                    StandardWidth = model.StandardWidth,
+                    StandardHeight = model.StandardHeight,
+                    License = "Commercial",
+                    UsageHint = $"API-based generation via {provider.Name}",
+                    ModelClassType = model.ModelClass?.ID,
+                    Tags = new List<string> { "api", provider.Name.ToLowerInvariant() },
+                    TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    TimeModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                };
+                modelNames.Add(name);
+                if (!Program.MainSDModels.Models.ContainsKey(name))
+                {
+                    Program.MainSDModels.Models[name] = model;
+                }
+                RegisteredApiModels[name] = model;
+            }
+
+            if (Models.TryGetValue("Stable-Diffusion", out List<string> existingModels))
+            {
+                existingModels.AddRange(modelNames);
+            }
+            else
+            {
+                Models.TryAdd("Stable-Diffusion", modelNames);
             }
         }
 
@@ -351,27 +436,28 @@ namespace Hartsy.Extensions.APIBackends.Backends
                     remoteSD[modelName] = CreateModelMetadata(model, modelName);
                 }
             }
-            Logs.Verbose($"[DynamicAPIBackend] Registered {RegisteredApiModels.Count} models from {Settings.SelectedProvider}");
+            Logs.Verbose($"[DynamicAPIBackend] Registered {RegisteredApiModels.Count} total API models");
         }
 
         private JObject CreateModelMetadata(T2IModel model, string modelName)
         {
+            string providerId = GetProviderIdFromModel(modelName) ?? "unknown";
             return new JObject
             {
                 ["name"] = modelName,
                 ["title"] = model.Title ?? modelName,
-                ["description"] = model.Description ?? $"API model from {Settings.SelectedProvider}",
+                ["description"] = model.Description ?? $"API model",
                 ["preview_image"] = model.PreviewImage ?? "",
                 ["loaded"] = true,
                 ["architecture"] = model.ModelClass?.ID ?? "stable-diffusion",
-                ["class"] = model.ModelClass?.Name ?? Settings.SelectedProvider,
+                ["class"] = model.ModelClass?.Name ?? providerId,
                 ["compat_class"] = model.ModelClass?.ID ?? "stable-diffusion",
                 ["standard_width"] = model.StandardWidth > 0 ? model.StandardWidth : 1024,
                 ["standard_height"] = model.StandardHeight > 0 ? model.StandardHeight : 1024,
                 ["is_supported_model_format"] = true,
-                ["tags"] = new JArray("api", ActiveProvider.Name.ToLowerInvariant()),
+                ["tags"] = new JArray("api", providerId),
                 ["local"] = false,
-                ["api_source"] = Settings.SelectedProvider
+                ["api_source"] = providerId
             };
         }
 

@@ -1,26 +1,22 @@
 /**
  * API Backends Feature Handler for SwarmUI
- * This script integrates various API-based image generation services
- * with SwarmUI's feature system, controlling parameter visibility.
+ * Integrates API-based image generation services with SwarmUI's feature system.
  */
 
-// 1. Feature set changer - Add required features for API models and remove unsupported ones
-// Also modifies param objects to add synthetic feature flags for proper visibility control
-featureSetChangers.push(() => {
-    if (!gen_param_types) {
-        return [[], []];
-    }
+// Centralized configuration for API backend feature flags
+const APIBackendsConfig = {
+    // Provider IDs mapped to their model-specific feature flags
+    providers: {
+        openai_api: ['dalle2_params', 'dalle3_params', 'gpt-image-1_params', 'gpt-image-1.5_params'],
+        ideogram_api: ['ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params'],
+        bfl_api: ['flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params', 'flux_2_max_params', 'flux_2_pro_params'],
+        grok_api: ['grok_2_image_params'],
+        google_api: ['google_imagen_params', 'google_gemini_params'],
+        fal_api: ['fal_flux_params', 'fal_flux_pro_params', 'fal_flux_kontext_params', 'fal_flux_2_params', 'fal_recraft_params', 'fal_ideogram_params', 'fal_sd_params', 'fal_grok_params', 'fal_video_params', 'fal_utility_params']
+    },
 
-    // Determine current API backend type
-    const isOpenAIModel = currentModelHelper.curArch === 'openai_api';
-    const isIdeogramModel = currentModelHelper.curArch === 'ideogram_api';
-    const isBlackForestModel = currentModelHelper.curArch === 'bfl_api';
-    const isGrokModel = currentModelHelper.curArch === 'grok_api';
-    const isGoogleModel = currentModelHelper.curArch === 'google_api';
-    const isApiModel = isOpenAIModel || isIdeogramModel || isBlackForestModel || isGrokModel || isGoogleModel;
-
-    // List of core parameters that don't have feature flags but shouldn't show for API models
-    const coreParamsToHideForAPI = [
+    // Core params to hide for all API models (no feature flags but incompatible)
+    coreParamsToHide: [
         'steps', 'cfgscale', 'width', 'height', 'sidelength', 'aspectratio',
         'seed', 'batchsize', 'initimagecreativity', 'initimageresettonorm',
         'initimagenoise', 'maskblur', 'maskgrow', 'maskshrinkgrow',
@@ -29,78 +25,75 @@ featureSetChangers.push(() => {
         'fluxguidancescale', 'fluxdisableguidance', 'clipstopatlayer',
         'vaetilesize', 'vaetileoverlap', 'removebackground', 'automaticvae',
         'modelspecificenhancements'
-    ];
+    ],
 
-    // Modify param objects to add/remove synthetic feature flag
-    // This ensures SwarmUI's core visibility system properly handles these params
+    // Features incompatible with API backends (local-only)
+    incompatibleFlags: [
+        'sampling', 'refiners', 'controlnet', 'variation_seed', 'video',
+        'autowebui', 'comfyui', 'frameinterps', 'ipadapter', 'sdxl',
+        'cascade', 'sd3', 'seamless', 'freeu', 'teacache', 'text2video',
+        'yolov8', 'aitemplate', 'endstepsearly', 'dynamic_thresholding',
+        'flux-dev', 'zero_negative'
+    ],
+
+    // Get all provider IDs
+    get providerIds() {
+        return Object.keys(this.providers);
+    },
+
+    // Get all model-specific flags across all providers
+    get allModelFlags() {
+        return Object.values(this.providers).flat();
+    },
+
+    // Get all flags to remove when not using API models
+    get allApiFlags() {
+        return [...this.providerIds, ...this.allModelFlags];
+    }
+};
+
+// Feature set changer - controls parameter visibility for API models
+featureSetChangers.push(() => {
+    if (!gen_param_types) {
+        return [[], []];
+    }
+
+    const curArch = currentModelHelper.curArch;
+    const isApiModel = APIBackendsConfig.providerIds.includes(curArch);
+
+    // Modify param objects to add/remove synthetic feature flag for core params
     for (let param of gen_param_types) {
-        if (coreParamsToHideForAPI.includes(param.id)) {
+        if (APIBackendsConfig.coreParamsToHide.includes(param.id)) {
             if (isApiModel) {
-                // Store original feature_flag if we haven't already
                 if (!param.hasOwnProperty('original_feature_flag_api')) {
                     param.original_feature_flag_api = param.feature_flag;
                 }
-                // Add synthetic feature flag that won't be in currentBackendFeatureSet
-                // This makes SwarmUI's core system think this param is unsupported
                 param.feature_flag = param.original_feature_flag_api
                     ? `${param.original_feature_flag_api},__api_incompatible__`
                     : '__api_incompatible__';
             } else if (param.hasOwnProperty('original_feature_flag_api')) {
-                // Restore original feature flag when switching away from API models
                 param.feature_flag = param.original_feature_flag_api;
                 delete param.original_feature_flag_api;
             }
         }
     }
 
-    // If not using any API model, just remove API-specific feature flags
+    // Not using API model - remove all API-specific flags
     if (!isApiModel) {
-        return [[], ['openai_api', 'ideogram_api', 'bfl_api', 'grok_api', 'google_api',
-            'dalle2_params', 'dalle3_params', 'gpt-image-1_params', 'gpt-image-1.5_params',
-            'ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params',
-            'flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params', 'flux_2_max_params', 'flux_2_pro_params',
-            'grok_2_image_params', 'google_api']];
+        return [[], APIBackendsConfig.allApiFlags];
     }
 
-    // These features should be REMOVED for all API backends as they're incompatible
-    const commonRemoveFlags = [
-        'sampling', 'refiners', 'controlnet', 'variation_seed',
-        'video', 'autowebui', 'comfyui', 'frameinterps', 'ipadapter',
-        'sdxl', 'cascade', 'sd3', 'seamless', 'freeu', 'teacache',
-        'text2video', 'yolov8', 'aitemplate', 'endstepsearly',
-        'dynamic_thresholding', 'flux-dev', 'zero_negative',
-        // Also remove model-specific feature flags when switching away
-        'dalle2_params', 'dalle3_params', 'gpt-image-1_params', 'gpt-image-1.5_params',
-        'ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params',
-        'flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_2_pro_params', 'flux_2_max_params',
-        'flux_kontext_pro_params', 'flux_kontext_max_params',
-        'grok_2_image_params', 'google_api'
+    // Build flags to remove (incompatible + other providers' model flags)
+    const removeFlags = [
+        ...APIBackendsConfig.incompatibleFlags,
+        ...APIBackendsConfig.allModelFlags
     ];
 
-    // These are features that should always be enabled for API models
-    const addFlags = ['prompt', 'images'];
+    // Build flags to add (base + current provider + its model flags)
+    const providerModelFlags = APIBackendsConfig.providers[curArch] || [];
+    const addFlags = ['prompt', 'images', curArch, ...providerModelFlags];
 
-    // Add provider-specific features only
-    if (isOpenAIModel) {
-        addFlags.push('openai_api');
-        addFlags.push('dalle2_params', 'dalle3_params', 'gpt-image-1_params', 'gpt-image-1.5_params');
-    } else if (isIdeogramModel) {
-        addFlags.push('ideogram_api');
-        addFlags.push('ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params');
-    } else if (isBlackForestModel) {
-        addFlags.push('bfl_api');
-        addFlags.push('flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params', 'flux_2_max_params', 'flux_2_pro_params');
-    } else if (isGrokModel) {
-        addFlags.push('grok_api');
-        addFlags.push('grok_2_image_params');
-    } else if(isGoogleModel) {
-        addFlags.push('google_api');
-    }
-
-    console.log(`[api-backends] Adding feature flags: ${addFlags.join(', ')}`);
-    console.log(`[api-backends] Removing feature flags: ${commonRemoveFlags.join(', ')}`);
-
-    return [addFlags, commonRemoveFlags];
+    return [addFlags, removeFlags];
 });
 
 // 2. Run setup when model changes
