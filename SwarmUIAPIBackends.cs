@@ -383,34 +383,22 @@ public class SwarmUIAPIBackends : Extension
             "true",
             OrderPriority: -3, Group: FalAdvancedGroup, FeatureFlag: "fal_api"));
 
-        // Register all feature flags that should be disregarded for API backends
         RegisterFeatureFlags();
-
-        // Register the dynamic API backend type
-        Program.Backends.RegisterBackendType<DynamicAPIBackend>("dynamic_api_backend", "3rd Party Paid API Backends",
-            "Generate images using various API services (OpenAI, Ideogram, Black Forest Labs, Grok, Google, Fal.ai)", true);
+        Program.Backends.RegisterBackendType<DynamicAPIBackend>("dynamic_api_backend", "3rd Party Paid API Backends", "Generate images using various API services (OpenAI, Ideogram, Black Forest Labs, Grok, Google, Fal.ai)", true);
         // All key types must be added to the accepted list first
         string[] keyTypes = ["openai_api", "bfl_api", "ideogram_api", "grok_api", "google_api", "fal_api"];
         foreach (string keyType in keyTypes)
         {
             BasicAPIFeatures.AcceptedAPIKeyTypes.Add(keyType);
         }
-        // Initialize provider registry (singleton) and register models globally
-        _ = APIProviderRegistry.Instance; // Ensure registry is initialized
+        _ = APIProviderRegistry.Instance;
         RegisterApiModelsWithGlobalRegistry();
-        // Register API Key tables for each backend - safely handle if already registered
-        RegisterApiKeyIfNeeded("openai_api", "openai", "OpenAI (ChatGPT)", "https://platform.openai.com/api-keys",
-            new HtmlString("To use OpenAI models in SwarmUI (via Hartsy extensions), you must set your OpenAI API key."));
-        RegisterApiKeyIfNeeded("bfl_api", "black_forest", "Black Forest Labs (FLUX)", "https://dashboard.bfl.ai/",
-            new HtmlString("To use Black Forest in SwarmUI (via Hartsy extensions), you must set your Black Forest API key."));
-        RegisterApiKeyIfNeeded("ideogram_api", "ideogram", "Ideogram", "https://developer.ideogram.ai/ideogram-api/api-setup",
-            new HtmlString("To use Ideogram in SwarmUI (via Hartsy extensions), you must set your Ideogram API key."));
-        RegisterApiKeyIfNeeded("grok_api", "grok", "Grok", "https://accounts.x.ai/sign-up?redirect=grok-com",
-            new HtmlString("To use Grok in SwarmUI (via Hartsy extensions), you must set your Grok API key."));
-        RegisterApiKeyIfNeeded("google_api", "google", "Google (Imagen, Gemini)", "https://ai.google.dev/gemini-api/docs/api-key",
-            new HtmlString("To use Google models in SwarmUI (via Hartsy extensions), you must set your Google API key."));
-        RegisterApiKeyIfNeeded("fal_api", "fal", "Fal.ai (600+ Models)", "https://fal.ai/dashboard/keys",
-            new HtmlString("To use Fal.ai models in SwarmUI (via Hartsy extensions), you must set your Fal.ai API key."));
+        RegisterApiKeyIfNeeded("openai_api", "openai", "OpenAI (ChatGPT)", "https://platform.openai.com/api-keys", new HtmlString("To use OpenAI models in SwarmUI (via Hartsy extensions), you must set your OpenAI API key."));
+        RegisterApiKeyIfNeeded("bfl_api", "black_forest", "Black Forest Labs (FLUX)", "https://dashboard.bfl.ai/", new HtmlString("To use Black Forest in SwarmUI (via Hartsy extensions), you must set your Black Forest API key."));
+        RegisterApiKeyIfNeeded("ideogram_api", "ideogram", "Ideogram", "https://developer.ideogram.ai/ideogram-api/api-setup", new HtmlString("To use Ideogram in SwarmUI (via Hartsy extensions), you must set your Ideogram API key."));
+        RegisterApiKeyIfNeeded("grok_api", "grok", "Grok", "https://accounts.x.ai/sign-up?redirect=grok-com", new HtmlString("To use Grok in SwarmUI (via Hartsy extensions), you must set your Grok API key."));
+        RegisterApiKeyIfNeeded("google_api", "google", "Google (Imagen, Gemini)", "https://ai.google.dev/gemini-api/docs/api-key", new HtmlString("To use Google models in SwarmUI (via Hartsy extensions), you must set your Google API key."));
+        RegisterApiKeyIfNeeded("fal_api", "fal", "Fal.ai (600+ Models)", "https://fal.ai/dashboard/keys", new HtmlString("To use Fal.ai models in SwarmUI (via Hartsy extensions), you must set your Fal.ai API key."));
         Logs.Init("Hartsy's APIBackends extension V1.1 has successfully started.");
     }
 
@@ -445,12 +433,10 @@ public class SwarmUIAPIBackends : Extension
             {
                 string modelName = entry.Key;
                 T2IModel model = entry.Value;
-                // Skip if model already exists (avoid duplicates)
                 if (Program.MainSDModels.Models.ContainsKey(modelName))
                 {
                     continue;
                 }
-                // Create a copy of the model for the global registry
                 T2IModel globalModel = new(Program.MainSDModels, null, model.RawFilePath, modelName)
                 {
                     Title = model.Title,

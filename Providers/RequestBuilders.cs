@@ -8,625 +8,537 @@ using SwarmUI.Text2Image;
 using SwarmUI.Utils;
 using Hartsy.Extensions.APIBackends.Models;
 
-namespace Hartsy.Extensions.APIBackends.Providers
+namespace Hartsy.Extensions.APIBackends.Providers;
+
+/// <summary>Interface for building provider-specific API requests.</summary>
+public interface IRequestBuilder
 {
-    /// <summary>Interface for building provider-specific API requests.</summary>
-    public interface IRequestBuilder
+    /// <summary>Builds the JSON request body for the API call.</summary>
+    JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider);
+
+    /// <summary>Processes the API response and extracts image data.</summary>
+    Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null);
+
+    /// <summary>Gets the endpoint URL for the specific model.</summary>
+    string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input);
+
+    /// <summary>Adds authentication headers to the request.</summary>
+    void AddAuthHeaders(HttpRequestMessage request, string apiKey, ProviderDefinition provider);
+}
+
+/// <summary>Factory for getting the appropriate request builder for a provider.</summary>
+public static class RequestBuilderFactory
+{
+    private static readonly Dictionary<string, IRequestBuilder> _builders = new()
     {
-        /// <summary>Builds the JSON request body for the API call.</summary>
-        JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider);
+        ["openai_api"] = new OpenAIRequestBuilder(),
+        ["ideogram_api"] = new IdeogramRequestBuilder(),
+        ["bfl_api"] = new BlackForestRequestBuilder(),
+        ["grok_api"] = new GrokRequestBuilder(),
+        ["google_api"] = new GoogleRequestBuilder(),
+        ["fal_api"] = new FalRequestBuilder()
+    };
 
-        /// <summary>Processes the API response and extracts image data.</summary>
-        Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null);
-
-        /// <summary>Gets the endpoint URL for the specific model.</summary>
-        string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input);
-
-        /// <summary>Adds authentication headers to the request.</summary>
-        void AddAuthHeaders(HttpRequestMessage request, string apiKey, ProviderDefinition provider);
+    /// <summary>Gets the request builder for the specified provider.</summary>
+    public static IRequestBuilder GetBuilder(string providerId)
+    {
+        if (_builders.TryGetValue(providerId, out IRequestBuilder builder))
+        {
+            return builder;
+        }
+        throw new ArgumentException($"No request builder found for provider: {providerId}");
     }
 
-    /// <summary>Factory for getting the appropriate request builder for a provider.</summary>
-    public static class RequestBuilderFactory
+    /// <summary>Registers a custom request builder for a provider.</summary>
+    public static void RegisterBuilder(string providerId, IRequestBuilder builder)
     {
-        private static readonly Dictionary<string, IRequestBuilder> _builders = new()
+        _builders[providerId] = builder;
+    }
+}
+
+/// <summary>Base class with common request building functionality.</summary>
+public abstract class BaseRequestBuilder : IRequestBuilder
+{
+    protected static readonly HttpClient HttpClient = NetworkBackendUtils.MakeHttpClient();
+    public abstract JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider);
+    public abstract Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null);
+    public virtual string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input)
+    {
+        if (!string.IsNullOrEmpty(model.EndpointOverride))
         {
-            ["openai_api"] = new OpenAIRequestBuilder(),
-            ["ideogram_api"] = new IdeogramRequestBuilder(),
-            ["bfl_api"] = new BlackForestRequestBuilder(),
-            ["grok_api"] = new GrokRequestBuilder(),
-            ["google_api"] = new GoogleRequestBuilder(),
-            ["fal_api"] = new FalRequestBuilder()
+            return model.EndpointOverride;
+        }
+        return provider.BaseUrl;
+    }
+
+    public virtual void AddAuthHeaders(HttpRequestMessage request, string apiKey, ProviderDefinition provider)
+    {
+        if (!string.IsNullOrEmpty(provider.CustomAuthHeader))
+        {
+            request.Headers.TryAddWithoutValidation(provider.CustomAuthHeader, apiKey);
+        }
+        else
+        {
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
+                provider.AuthHeaderType, apiKey);
+        }
+    }
+
+    protected static int GetNumImages(T2IParamInput input)
+    {
+        return input.TryGet(T2IParamTypes.Images, out int num) && num > 0 ? num : 1;
+    }
+
+    protected static async Task<byte[]> DownloadImageFromUrl(string url)
+    {
+        return await HttpClient.GetByteArrayAsync(url);
+    }
+
+    protected static byte[] DecodeBase64Image(string base64Data)
+    {
+        if (base64Data.Contains(','))
+        {
+            base64Data = base64Data[(base64Data.IndexOf(',') + 1)..];
+        }
+        return Convert.FromBase64String(base64Data);
+    }
+}
+
+#region OpenAI Request Builder
+
+public sealed class OpenAIRequestBuilder : BaseRequestBuilder
+{
+    public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
+    {
+        string modelName = model.Id;
+        JObject request = new()
+        {
+            ["prompt"] = input.Get(T2IParamTypes.Prompt),
+            ["model"] = modelName,
+            ["n"] = GetNumImages(input),
+            ["size"] = input.TryGet(SwarmUIAPIBackends.SizeParam_OpenAI, out string size) ? size : "1024x1024"
         };
-
-        /// <summary>Gets the request builder for the specified provider.</summary>
-        public static IRequestBuilder GetBuilder(string providerId)
+        if (modelName is "gpt-image-1" or "gpt-image-1.5")
         {
-            if (_builders.TryGetValue(providerId, out IRequestBuilder builder))
-            {
-                return builder;
-            }
-            throw new ArgumentException($"No request builder found for provider: {providerId}");
+            if (input.TryGet(SwarmUIAPIBackends.QualityParam_GPTImage1, out string quality)) request["quality"] = quality;
+            if (input.TryGet(SwarmUIAPIBackends.BackgroundParam_GPTImage1, out string bg)) request["background"] = bg;
+            if (input.TryGet(SwarmUIAPIBackends.ModerationParam_GPTImage1, out string mod)) request["moderation"] = mod;
+            if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_GPTImage1, out string format)) request["output_format"] = format;
+            if (input.TryGet(SwarmUIAPIBackends.OutputCompressionParam_GPTImage1, out int compression)) request["output_compression"] = compression;
         }
-
-        /// <summary>Registers a custom request builder for a provider.</summary>
-        public static void RegisterBuilder(string providerId, IRequestBuilder builder)
+        else if (modelName is "dall-e-3")
         {
-            _builders[providerId] = builder;
+            if (input.TryGet(SwarmUIAPIBackends.QualityParam_OpenAI, out string quality)) request["quality"] = quality;
+            if (input.TryGet(SwarmUIAPIBackends.StyleParam_OpenAI, out string style)) request["style"] = style;
+            request["response_format"] = "b64_json";
         }
+        else
+        {
+            request["response_format"] = "b64_json";
+        }
+        return request;
     }
 
-    /// <summary>Base class with common request building functionality.</summary>
-    public abstract class BaseRequestBuilder : IRequestBuilder
+    public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
     {
-        protected static readonly HttpClient HttpClient = NetworkBackendUtils.MakeHttpClient();
-
-        public abstract JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider);
-        public abstract Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null);
-
-        public virtual string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input)
+        JArray data = response["data"] as JArray;
+        if (data is null || data.Count is 0)
         {
-            if (!string.IsNullOrEmpty(model.EndpointOverride))
-            {
-                return model.EndpointOverride;
-            }
-            return provider.BaseUrl;
+            throw new Exception("No image data in OpenAI response");
         }
-
-        public virtual void AddAuthHeaders(HttpRequestMessage request, string apiKey, ProviderDefinition provider)
+        JToken firstImage = data[0];
+        if (firstImage["b64_json"] is not null)
         {
-            if (!string.IsNullOrEmpty(provider.CustomAuthHeader))
-            {
-                request.Headers.TryAddWithoutValidation(provider.CustomAuthHeader, apiKey);
-            }
-            else
-            {
-                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
-                    provider.AuthHeaderType, apiKey);
-            }
+            return DecodeBase64Image(firstImage["b64_json"].ToString());
         }
-
-        protected static int GetNumImages(T2IParamInput input)
+        else if (firstImage["url"] != null)
         {
-            return input.TryGet(T2IParamTypes.Images, out int num) && num > 0 ? num : 1;
+            return await DownloadImageFromUrl(firstImage["url"].ToString());
         }
+        throw new Exception("OpenAI response missing image data");
+    }
+}
 
-        protected static async Task<byte[]> DownloadImageFromUrl(string url)
-        {
-            return await HttpClient.GetByteArrayAsync(url);
-        }
+#endregion
 
-        protected static byte[] DecodeBase64Image(string base64Data)
-        {
-            if (base64Data.Contains(','))
-            {
-                base64Data = base64Data[(base64Data.IndexOf(',') + 1)..];
-            }
-            return Convert.FromBase64String(base64Data);
-        }
+#region Ideogram Request Builder
+
+public sealed class IdeogramRequestBuilder : BaseRequestBuilder
+{
+    private static readonly Dictionary<string, string> LegacyAspectRatioMap = new()
+    {
+        ["1:1"] = "ASPECT_1_1",
+        ["10:16"] = "ASPECT_10_16",
+        ["16:10"] = "ASPECT_16_10",
+        ["9:16"] = "ASPECT_9_16",
+        ["16:9"] = "ASPECT_16_9",
+        ["3:2"] = "ASPECT_3_2",
+        ["2:3"] = "ASPECT_2_3",
+        ["4:3"] = "ASPECT_4_3",
+        ["3:4"] = "ASPECT_3_4",
+        ["1:3"] = "ASPECT_1_3",
+        ["3:1"] = "ASPECT_3_1"
+    };
+
+    private static readonly Dictionary<string, string> V3AspectRatioMap = new()
+    {
+        ["1:1"] = "1x1",
+        ["10:16"] = "10x16",
+        ["16:10"] = "16x10",
+        ["9:16"] = "9x16",
+        ["16:9"] = "16x9",
+        ["3:2"] = "3x2",
+        ["2:3"] = "2x3",
+        ["4:3"] = "4x3",
+        ["3:4"] = "3x4",
+        ["1:3"] = "1x3",
+        ["3:1"] = "3x1",
+        ["1:2"] = "1x2",
+        ["2:1"] = "2x1",
+        ["4:5"] = "4x5",
+        ["5:4"] = "5x4"
+    };
+
+    private static string MapAspectRatioLegacy(string aspect)
+    {
+        if (string.IsNullOrEmpty(aspect)) return "ASPECT_1_1";
+        if (aspect.StartsWith("ASPECT_")) return aspect;
+        return LegacyAspectRatioMap.TryGetValue(aspect, out string mapped) ? mapped : "ASPECT_1_1";
     }
 
-    #region OpenAI Request Builder
-
-    public sealed class OpenAIRequestBuilder : BaseRequestBuilder
+    private static string MapAspectRatioV3(string aspect)
     {
-        public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
-        {
-            string modelName = model.Id;
-            JObject request = new()
-            {
-                ["prompt"] = input.Get(T2IParamTypes.Prompt),
-                ["model"] = modelName,
-                ["n"] = GetNumImages(input),
-                ["size"] = input.TryGet(SwarmUIAPIBackends.SizeParam_OpenAI, out string size) ? size : "1024x1024"
-            };
-
-            if (modelName is "gpt-image-1" or "gpt-image-1.5")
-            {
-                if (input.TryGet(SwarmUIAPIBackends.QualityParam_GPTImage1, out string quality))
-                    request["quality"] = quality;
-                if (input.TryGet(SwarmUIAPIBackends.BackgroundParam_GPTImage1, out string bg))
-                    request["background"] = bg;
-                if (input.TryGet(SwarmUIAPIBackends.ModerationParam_GPTImage1, out string mod))
-                    request["moderation"] = mod;
-                if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_GPTImage1, out string format))
-                    request["output_format"] = format;
-                if (input.TryGet(SwarmUIAPIBackends.OutputCompressionParam_GPTImage1, out int compression))
-                    request["output_compression"] = compression;
-            }
-            else if (modelName == "dall-e-3")
-            {
-                if (input.TryGet(SwarmUIAPIBackends.QualityParam_OpenAI, out string quality))
-                    request["quality"] = quality;
-                if (input.TryGet(SwarmUIAPIBackends.StyleParam_OpenAI, out string style))
-                    request["style"] = style;
-                request["response_format"] = "b64_json";
-            }
-            else
-            {
-                request["response_format"] = "b64_json";
-            }
-
-            return request;
-        }
-
-        public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
-        {
-            JArray data = response["data"] as JArray;
-            if (data == null || data.Count == 0)
-            {
-                throw new Exception("No image data in OpenAI response");
-            }
-
-            JToken firstImage = data[0];
-            if (firstImage["b64_json"] != null)
-            {
-                return DecodeBase64Image(firstImage["b64_json"].ToString());
-            }
-            else if (firstImage["url"] != null)
-            {
-                return await DownloadImageFromUrl(firstImage["url"].ToString());
-            }
-
-            throw new Exception("OpenAI response missing image data");
-        }
+        if (string.IsNullOrEmpty(aspect)) return "1x1";
+        if (aspect.Contains("x")) return aspect;
+        return V3AspectRatioMap.TryGetValue(aspect, out string mapped) ? mapped : "1x1";
     }
 
-    #endregion
-
-    #region Ideogram Request Builder
-
-    public sealed class IdeogramRequestBuilder : BaseRequestBuilder
+    private static bool IsV3Model(ModelDefinition model)
     {
-        private static readonly Dictionary<string, string> LegacyAspectRatioMap = new()
+        string id = model.Id?.ToLowerInvariant() ?? "";
+        return id.Contains("v_3") || id.Contains("v3");
+    }
+
+    public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
+    {
+        bool hasInputImage = input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Ideogram, out Image inputImg) && inputImg?.RawData is not null;
+        bool isV3 = IsV3Model(model);
+        JObject requestBody = new()
         {
-            ["1:1"] = "ASPECT_1_1",
-            ["10:16"] = "ASPECT_10_16",
-            ["16:10"] = "ASPECT_16_10",
-            ["9:16"] = "ASPECT_9_16",
-            ["16:9"] = "ASPECT_16_9",
-            ["3:2"] = "ASPECT_3_2",
-            ["2:3"] = "ASPECT_2_3",
-            ["4:3"] = "ASPECT_4_3",
-            ["3:4"] = "ASPECT_3_4",
-            ["1:3"] = "ASPECT_1_3",
-            ["3:1"] = "ASPECT_3_1"
+            ["prompt"] = input.Get(T2IParamTypes.Prompt)
         };
-
-        private static readonly Dictionary<string, string> V3AspectRatioMap = new()
+        if (!isV3)
         {
-            ["1:1"] = "1x1",
-            ["10:16"] = "10x16",
-            ["16:10"] = "16x10",
-            ["9:16"] = "9x16",
-            ["16:9"] = "16x9",
-            ["3:2"] = "3x2",
-            ["2:3"] = "2x3",
-            ["4:3"] = "4x3",
-            ["3:4"] = "3x4",
-            ["1:3"] = "1x3",
-            ["3:1"] = "3x1",
-            ["1:2"] = "1x2",
-            ["2:1"] = "2x1",
-            ["4:5"] = "4x5",
-            ["5:4"] = "5x4"
-        };
-
-        private static string MapAspectRatioLegacy(string aspect)
-        {
-            if (string.IsNullOrEmpty(aspect)) return "ASPECT_1_1";
-            if (aspect.StartsWith("ASPECT_")) return aspect;
-            return LegacyAspectRatioMap.TryGetValue(aspect, out string mapped) ? mapped : "ASPECT_1_1";
+            requestBody["model"] = model.Id;
         }
-
-        private static string MapAspectRatioV3(string aspect)
+        if (input.TryGet(SwarmUIAPIBackends.MagicPromptParam_Ideogram, out string magic)) requestBody["magic_prompt_option"] = magic;
+        else requestBody["magic_prompt_option"] = "AUTO";
+        if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Ideogram, out string aspect)) requestBody["aspect_ratio"] = isV3 ? MapAspectRatioV3(aspect) : MapAspectRatioLegacy(aspect);
+        if (input.TryGet(SwarmUIAPIBackends.StyleTypeParam_Ideogram, out string style) && !string.IsNullOrEmpty(style)) requestBody["style_type"] = style;
+        if (input.TryGet(SwarmUIAPIBackends.NegativePromptParam_Ideogram, out string negPrompt) && !string.IsNullOrEmpty(negPrompt)) requestBody["negative_prompt"] = negPrompt;
+        if (hasInputImage)
         {
-            if (string.IsNullOrEmpty(aspect)) return "1x1";
-            if (aspect.Contains("x")) return aspect;
-            return V3AspectRatioMap.TryGetValue(aspect, out string mapped) ? mapped : "1x1";
+            string base64Image = Convert.ToBase64String(inputImg.RawData);
+            requestBody["image"] = base64Image;
+            if (input.TryGet(SwarmUIAPIBackends.ImageWeightParam_Ideogram, out double weight)) requestBody["image_weight"] = weight;
         }
-
-        private static bool IsV3Model(ModelDefinition model)
+        if (isV3)
         {
-            string id = model.Id?.ToLowerInvariant() ?? "";
-            return id.Contains("v_3") || id.Contains("v3");
+            return requestBody;
         }
-
-        public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
-        {
-            bool hasInputImage = input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Ideogram, out Image inputImg) 
-                && inputImg?.RawData != null;
-            bool isV3 = IsV3Model(model);
-
-            JObject requestBody = new()
-            {
-                ["prompt"] = input.Get(T2IParamTypes.Prompt)
-            };
-
-            if (!isV3)
-            {
-                requestBody["model"] = model.Id;
-            }
-
-            if (input.TryGet(SwarmUIAPIBackends.MagicPromptParam_Ideogram, out string magic))
-                requestBody["magic_prompt_option"] = magic;
-            else
-                requestBody["magic_prompt_option"] = "AUTO";
-
-            if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Ideogram, out string aspect))
-                requestBody["aspect_ratio"] = isV3 ? MapAspectRatioV3(aspect) : MapAspectRatioLegacy(aspect);
-            if (input.TryGet(SwarmUIAPIBackends.StyleTypeParam_Ideogram, out string style) && !string.IsNullOrEmpty(style))
-                requestBody["style_type"] = style;
-            if (input.TryGet(SwarmUIAPIBackends.NegativePromptParam_Ideogram, out string negPrompt) && !string.IsNullOrEmpty(negPrompt))
-                requestBody["negative_prompt"] = negPrompt;
-
-            if (hasInputImage)
-            {
-                string base64Image = Convert.ToBase64String(inputImg.RawData);
-                requestBody["image"] = base64Image;
-                if (input.TryGet(SwarmUIAPIBackends.ImageWeightParam_Ideogram, out double weight))
-                    requestBody["image_weight"] = weight;
-            }
-
-            if (isV3)
-            {
-                return requestBody;
-            }
-            return new JObject { ["image_request"] = requestBody };
-        }
-
-        public override string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input)
-        {
-            bool hasInputImage = input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Ideogram, out Image inputImg) 
-                && inputImg?.RawData != null;
-
-            if (model.Id.Contains("V_3") || model.Id.Contains("v3"))
-            {
-                return hasInputImage ? "https://api.ideogram.ai/v1/ideogram-v3/edit" : "https://api.ideogram.ai/v1/ideogram-v3/generate";
-            }
-            return hasInputImage ? "https://api.ideogram.ai/edit" : provider.BaseUrl;
-        }
-
-        public override void AddAuthHeaders(HttpRequestMessage request, string apiKey, ProviderDefinition provider)
-        {
-            request.Headers.TryAddWithoutValidation("Api-Key", apiKey);
-        }
-
-        public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
-        {
-            JArray data = response["data"] as JArray;
-            if (data == null || data.Count == 0)
-            {
-                throw new Exception("No image data in Ideogram response");
-            }
-
-            string url = data[0]["url"]?.ToString();
-            if (string.IsNullOrEmpty(url))
-            {
-                throw new Exception("Ideogram response missing image URL");
-            }
-
-            return await DownloadImageFromUrl(url);
-        }
+        return new JObject { ["image_request"] = requestBody };
     }
 
-    #endregion
-
-    #region Black Forest Labs Request Builder
-
-    public sealed class BlackForestRequestBuilder : BaseRequestBuilder
+    public override string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input)
     {
-        public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
+        bool hasInputImage = input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Ideogram, out Image inputImg) && inputImg?.RawData != null;
+        if (model.Id.Contains("V_3") || model.Id.Contains("v3"))
         {
-            JObject request = new()
-            {
-                ["prompt"] = input.Get(T2IParamTypes.Prompt)
-            };
-
-            if (input.TryGet(SwarmUIAPIBackends.WidthParam_BlackForest, out int width))
-                request["width"] = width;
-            if (input.TryGet(SwarmUIAPIBackends.HeightParam_BlackForest, out int height))
-                request["height"] = height;
-            if (input.TryGet(SwarmUIAPIBackends.PromptUpsampling_BlackForest, out bool upsample))
-                request["prompt_upsampling"] = upsample;
-            if (input.TryGet(SwarmUIAPIBackends.SafetyTolerance_BlackForest, out int safety))
-                request["safety_tolerance"] = safety;
-            if (input.TryGet(SwarmUIAPIBackends.SeedParam_BlackForest, out long seed) && seed >= 0)
-                request["seed"] = seed;
-            if (input.TryGet(SwarmUIAPIBackends.GuidanceParam_BlackForest, out double guidance))
-                request["guidance"] = guidance;
-            if (input.TryGet(SwarmUIAPIBackends.StepsParam_BlackForest, out int steps))
-                request["steps"] = steps;
-            if (input.TryGet(SwarmUIAPIBackends.IntervalParam_BlackForest, out double interval))
-                request["interval"] = interval;
-            if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_BlackForest, out string format))
-                request["output_format"] = format;
-
-            return request;
+            return hasInputImage ? "https://api.ideogram.ai/v1/ideogram-v3/edit" : "https://api.ideogram.ai/v1/ideogram-v3/generate";
         }
+        return hasInputImage ? "https://api.ideogram.ai/edit" : provider.BaseUrl;
+    }
 
-        public override string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input)
+    public override void AddAuthHeaders(HttpRequestMessage request, string apiKey, ProviderDefinition provider)
+    {
+        request.Headers.TryAddWithoutValidation("Api-Key", apiKey);
+    }
+
+    public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
+    {
+        JArray data = response["data"] as JArray;
+        if (data is null || data.Count == 0)
         {
-            return $"{provider.BaseUrl}/v1/{model.Id}";
+            throw new Exception("No image data in Ideogram response");
         }
-
-        public override void AddAuthHeaders(HttpRequestMessage request, string apiKey, ProviderDefinition provider)
+        string url = data[0]["url"]?.ToString();
+        if (string.IsNullOrEmpty(url))
         {
-            request.Headers.TryAddWithoutValidation("x-key", apiKey);
+            throw new Exception("Ideogram response missing image URL");
         }
+        return await DownloadImageFromUrl(url);
+    }
+}
 
-        public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
+#endregion
+
+#region Black Forest Labs Request Builder
+
+public sealed class BlackForestRequestBuilder : BaseRequestBuilder
+{
+    public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
+    {
+        JObject request = new()
         {
-            string pollingUrl = response["polling_url"]?.ToString();
-            if (!string.IsNullOrEmpty(pollingUrl) && !string.IsNullOrEmpty(apiKey))
-            {
-                return await PollForResult(pollingUrl, apiKey);
-            }
+            ["prompt"] = input.Get(T2IParamTypes.Prompt)
+        };
+        if (input.TryGet(SwarmUIAPIBackends.WidthParam_BlackForest, out int width)) request["width"] = width;
+        if (input.TryGet(SwarmUIAPIBackends.HeightParam_BlackForest, out int height)) request["height"] = height;
+        if (input.TryGet(SwarmUIAPIBackends.PromptUpsampling_BlackForest, out bool upsample)) request["prompt_upsampling"] = upsample;
+        if (input.TryGet(SwarmUIAPIBackends.SafetyTolerance_BlackForest, out int safety)) request["safety_tolerance"] = safety;
+        if (input.TryGet(SwarmUIAPIBackends.SeedParam_BlackForest, out long seed) && seed >= 0) request["seed"] = seed;
+        if (input.TryGet(SwarmUIAPIBackends.GuidanceParam_BlackForest, out double guidance)) request["guidance"] = guidance;
+        if (input.TryGet(SwarmUIAPIBackends.StepsParam_BlackForest, out int steps)) request["steps"] = steps;
+        if (input.TryGet(SwarmUIAPIBackends.IntervalParam_BlackForest, out double interval)) request["interval"] = interval;
+        if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_BlackForest, out string format)) request["output_format"] = format;
+        return request;
+    }
 
-            string resultUrl = response["result"]?["sample"]?.ToString();
-            if (!string.IsNullOrEmpty(resultUrl))
-            {
-                return await DownloadImageFromUrl(resultUrl);
-            }
+    public override string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input)
+    {
+        return $"{provider.BaseUrl}/v1/{model.Id}";
+    }
 
-            if (response["sample"] != null)
-            {
-                string sampleUrl = response["sample"].ToString();
-                return await DownloadImageFromUrl(sampleUrl);
-            }
+    public override void AddAuthHeaders(HttpRequestMessage request, string apiKey, ProviderDefinition provider)
+    {
+        request.Headers.TryAddWithoutValidation("x-key", apiKey);
+    }
 
-            throw new Exception($"Black Forest Labs response missing image data. Response: {response}");
+    public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
+    {
+        string pollingUrl = response["polling_url"]?.ToString();
+        if (!string.IsNullOrEmpty(pollingUrl) && !string.IsNullOrEmpty(apiKey))
+        {
+            return await PollForResult(pollingUrl, apiKey);
         }
-
-        private async Task<byte[]> PollForResult(string pollingUrl, string apiKey)
+        string resultUrl = response["result"]?["sample"]?.ToString();
+        if (!string.IsNullOrEmpty(resultUrl))
         {
-            int maxAttempts = 120;
-            int delayMs = 1000;
+            return await DownloadImageFromUrl(resultUrl);
+        }
+        if (response["sample"] is not null)
+        {
+            string sampleUrl = response["sample"].ToString();
+            return await DownloadImageFromUrl(sampleUrl);
+        }
+        throw new Exception($"Black Forest Labs response missing image data. Response: {response}");
+    }
 
-            for (int i = 0; i < maxAttempts; i++)
+    private async Task<byte[]> PollForResult(string pollingUrl, string apiKey)
+    {
+        int maxAttempts = 120;
+        int delayMs = 1000;
+        for (int i = 0; i < maxAttempts; i++)
+        {
+            await Task.Delay(delayMs);
+            using HttpRequestMessage pollRequest = new(HttpMethod.Get, pollingUrl);
+            pollRequest.Headers.TryAddWithoutValidation("x-key", apiKey);
+            pollRequest.Headers.TryAddWithoutValidation("accept", "application/json");
+            HttpResponseMessage pollResponse = await HttpClient.SendAsync(pollRequest);
+            string content = await pollResponse.Content.ReadAsStringAsync();
+            JObject result = JObject.Parse(content);
+            string status = result["status"]?.ToString();
+            Logs.Verbose($"[BFL] Polling status: {status}");
+            if (status is "Ready")
             {
-                await Task.Delay(delayMs);
-
-                using HttpRequestMessage pollRequest = new(HttpMethod.Get, pollingUrl);
-                pollRequest.Headers.TryAddWithoutValidation("x-key", apiKey);
-                pollRequest.Headers.TryAddWithoutValidation("accept", "application/json");
-
-                HttpResponseMessage pollResponse = await HttpClient.SendAsync(pollRequest);
-                string content = await pollResponse.Content.ReadAsStringAsync();
-                JObject result = JObject.Parse(content);
-
-                string status = result["status"]?.ToString();
-                Logs.Verbose($"[BFL] Polling status: {status}");
-
-                if (status == "Ready")
+                string sampleUrl = result["result"]?["sample"]?.ToString();
+                if (!string.IsNullOrEmpty(sampleUrl))
                 {
-                    string sampleUrl = result["result"]?["sample"]?.ToString();
-                    if (!string.IsNullOrEmpty(sampleUrl))
-                    {
-                        return await DownloadImageFromUrl(sampleUrl);
-                    }
-                    throw new Exception("BFL result ready but missing sample URL");
+                    return await DownloadImageFromUrl(sampleUrl);
                 }
-                else if (status == "Error" || status == "Failed")
-                {
-                    throw new Exception($"BFL generation failed: {result}");
-                }
+                throw new Exception("BFL result ready but missing sample URL");
             }
-
-            throw new Exception("BFL polling timed out after 120 seconds");
+            else if (status is "Error" || status is "Failed")
+            {
+                throw new Exception($"BFL generation failed: {result}");
+            }
         }
+        throw new Exception("BFL polling timed out after 120 seconds");
+    }
+}
+
+#endregion
+
+#region Grok Request Builder
+
+public sealed class GrokRequestBuilder : BaseRequestBuilder
+{
+    public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
+    {
+        return new JObject
+        {
+            ["prompt"] = input.Get(T2IParamTypes.Prompt),
+            ["model"] = "grok-2-image",
+            ["n"] = GetNumImages(input),
+            ["response_format"] = "b64_json"
+        };
     }
 
-    #endregion
-
-    #region Grok Request Builder
-
-    public sealed class GrokRequestBuilder : BaseRequestBuilder
+    public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
     {
-        public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
+        JArray data = response["data"] as JArray;
+        if (data is null || data.Count is 0)
+        {
+            throw new Exception("No image data in Grok response");
+        }
+        JToken firstImage = data[0];
+        if (firstImage["b64_json"] is not null)
+        {
+            return DecodeBase64Image(firstImage["b64_json"].ToString());
+        }
+        else if (firstImage["url"] is not null)
+        {
+            return await DownloadImageFromUrl(firstImage["url"].ToString());
+        }
+        throw new Exception("Grok response missing image data");
+    }
+}
+
+#endregion
+
+#region Google Request Builder
+
+public sealed class GoogleRequestBuilder : BaseRequestBuilder
+{
+    public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
+    {
+        bool isGemini = model.Id.StartsWith("gemini-");
+        if (isGemini)
         {
             return new JObject
             {
-                ["prompt"] = input.Get(T2IParamTypes.Prompt),
-                ["model"] = "grok-2-image",
-                ["n"] = GetNumImages(input),
-                ["response_format"] = "b64_json"
-            };
-        }
-
-        public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
-        {
-            JArray data = response["data"] as JArray;
-            if (data == null || data.Count == 0)
-            {
-                throw new Exception("No image data in Grok response");
-            }
-
-            JToken firstImage = data[0];
-            if (firstImage["b64_json"] != null)
-            {
-                return DecodeBase64Image(firstImage["b64_json"].ToString());
-            }
-            else if (firstImage["url"] != null)
-            {
-                return await DownloadImageFromUrl(firstImage["url"].ToString());
-            }
-
-            throw new Exception("Grok response missing image data");
-        }
-    }
-
-    #endregion
-
-    #region Google Request Builder
-
-    public sealed class GoogleRequestBuilder : BaseRequestBuilder
-    {
-        public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
-        {
-            bool isGemini = model.Id.StartsWith("gemini-");
-
-            if (isGemini)
-            {
-                return new JObject
+                ["contents"] = new JArray
                 {
-                    ["contents"] = new JArray
+                    new JObject
                     {
-                        new JObject
+                        ["parts"] = new JArray
                         {
-                            ["parts"] = new JArray
-                            {
-                                new JObject { ["text"] = input.Get(T2IParamTypes.Prompt) }
-                            }
+                            new JObject { ["text"] = input.Get(T2IParamTypes.Prompt) }
                         }
-                    },
-                    ["generationConfig"] = new JObject
-                    {
-                        ["responseModalities"] = new JArray { "TEXT", "IMAGE" }
                     }
-                };
-            }
-
-            // Imagen format
-            return new JObject
-            {
-                ["instances"] = new JArray
-                {
-                    new JObject { ["prompt"] = input.Get(T2IParamTypes.Prompt) }
                 },
-                ["parameters"] = new JObject
+                ["generationConfig"] = new JObject
                 {
-                    ["sampleCount"] = GetNumImages(input)
+                    ["responseModalities"] = new JArray { "TEXT", "IMAGE" }
                 }
             };
         }
-
-        public override string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input)
+        return new JObject
         {
-            bool isGemini = model.Id.StartsWith("gemini-");
-            return isGemini 
-                ? $"{provider.BaseUrl}/{model.Id}:generateContent" 
-                : $"{provider.BaseUrl}/{model.Id}:predict";
-        }
-
-        public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
-        {
-            // Try Gemini format first
-            JArray candidates = response["candidates"] as JArray;
-            if (candidates != null && candidates.Count > 0)
+            ["instances"] = new JArray
             {
-                JArray parts = candidates[0]["content"]?["parts"] as JArray;
-                if (parts != null)
+                new JObject { ["prompt"] = input.Get(T2IParamTypes.Prompt) }
+            },
+            ["parameters"] = new JObject
+            {
+                ["sampleCount"] = GetNumImages(input)
+            }
+        };
+    }
+
+    public override string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input)
+    {
+        bool isGemini = model.Id.StartsWith("gemini-");
+        return isGemini ? $"{provider.BaseUrl}/{model.Id}:generateContent" : $"{provider.BaseUrl}/{model.Id}:predict";
+    }
+
+    public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
+    {
+        JArray candidates = response["candidates"] as JArray;
+        if (candidates is not null && candidates.Count > 0)
+        {
+            JArray parts = candidates[0]["content"]?["parts"] as JArray;
+            if (parts is not null)
+            {
+                foreach (JToken part in parts)
                 {
-                    foreach (JToken part in parts)
+                    if (part["inlineData"] is not null)
                     {
-                        if (part["inlineData"] != null)
+                        string base64 = part["inlineData"]["data"]?.ToString();
+                        if (!string.IsNullOrEmpty(base64))
                         {
-                            string base64 = part["inlineData"]["data"]?.ToString();
-                            if (!string.IsNullOrEmpty(base64))
-                            {
-                                return DecodeBase64Image(base64);
-                            }
+                            return DecodeBase64Image(base64);
                         }
                     }
                 }
             }
-
-            // Try Imagen format
-            JArray predictions = response["predictions"] as JArray;
-            if (predictions != null && predictions.Count > 0)
-            {
-                string base64 = predictions[0]["bytesBase64Encoded"]?.ToString();
-                if (!string.IsNullOrEmpty(base64))
-                {
-                    return DecodeBase64Image(base64);
-                }
-            }
-
-            throw new Exception("Google response missing image data");
         }
-    }
-
-    #endregion
-
-    #region Fal.ai Request Builder
-
-    public sealed class FalRequestBuilder : BaseRequestBuilder
-    {
-        public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
+        JArray predictions = response["predictions"] as JArray;
+        if (predictions is not null && predictions.Count > 0)
         {
-            JObject request = new()
-            {
-                ["prompt"] = input.Get(T2IParamTypes.Prompt)
-            };
-
-            // Common Fal parameters
-            if (input.TryGet(SwarmUIAPIBackends.ImageSizeParam_Fal, out string imageSize))
-                request["image_size"] = imageSize;
-            else
-                request["image_size"] = "landscape_4_3";
-
-            request["num_images"] = GetNumImages(input);
-
-            if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0)
-                request["seed"] = seed;
-
-            if (input.TryGet(SwarmUIAPIBackends.GuidanceScaleParam_Fal, out double guidance))
-                request["guidance_scale"] = guidance;
-
-            if (input.TryGet(SwarmUIAPIBackends.NumInferenceStepsParam_Fal, out int steps))
-                request["num_inference_steps"] = steps;
-
-            if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_Fal, out string format))
-                request["output_format"] = format;
-
-            if (input.TryGet(SwarmUIAPIBackends.SafetyCheckerParam_Fal, out bool safety))
-                request["enable_safety_checker"] = safety;
-
-            // Sync mode returns base64 directly
-            request["sync_mode"] = true;
-
-            return request;
-        }
-
-        public override string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input)
-        {
-            // Fal.ai endpoint is: https://fal.run/{model-id}
-            return $"{provider.BaseUrl}/{model.Id}";
-        }
-
-        public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
-        {
-            JArray images = response["images"] as JArray;
-            if (images == null || images.Count == 0)
-            {
-                throw new Exception("No image data in Fal.ai response");
-            }
-
-            JToken firstImage = images[0];
-            
-            // Check for URL (most common)
-            string url = firstImage["url"]?.ToString();
-            if (!string.IsNullOrEmpty(url))
-            {
-                // If it's a data URI, decode it
-                if (url.StartsWith("data:"))
-                {
-                    return DecodeBase64Image(url);
-                }
-                return await DownloadImageFromUrl(url);
-            }
-
-            // Check for direct base64
-            string base64 = firstImage["base64"]?.ToString();
+            string base64 = predictions[0]["bytesBase64Encoded"]?.ToString();
             if (!string.IsNullOrEmpty(base64))
             {
                 return DecodeBase64Image(base64);
             }
-
-            throw new Exception("Fal.ai response missing image data");
         }
+        throw new Exception("Google response missing image data");
+    }
+}
+
+#endregion
+
+#region Fal.ai Request Builder
+
+public sealed class FalRequestBuilder : BaseRequestBuilder
+{
+    public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
+    {
+        JObject request = new()
+        {
+            ["prompt"] = input.Get(T2IParamTypes.Prompt)
+        };
+        if (input.TryGet(SwarmUIAPIBackends.ImageSizeParam_Fal, out string imageSize)) request["image_size"] = imageSize;
+        else request["image_size"] = "landscape_4_3";
+        request["num_images"] = GetNumImages(input);
+        if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0) request["seed"] = seed;
+        if (input.TryGet(SwarmUIAPIBackends.GuidanceScaleParam_Fal, out double guidance)) request["guidance_scale"] = guidance;
+        if (input.TryGet(SwarmUIAPIBackends.NumInferenceStepsParam_Fal, out int steps)) request["num_inference_steps"] = steps;
+        if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_Fal, out string format)) request["output_format"] = format;
+        if (input.TryGet(SwarmUIAPIBackends.SafetyCheckerParam_Fal, out bool safety)) request["enable_safety_checker"] = safety;
+        request["sync_mode"] = true;
+        return request;
     }
 
-    #endregion
+    public override string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input)
+    {
+        return $"{provider.BaseUrl}/{model.Id}";
+    }
+
+    public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
+    {
+        JArray images = response["images"] as JArray;
+        if (images is null || images.Count is 0)
+        {
+            throw new Exception("No image data in Fal.ai response");
+        }
+        JToken firstImage = images[0];
+        string url = firstImage["url"]?.ToString();
+        if (!string.IsNullOrEmpty(url))
+        {
+            if (url.StartsWith("data:"))
+            {
+                return DecodeBase64Image(url);
+            }
+            return await DownloadImageFromUrl(url);
+        }
+        string base64 = firstImage["base64"]?.ToString();
+        if (!string.IsNullOrEmpty(base64))
+        {
+            return DecodeBase64Image(base64);
+        }
+        throw new Exception("Fal.ai response missing image data");
+    }
 }
+
+#endregion
