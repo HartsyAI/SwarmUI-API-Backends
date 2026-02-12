@@ -93,7 +93,7 @@ public class APIProviderInit
         string modelId = normalized;
         foreach (ModelDefinition model in provider.Models)
         {
-            if (model.Id is modelId || model.GetFullName(provider.ModelPrefix) is fullModelName)
+            if (model.Id == modelId || model.GetFullName(provider.ModelPrefix) == fullModelName)
             {
                 return model;
             }
