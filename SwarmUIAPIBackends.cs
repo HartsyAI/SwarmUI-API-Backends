@@ -393,6 +393,8 @@ public class SwarmUIAPIBackends : Extension
         }
         _ = APIProviderRegistry.Instance;
         RegisterApiModelsWithGlobalRegistry();
+        // Re-register API models after every filesystem refresh (Refresh() replaces the entire Models dict)
+        Program.ModelRefreshEvent += RegisterApiModelsWithGlobalRegistry;
         RegisterApiKeyIfNeeded("openai_api", "openai", "OpenAI (ChatGPT)", "https://platform.openai.com/api-keys", new HtmlString("To use OpenAI models in SwarmUI (via Hartsy extensions), you must set your OpenAI API key."));
         RegisterApiKeyIfNeeded("bfl_api", "black_forest", "Black Forest Labs (FLUX)", "https://dashboard.bfl.ai/", new HtmlString("To use Black Forest in SwarmUI (via Hartsy extensions), you must set your Black Forest API key."));
         RegisterApiKeyIfNeeded("ideogram_api", "ideogram", "Ideogram", "https://developer.ideogram.ai/ideogram-api/api-setup", new HtmlString("To use Ideogram in SwarmUI (via Hartsy extensions), you must set your Ideogram API key."));
@@ -424,9 +426,11 @@ public class SwarmUIAPIBackends : Extension
     }
 
     /// <summary>Registers models from API providers to the global SwarmUI model registry, making them visible in the Models tab.
-    /// This ensures API models can be browsed, selected, and modified like standard local models.</summary>
+    /// This ensures API models can be browsed, selected, and modified like standard local models.
+    /// Also called by ModelRefreshEvent since T2IModelHandler.Refresh() replaces the entire Models dictionary.</summary>
     public static void RegisterApiModelsWithGlobalRegistry()
     {
+        int added = 0;
         foreach (APIProviderMetadata provider in APIProviderRegistry.Instance.Providers.Values)
         {
             foreach (KeyValuePair<string, T2IModel> entry in provider.Models)
@@ -448,10 +452,13 @@ public class SwarmUIAPIBackends : Extension
                     Metadata = model.Metadata,
                     IsSupportedModelType = true
                 };
-                // Register the model with the global registry so it shows up in the Models tab
                 Program.MainSDModels.Models[modelName] = globalModel;
-                Logs.Verbose($"Registered API model in global registry: {modelName}");
+                added++;
             }
+        }
+        if (added > 0)
+        {
+            Logs.Verbose($"Registered {added} API models in global registry");
         }
     }
 

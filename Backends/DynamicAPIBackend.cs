@@ -328,6 +328,8 @@ public class DynamicAPIBackend : APIAbstractBackend
         SupportedFeatureSet.Clear();
         RegisteredApiModels.Clear();
         RemoteModels.Clear();
+        // Unsubscribe first to avoid duplicate subscriptions on re-init
+        Program.ModelRefreshEvent -= ReRegisterModelsAfterRefresh;
         List<string> enabledProviders = GetEnabledProviderIds();
         if (enabledProviders.Count is 0)
         {
@@ -356,6 +358,8 @@ public class DynamicAPIBackend : APIAbstractBackend
                 Logs.Verbose($"[DynamicAPIBackend] Registered models for provider: {providerId}");
             }
             UpdateRemoteModels();
+            // Subscribe to refresh events so API models are re-added after filesystem refresh wipes them
+            Program.ModelRefreshEvent += ReRegisterModelsAfterRefresh;
             Status = BackendStatus.RUNNING;
             Logs.Info($"[DynamicAPIBackend] Initialized with {enabledProviders.Count} provider(s): {string.Join(", ", enabledProviders)}");
         }
@@ -416,22 +420,43 @@ public class DynamicAPIBackend : APIAbstractBackend
 
     private void UpdateRemoteModels()
     {
-        if (!Models.TryGetValue("Stable-Diffusion", out List<string> sdModels) || !sdModels.Any())
+        if (!RegisteredApiModels.Any())
         {
-            Logs.Warning("[DynamicAPIBackend] No models found to register");
+            Logs.Warning("[DynamicAPIBackend] No registered API models to publish");
             return;
         }
         Dictionary<string, JObject> remoteSD = RemoteModels.GetOrCreate("Stable-Diffusion", () => []);
         remoteSD.Clear();
-        foreach (string modelName in sdModels)
+        foreach (KeyValuePair<string, T2IModel> kvp in RegisteredApiModels)
         {
-            if (Program.MainSDModels.Models.TryGetValue(modelName, out T2IModel model))
+            remoteSD[kvp.Key] = CreateModelMetadata(kvp.Value, kvp.Key);
+        }
+        // Also ensure models are in MainSDModels for direct handler.Models access
+        ReRegisterModelsAfterRefresh();
+        Logs.Verbose($"[DynamicAPIBackend] Published {remoteSD.Count} API models to RemoteModels");
+    }
+
+    /// <summary>Re-registers API models into MainSDModels.Models after a filesystem refresh wipes them.
+    /// Called by ModelRefreshEvent and during UpdateRemoteModels.</summary>
+    private void ReRegisterModelsAfterRefresh()
+    {
+        if (Status != BackendStatus.RUNNING && Status != BackendStatus.LOADING)
+        {
+            return;
+        }
+        int added = 0;
+        foreach (KeyValuePair<string, T2IModel> kvp in RegisteredApiModels)
+        {
+            if (!Program.MainSDModels.Models.ContainsKey(kvp.Key))
             {
-                RegisteredApiModels[modelName] = model;
-                remoteSD[modelName] = CreateModelMetadata(model, modelName);
+                Program.MainSDModels.Models[kvp.Key] = kvp.Value;
+                added++;
             }
         }
-        Logs.Verbose($"[DynamicAPIBackend] Registered {RegisteredApiModels.Count} total API models");
+        if (added > 0)
+        {
+            Logs.Verbose($"[DynamicAPIBackend] Re-registered {added} API models into MainSDModels after refresh");
+        }
     }
 
     private JObject CreateModelMetadata(T2IModel model, string modelName)
@@ -460,6 +485,7 @@ public class DynamicAPIBackend : APIAbstractBackend
     public override async Task Shutdown()
     {
         Logs.Verbose($"[APIAbstractBackend] {GetType().Name} - Shutting down backend");
+        Program.ModelRefreshEvent -= ReRegisterModelsAfterRefresh;
         // Properly clean up model registrations
         foreach (string modelName in RegisteredApiModels.Keys)
         {
@@ -470,6 +496,7 @@ public class DynamicAPIBackend : APIAbstractBackend
             }
         }
         RegisteredApiModels.Clear();
+        RemoteModels.Clear();
         Status = BackendStatus.DISABLED;
     }
 }
