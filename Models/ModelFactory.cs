@@ -86,18 +86,22 @@ public static class ModelFactory
         return modelClass;
     }
 
-    /// <summary>Loads a preview image from the specified path and returns as base64 data URI.</summary>
+    /// <summary>SwarmUI's standard placeholder image path, used when no custom preview exists.</summary>
+    private const string PlaceholderImage = "imgs/model_placeholder.jpg";
+
+    /// <summary>Loads a preview image from the specified path and returns as base64 data URI.
+    /// Falls back to SwarmUI's standard model placeholder when the image is missing.</summary>
     private static string LoadPreviewImage(string relativePath)
     {
         if (string.IsNullOrEmpty(relativePath))
         {
-            return "";
+            return PlaceholderImage;
         }
         string fullPath = Path.Combine(ExtensionRoot, relativePath);
         if (!File.Exists(fullPath))
         {
-            Logs.Warning($"[ModelFactory] Preview image not found: {fullPath}");
-            return "";
+            Logs.Verbose($"[ModelFactory] Preview image not found, using placeholder: {fullPath}");
+            return PlaceholderImage;
         }
         try
         {
@@ -116,7 +120,7 @@ public static class ModelFactory
         catch (Exception ex)
         {
             Logs.Warning($"[ModelFactory] Failed to load preview image {fullPath}: {ex.Message}");
-            return "";
+            return PlaceholderImage;
         }
     }
 }

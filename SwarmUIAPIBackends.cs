@@ -65,7 +65,7 @@ public class SwarmUIAPIBackends : Extension
     // Ideogram Parameters
     public static T2IRegisteredParam<string> StyleParam_Ideogram;
     public static T2IRegisteredParam<string> MagicPromptParam_Ideogram;
-    public static T2IRegisteredParam<int> SeedParam_Ideogram;
+
     public static T2IRegisteredParam<string> ColorPaletteParam_Ideogram;
     public static T2IRegisteredParam<Image> ImagePromptParam_Ideogram;
     public static T2IRegisteredParam<Image> ImageMaskPromptParam_Ideogram;
@@ -95,7 +95,7 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<long> SeedParam_Fal => T2IParamTypes.Seed;
     public static T2IRegisteredParam<double> GuidanceScaleParam_Fal;
     public static T2IRegisteredParam<int> NumInferenceStepsParam_Fal;
-    public static T2IRegisteredParam<string> OutputFormatParam_Fal => OutputFormatParam_BlackForest;
+    public static T2IRegisteredParam<string> OutputFormatParam_Fal;
     public static T2IRegisteredParam<bool> SafetyCheckerParam_Fal;
 
     // Fal.ai Video Parameters
@@ -112,7 +112,7 @@ public class SwarmUIAPIBackends : Extension
 
     public override void OnInit()
     {
-        OpenAIParamGroup = new("DALL-E API", Toggles: false, Open: true, OrderPriority: 10);
+        OpenAIParamGroup = new("OpenAI API", Toggles: false, Open: true, OrderPriority: 10);
         DallE2Group = new("DALL-E 2 Settings", Toggles: false, Open: true, OrderPriority: 10, Description: "Parameters specific to OpenAI's DALL-E 2 model generation.");
         DallE3Group = new("DALL-E 3 Settings", Toggles: false, Open: true, OrderPriority: 11, Description: "Parameters specific to OpenAI's DALL-E 3 model, featuring enhanced quality and style options.");
         GPTImage1Group = new("GPT Image 1 Settings", Toggles: false, Open: true, OrderPriority: 12, Description: "Able to generate images with stronger instruction following, contextual awareness, and world knowledge.");
@@ -141,7 +141,7 @@ public class SwarmUIAPIBackends : Extension
                 else return ["1024x1024", "1792x1024", "1024x1792"];
             },
             OrderPriority: -10, ViewType: ParamViewType.POT_SLIDER,
-            Group: DallE3Group, FeatureFlag: "openai_api"));
+            Group: T2IParamTypes.GroupResolution, FeatureFlag: "openai_api"));
 
         QualityParam_OpenAI = T2IParamTypes.Register<string>(new("Generation Quality",
             "Controls the level of detail and consistency in DALL-E 3 images.\n" +
@@ -149,7 +149,7 @@ public class SwarmUIAPIBackends : Extension
             "'HD' - Enhanced detail and better consistency across the entire image, takes longer to generate\n" +
             "Note: HD mode costs more credits but can be worth it for complex scenes or when fine details matter.",
             "standard", GetValues: _ => ["standard///Standard (Faster)", "hd///HD (Higher Quality)"],
-            OrderPriority: -8, Group: DallE3Group, FeatureFlag: "openai_api"));
+            OrderPriority: -8, Group: DallE3Group, FeatureFlag: "dalle3_params"));
 
         StyleParam_OpenAI = T2IParamTypes.Register<string>(new("Visual Style",
             "Determines the artistic approach for DALL-E 3 generations:\n" +
@@ -157,7 +157,7 @@ public class SwarmUIAPIBackends : Extension
             "'Natural' - Produces more photorealistic results with subtle lighting and natural composition\n" +
             "Choose 'Vivid' for artistic or commercial work, 'Natural' for documentary or product photos.",
             "vivid", GetValues: _ => ["vivid///Vivid (Dramatic)", "natural///Natural (Realistic)"],
-            OrderPriority: -7, Group: DallE3Group, FeatureFlag: "openai_api"));
+            OrderPriority: -7, Group: DallE3Group, FeatureFlag: "dalle3_params"));
 
         ResponseFormatParam_OpenAI = T2IParamTypes.Register<string>(new("Response Format",
             "Determines how the generated image is returned from the API.\n" +
@@ -165,7 +165,7 @@ public class SwarmUIAPIBackends : Extension
             "'Base64' - Returns the image data directly encoded in base64\n" +
             "Base64 is preferred for immediate use, URLs for deferred processing.",
             "b64_json", GetValues: _ => ["url", "b64_json"], OrderPriority: -6,
-            Group: DallE3Group, FeatureFlag: "openai_api"));
+            Group: DallE3Group, FeatureFlag: "dalle3_params"));
 
         // gpt-image-1 parameters
         QualityParam_GPTImage1 = T2IParamTypes.Register<string>(new("Quality",
@@ -243,13 +243,6 @@ public class SwarmUIAPIBackends : Extension
             GetValues: _ => ["AUTO///Auto (Recommended)", "ON///Always Enhance", "OFF///Exact Prompts"],
             OrderPriority: -7, Group: IdeogramAdvancedGroup, FeatureFlag: "ideogram_api"));
 
-        SeedParam_Ideogram = T2IParamTypes.Register<int>(new("Generation Seed",
-            "Set a specific seed for reproducible results.\n" +
-            "Same seed + same settings = same image.\n" +
-            "Useful for iterating on specific images or sharing exact settings.", "-1",
-            Min: -1, Max: 2147483647, ViewType: ParamViewType.SEED, OrderPriority: -4,
-            Group: IdeogramAdvancedGroup, FeatureFlag: "ideogram_api"));
-
         ImagePromptParam_Ideogram = T2IParamTypes.Register<Image>(new("Input Image Prompt",
             "Optional input image (JPEG, PNG, or WebP, max 10MB) to use as a starting point or reference.\n" +
             "Serves as a visual guide for generation.\n" +
@@ -301,7 +294,7 @@ public class SwarmUIAPIBackends : Extension
             "Lower values (1.5-2.5): More creative but less controlled\n" +
             "Higher values (3.0-5.0): Stricter prompt following but may reduce realism.", "2.5",
             Min: 1.5, Max: 5.0, Step: 0.1, ViewType: ParamViewType.SLIDER, OrderPriority: -6,
-            Group: BlackForestGeneralGroup, FeatureFlag: "bfl_api"));
+            Group: BlackForestGeneralGroup, FeatureFlag: "flux_dev_params"));
 
         SafetyParam_BlackForest = T2IParamTypes.Register<int>(new("Safety Filter Level",
             "Controls content filtering strictness for both input and output.\n" +
@@ -317,7 +310,7 @@ public class SwarmUIAPIBackends : Extension
             "Higher values (2.0-4.0): More creative freedom and variation\n" +
             "Default 2.0 provides good balance of control and creativity.", "2.0", Min: 1.0, Max: 4.0, Step: 0.1,
             ViewType: ParamViewType.SLIDER, OrderPriority: -5, Group: BlackForestAdvancedGroup,
-            FeatureFlag: "bfl_api"));
+            FeatureFlag: "flux_pro_params"));
 
         PromptEnhanceParam_BlackForest = T2IParamTypes.Register<bool>(new("Prompt Enhancement",
             "Enables Flux's automatic prompt enhancement system.\n" +
@@ -331,7 +324,7 @@ public class SwarmUIAPIBackends : Extension
             "When enabled: Generates less processed, more natural-looking images\n" +
             "Raw mode can produce more authentic results but may be less polished\n" +
             "Only available in Flux Pro 1.1 ultra mode.", "false", OrderPriority: -3,
-            IsAdvanced: true, Group: BlackForestAdvancedGroup, FeatureFlag: "bfl_api"));
+            IsAdvanced: true, Group: BlackForestAdvancedGroup, FeatureFlag: "flux_ultra_params"));
 
         ImagePromptParam_BlackForest = T2IParamTypes.Register<Image>(new("Image Prompt",
             "Optional image to use as a starting point or reference.\n" +
@@ -346,7 +339,7 @@ public class SwarmUIAPIBackends : Extension
             "1.0: Follow image prompt very closely\n" +
             "Default 0.1 provides subtle guidance while allowing creativity.",
             "0.1", Min: 0.0, Max: 1.0, Step: 0.05, ViewType: ParamViewType.SLIDER,
-            OrderPriority: -1, Group: BlackForestAdvancedGroup, FeatureFlag: "bfl_api"));
+            OrderPriority: -1, Group: BlackForestAdvancedGroup, FeatureFlag: "flux_ultra_params"));
 
         OutputFormatParam_BlackForest = T2IParamTypes.Register<string>(new("Output Format",
             "Choose the file format for saving generated images:\n" +
@@ -394,8 +387,15 @@ public class SwarmUIAPIBackends : Extension
             "true",
             OrderPriority: -3, Group: FalAdvancedGroup, FeatureFlag: "fal_t2i_params"));
 
+        OutputFormatParam_Fal = T2IParamTypes.Register<string>(new("Output File Format",
+            "Choose the file format for generated images:\n" +
+            "JPEG: Smaller files, slight quality loss, good for sharing\n" +
+            "PNG: Lossless quality, larger files, best for editing.",
+            "jpeg", GetValues: _ => ["jpeg///JPEG (Smaller)", "png///PNG (Lossless)"],
+            OrderPriority: -2, Group: FalAdvancedGroup, FeatureFlag: "fal_t2i_params"));
+
         // Fal.ai Video Parameters
-        DurationParam_FalVideo = T2IParamTypes.Register<string>(new("Fal Video Duration",
+        DurationParam_FalVideo = T2IParamTypes.Register<string>(new("Video Duration",
             "Length of the generated video in seconds.\n" +
             "Available durations vary by model.\n" +
             "Longer durations cost more and take longer to generate.",
@@ -411,7 +411,7 @@ public class SwarmUIAPIBackends : Extension
             ],
             OrderPriority: -10, Group: FalVideoGroup, FeatureFlag: "fal_video_params"));
 
-        AspectRatioParam_FalVideo = T2IParamTypes.Register<string>(new("Fal Video Aspect Ratio",
+        AspectRatioParam_FalVideo = T2IParamTypes.Register<string>(new("Video Aspect Ratio",
             "Aspect ratio for the generated video.\n" +
             "16:9: Widescreen (landscape)\n" +
             "9:16: Vertical (portrait/mobile)\n" +
@@ -425,7 +425,7 @@ public class SwarmUIAPIBackends : Extension
             ],
             OrderPriority: -9, Group: FalVideoGroup, FeatureFlag: "fal_video_params"));
 
-        ResolutionParam_FalVideo = T2IParamTypes.Register<string>(new("Fal Video Resolution",
+        ResolutionParam_FalVideo = T2IParamTypes.Register<string>(new("Video Output Resolution",
             "Resolution of the generated video.\n" +
             "Higher resolutions cost more and take longer.\n" +
             "720p is standard, 1080p is available on some models.",
@@ -436,14 +436,14 @@ public class SwarmUIAPIBackends : Extension
             ],
             OrderPriority: -8, Group: FalVideoGroup, FeatureFlag: "fal_video_params"));
 
-        GenerateAudioParam_FalVideo = T2IParamTypes.Register<bool>(new("Fal Generate Audio",
+        GenerateAudioParam_FalVideo = T2IParamTypes.Register<bool>(new("Generate Audio",
             "Generate audio alongside the video.\n" +
             "When enabled, the model will create matching audio/sound effects.\n" +
             "Supported by Sora, Veo, Kling, and other models.",
             "true",
             OrderPriority: -7, Group: FalVideoGroup, FeatureFlag: "fal_video_params"));
 
-        NegativePromptParam_FalVideo = T2IParamTypes.Register<string>(new("Fal Video Negative Prompt",
+        NegativePromptParam_FalVideo = T2IParamTypes.Register<string>(new("Video Negative Prompt",
             "Describe what you don't want in the generated video.\n" +
             "Supported by Veo, Wan, PixVerse, and some other video models.",
             "", OrderPriority: -5, Group: FalVideoAdvancedGroup, FeatureFlag: "fal_video_params"));
@@ -508,7 +508,7 @@ public class SwarmUIAPIBackends : Extension
             "sampling", "zero_negative", "refiners", "controlnet", "variation_seed",
             "video", "autowebui", "comfyui", "frameinterps", "ipadapter", "sdxl",
             "dynamic_thresholding", "cascade", "sd3", "flux-dev", "seamless",
-            "freeu", "teacache", "text2video", "yolov8", "aitemplate"
+            "freeu", "teacache", "text2video", "yolov8", "aitemplate", "sdcpp"
         ];
 
         // Register all flags

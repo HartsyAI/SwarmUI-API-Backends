@@ -490,7 +490,7 @@ public class DynamicAPIBackend : APIAbstractBackend
             ["standard_width"] = model.StandardWidth > 0 ? model.StandardWidth : 1024,
             ["standard_height"] = model.StandardHeight > 0 ? model.StandardHeight : 1024,
             ["is_supported_model_format"] = true,
-            ["tags"] = new JArray("api", providerId),
+            ["tags"] = model.Metadata?.Tags != null ? new JArray(model.Metadata.Tags) : new JArray("api", providerId),
             ["local"] = false,
             ["api_source"] = providerId
         };

@@ -236,6 +236,7 @@ public sealed class IdeogramRequestBuilder : BaseRequestBuilder
         if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Ideogram, out string aspect)) requestBody["aspect_ratio"] = isV3 ? MapAspectRatioV3(aspect) : MapAspectRatioLegacy(aspect);
         if (input.TryGet(SwarmUIAPIBackends.StyleTypeParam_Ideogram, out string style) && !string.IsNullOrEmpty(style)) requestBody["style_type"] = style;
         if (input.TryGet(SwarmUIAPIBackends.NegativePromptParam_Ideogram, out string negPrompt) && !string.IsNullOrEmpty(negPrompt)) requestBody["negative_prompt"] = negPrompt;
+        if (input.TryGet(T2IParamTypes.Seed, out long seed) && seed >= 0) requestBody["seed"] = (int)seed;
         if (hasInputImage)
         {
             string base64Image = Convert.ToBase64String(inputImg.RawData);
