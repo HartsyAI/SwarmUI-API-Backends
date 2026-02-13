@@ -39,6 +39,8 @@ public class SwarmUIAPIBackends : Extension
     public static T2IParamGroup FalParamGroup;
     public static T2IParamGroup FalGeneralGroup;
     public static T2IParamGroup FalAdvancedGroup;
+    public static T2IParamGroup FalVideoGroup;
+    public static T2IParamGroup FalVideoAdvancedGroup;
 
     // OpenAI Parameters
     public static T2IRegisteredParam<string> SizeParam_OpenAI;
@@ -88,13 +90,20 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<long> SeedParam_BlackForest => T2IParamTypes.Seed;
     public static T2IRegisteredParam<int> StepsParam_BlackForest => T2IParamTypes.Steps;
 
-    // Fal.ai Parameters
+    // Fal.ai Text-to-Image Parameters
     public static T2IRegisteredParam<string> ImageSizeParam_Fal;
     public static T2IRegisteredParam<long> SeedParam_Fal => T2IParamTypes.Seed;
     public static T2IRegisteredParam<double> GuidanceScaleParam_Fal;
     public static T2IRegisteredParam<int> NumInferenceStepsParam_Fal;
     public static T2IRegisteredParam<string> OutputFormatParam_Fal => OutputFormatParam_BlackForest;
     public static T2IRegisteredParam<bool> SafetyCheckerParam_Fal;
+
+    // Fal.ai Video Parameters
+    public static T2IRegisteredParam<string> DurationParam_FalVideo;
+    public static T2IRegisteredParam<string> AspectRatioParam_FalVideo;
+    public static T2IRegisteredParam<string> ResolutionParam_FalVideo;
+    public static T2IRegisteredParam<bool> GenerateAudioParam_FalVideo;
+    public static T2IRegisteredParam<string> NegativePromptParam_FalVideo;
 
     public override void OnPreInit()
     {
@@ -120,8 +129,10 @@ public class SwarmUIAPIBackends : Extension
         BlackForestAdvancedGroup = new("Flux Advanced Settings", Toggles: true, Open: false, OrderPriority: 41, Description: "Additional options for fine-tuning Flux generations and output processing.");
 
         FalParamGroup = new("Fal.ai API", Toggles: false, Open: true, OrderPriority: 50, Description: "API access to Fal.ai's 600+ production-ready AI models.");
-        FalGeneralGroup = new("Fal.ai Core Settings", Toggles: false, Open: true, OrderPriority: 50, Description: "Core parameters for Fal.ai image generation.\nAccess to FLUX, Stable Diffusion, Recraft, and many more models.");
-        FalAdvancedGroup = new("Fal.ai Advanced Settings", Toggles: true, Open: false, OrderPriority: 51, Description: "Additional options for fine-tuning Fal.ai generations.");
+        FalGeneralGroup = new("Fal.ai Image Settings", Toggles: false, Open: true, OrderPriority: 50, Description: "Core parameters for Fal.ai image generation.\nAccess to FLUX, Stable Diffusion, Recraft, and many more models.");
+        FalAdvancedGroup = new("Fal.ai Image Advanced Settings", Toggles: true, Open: false, OrderPriority: 51, Description: "Additional options for fine-tuning Fal.ai image generations.");
+        FalVideoGroup = new("Fal.ai Video Settings", Toggles: false, Open: true, OrderPriority: 52, Description: "Parameters for Fal.ai video generation models.\nAccess to Sora, Veo, Kling, MiniMax, and many more video models.");
+        FalVideoAdvancedGroup = new("Fal.ai Video Advanced Settings", Toggles: true, Open: false, OrderPriority: 53, Description: "Additional options for fine-tuning Fal.ai video generations.");
         SizeParam_OpenAI = T2IParamTypes.Register<string>(new("Output Resolution", "Controls the dimensions of the generated image.\n" + "DALL-E 2: 256x256, 512x512, or 1024x1024\n" + "DALL-E 3: 1024x1024, 1792x1024, or 1024x1792\n" +
             "GPT Image 1: auto, 1024x1024, 1536x1024, or 1024x1536", "1024x1024", GetValues: model =>
             {
@@ -344,7 +355,7 @@ public class SwarmUIAPIBackends : Extension
             "jpeg", GetValues: _ => ["jpeg///JPEG (Smaller)", "png///PNG (Lossless)"],
             OrderPriority: 0, Group: BlackForestAdvancedGroup, FeatureFlag: "bfl_api"));
 
-        // Fal.ai Parameters
+        // Fal.ai Text-to-Image Parameters
         ImageSizeParam_Fal = T2IParamTypes.Register<string>(new("Image Size",
             "Controls the dimensions of the generated image:\n" +
             "Square HD: 1024x1024 high definition\n" +
@@ -359,7 +370,7 @@ public class SwarmUIAPIBackends : Extension
                 "landscape_4_3///Landscape 4:3",
                 "landscape_16_9///Landscape 16:9"
             ],
-            OrderPriority: -10, Group: FalGeneralGroup, FeatureFlag: "fal_api"));
+            OrderPriority: -10, Group: FalGeneralGroup, FeatureFlag: "fal_t2i_params"));
 
         GuidanceScaleParam_Fal = T2IParamTypes.Register<double>(new("Guidance Scale",
             "Controls how closely the model follows your prompt:\n" +
@@ -367,7 +378,7 @@ public class SwarmUIAPIBackends : Extension
             "Medium values (3.5-7): Balanced\n" +
             "Higher values (7-15): Stricter prompt adherence",
             "3.5", Min: 1.0, Max: 20.0, Step: 0.5, ViewType: ParamViewType.SLIDER,
-            OrderPriority: -6, Group: FalGeneralGroup, FeatureFlag: "fal_api"));
+            OrderPriority: -6, Group: FalGeneralGroup, FeatureFlag: "fal_t2i_params"));
 
         NumInferenceStepsParam_Fal = T2IParamTypes.Register<int>(new("Inference Steps",
             "Number of denoising steps. More steps = higher quality but slower.\n" +
@@ -375,13 +386,67 @@ public class SwarmUIAPIBackends : Extension
             "FLUX dev: 20-50 steps (quality)\n" +
             "Other models: 20-30 steps typical",
             "28", Min: 1, Max: 100, ViewType: ParamViewType.SLIDER,
-            OrderPriority: -5, Group: FalAdvancedGroup, FeatureFlag: "fal_api"));
+            OrderPriority: -5, Group: FalAdvancedGroup, FeatureFlag: "fal_t2i_params"));
 
         SafetyCheckerParam_Fal = T2IParamTypes.Register<bool>(new("Safety Checker",
             "Enable or disable the NSFW safety checker.\n" +
             "When enabled, inappropriate content will be filtered.",
             "true",
-            OrderPriority: -3, Group: FalAdvancedGroup, FeatureFlag: "fal_api"));
+            OrderPriority: -3, Group: FalAdvancedGroup, FeatureFlag: "fal_t2i_params"));
+
+        // Fal.ai Video Parameters
+        DurationParam_FalVideo = T2IParamTypes.Register<string>(new("Fal Video Duration",
+            "Length of the generated video in seconds.\n" +
+            "Available durations vary by model.\n" +
+            "Longer durations cost more and take longer to generate.",
+            "5", GetValues: _ => [
+                "3///3 seconds",
+                "4///4 seconds",
+                "5///5 seconds (Default)",
+                "6///6 seconds",
+                "8///8 seconds",
+                "10///10 seconds",
+                "12///12 seconds",
+                "15///15 seconds"
+            ],
+            OrderPriority: -10, Group: FalVideoGroup, FeatureFlag: "fal_video_params"));
+
+        AspectRatioParam_FalVideo = T2IParamTypes.Register<string>(new("Fal Video Aspect Ratio",
+            "Aspect ratio for the generated video.\n" +
+            "16:9: Widescreen (landscape)\n" +
+            "9:16: Vertical (portrait/mobile)\n" +
+            "1:1: Square",
+            "16:9", GetValues: _ => [
+                "16:9///Widescreen (16:9)",
+                "9:16///Portrait (9:16)",
+                "1:1///Square (1:1)",
+                "4:3///Standard (4:3)",
+                "3:4///Portrait (3:4)"
+            ],
+            OrderPriority: -9, Group: FalVideoGroup, FeatureFlag: "fal_video_params"));
+
+        ResolutionParam_FalVideo = T2IParamTypes.Register<string>(new("Fal Video Resolution",
+            "Resolution of the generated video.\n" +
+            "Higher resolutions cost more and take longer.\n" +
+            "720p is standard, 1080p is available on some models.",
+            "720p", GetValues: _ => [
+                "480p///480p (Fast)",
+                "720p///720p (Standard)",
+                "1080p///1080p (HD)"
+            ],
+            OrderPriority: -8, Group: FalVideoGroup, FeatureFlag: "fal_video_params"));
+
+        GenerateAudioParam_FalVideo = T2IParamTypes.Register<bool>(new("Fal Generate Audio",
+            "Generate audio alongside the video.\n" +
+            "When enabled, the model will create matching audio/sound effects.\n" +
+            "Supported by Sora, Veo, Kling, and other models.",
+            "true",
+            OrderPriority: -7, Group: FalVideoGroup, FeatureFlag: "fal_video_params"));
+
+        NegativePromptParam_FalVideo = T2IParamTypes.Register<string>(new("Fal Video Negative Prompt",
+            "Describe what you don't want in the generated video.\n" +
+            "Supported by Veo, Wan, PixVerse, and some other video models.",
+            "", OrderPriority: -5, Group: FalVideoAdvancedGroup, FeatureFlag: "fal_video_params"));
 
         RegisterFeatureFlags();
         Program.Backends.RegisterBackendType<DynamicAPIBackend>("dynamic_api_backend", "3rd Party Paid API Backends", "Generate images using various API services (OpenAI, Ideogram, Black Forest Labs, Grok, Google, Fal.ai)", true);
@@ -392,9 +457,6 @@ public class SwarmUIAPIBackends : Extension
             BasicAPIFeatures.AcceptedAPIKeyTypes.Add(keyType);
         }
         _ = APIProviderRegistry.Instance;
-        RegisterApiModelsWithGlobalRegistry();
-        // Re-register API models after every filesystem refresh (Refresh() replaces the entire Models dict)
-        Program.ModelRefreshEvent += RegisterApiModelsWithGlobalRegistry;
         RegisterApiKeyIfNeeded("openai_api", "openai", "OpenAI (ChatGPT)", "https://platform.openai.com/api-keys", new HtmlString("To use OpenAI models in SwarmUI (via Hartsy extensions), you must set your OpenAI API key."));
         RegisterApiKeyIfNeeded("bfl_api", "black_forest", "Black Forest Labs (FLUX)", "https://dashboard.bfl.ai/", new HtmlString("To use Black Forest in SwarmUI (via Hartsy extensions), you must set your Black Forest API key."));
         RegisterApiKeyIfNeeded("ideogram_api", "ideogram", "Ideogram", "https://developer.ideogram.ai/ideogram-api/api-setup", new HtmlString("To use Ideogram in SwarmUI (via Hartsy extensions), you must set your Ideogram API key."));
@@ -425,43 +487,6 @@ public class SwarmUIAPIBackends : Extension
         }
     }
 
-    /// <summary>Registers models from API providers to the global SwarmUI model registry, making them visible in the Models tab.
-    /// This ensures API models can be browsed, selected, and modified like standard local models.
-    /// Also called by ModelRefreshEvent since T2IModelHandler.Refresh() replaces the entire Models dictionary.</summary>
-    public static void RegisterApiModelsWithGlobalRegistry()
-    {
-        int added = 0;
-        foreach (APIProviderMetadata provider in APIProviderRegistry.Instance.Providers.Values)
-        {
-            foreach (KeyValuePair<string, T2IModel> entry in provider.Models)
-            {
-                string modelName = entry.Key;
-                T2IModel model = entry.Value;
-                if (Program.MainSDModels.Models.ContainsKey(modelName))
-                {
-                    continue;
-                }
-                T2IModel globalModel = new(Program.MainSDModels, null, model.RawFilePath, modelName)
-                {
-                    Title = model.Title,
-                    Description = model.Description,
-                    PreviewImage = model.PreviewImage,
-                    ModelClass = model.ModelClass,
-                    StandardWidth = model.StandardWidth,
-                    StandardHeight = model.StandardHeight,
-                    Metadata = model.Metadata,
-                    IsSupportedModelType = true
-                };
-                Program.MainSDModels.Models[modelName] = globalModel;
-                added++;
-            }
-        }
-        if (added > 0)
-        {
-            Logs.Verbose($"Registered {added} API models in global registry");
-        }
-    }
-
     /// <summary>Registers all feature flags that should be disregarded for API backends.</summary>
     private static void RegisterFeatureFlags()
     {
@@ -475,9 +500,7 @@ public class SwarmUIAPIBackends : Extension
             "flux_ultra_params", "flux_pro_params", "flux_dev_params",
             "flux_kontext_pro_params", "flux_kontext_max_params", "flux_2_max_params", "flux_2_pro_params",
             "grok_2_image_params", "google_imagen_params", "google_gemini_params",
-            "fal_flux_params", "fal_flux_pro_params", "fal_flux_kontext_params", "fal_flux_2_params",
-            "fal_recraft_params", "fal_ideogram_params", "fal_sd_params", "fal_grok_params",
-            "fal_video_params", "fal_utility_params"
+            "fal_t2i_params", "fal_video_params", "fal_utility_params"
         ];
 
         // Features incompatible with API backends (local-only features)

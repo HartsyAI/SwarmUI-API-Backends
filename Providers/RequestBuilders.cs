@@ -494,6 +494,21 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
 {
     public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
     {
+        bool isVideo = model.Id.EndsWith("-t2v") || model.Id.EndsWith("-i2v");
+        bool isUtility = model.Id.StartsWith("Utility/");
+        if (isVideo)
+        {
+            return BuildVideoRequest(input, model);
+        }
+        if (isUtility)
+        {
+            return BuildUtilityRequest(input, model);
+        }
+        return BuildImageRequest(input, model);
+    }
+
+    private static JObject BuildImageRequest(T2IParamInput input, ModelDefinition model)
+    {
         JObject request = new()
         {
             ["prompt"] = input.Get(T2IParamTypes.Prompt)
@@ -510,34 +525,87 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         return request;
     }
 
+    private static JObject BuildVideoRequest(T2IParamInput input, ModelDefinition model)
+    {
+        JObject request = new()
+        {
+            ["prompt"] = input.Get(T2IParamTypes.Prompt)
+        };
+        if (input.TryGet(SwarmUIAPIBackends.DurationParam_FalVideo, out string duration)) request["duration"] = duration;
+        if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_FalVideo, out string aspectRatio)) request["aspect_ratio"] = aspectRatio;
+        if (input.TryGet(SwarmUIAPIBackends.ResolutionParam_FalVideo, out string resolution)) request["resolution"] = resolution;
+        if (input.TryGet(SwarmUIAPIBackends.GenerateAudioParam_FalVideo, out bool genAudio)) request["generate_audio"] = genAudio;
+        if (input.TryGet(SwarmUIAPIBackends.NegativePromptParam_FalVideo, out string negPrompt) && !string.IsNullOrEmpty(negPrompt)) request["negative_prompt"] = negPrompt;
+        if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0) request["seed"] = seed;
+        return request;
+    }
+
+    private static JObject BuildUtilityRequest(T2IParamInput input, ModelDefinition model)
+    {
+        JObject request = new();
+        request["sync_mode"] = true;
+        return request;
+    }
+
     public override string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input)
     {
-        return $"{provider.BaseUrl}/{model.Id}";
+        string path = !string.IsNullOrEmpty(model.EndpointOverride) ? model.EndpointOverride : model.Id;
+        return $"{provider.BaseUrl}/{path}";
     }
 
     public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
     {
+        // Handle image responses (most text-to-image models)
         JArray images = response["images"] as JArray;
-        if (images is null || images.Count is 0)
+        if (images is not null && images.Count > 0)
         {
-            throw new Exception("No image data in Fal.ai response");
-        }
-        JToken firstImage = images[0];
-        string url = firstImage["url"]?.ToString();
-        if (!string.IsNullOrEmpty(url))
-        {
-            if (url.StartsWith("data:"))
+            JToken firstImage = images[0];
+            string url = firstImage["url"]?.ToString();
+            if (!string.IsNullOrEmpty(url))
             {
-                return DecodeBase64Image(url);
+                if (url.StartsWith("data:"))
+                {
+                    return DecodeBase64Image(url);
+                }
+                return await DownloadImageFromUrl(url);
             }
-            return await DownloadImageFromUrl(url);
+            string base64 = firstImage["base64"]?.ToString();
+            if (!string.IsNullOrEmpty(base64))
+            {
+                return DecodeBase64Image(base64);
+            }
         }
-        string base64 = firstImage["base64"]?.ToString();
-        if (!string.IsNullOrEmpty(base64))
+        // Handle single image response (some models return {image: {url: ...}})
+        JToken imageObj = response["image"];
+        if (imageObj is not null)
         {
-            return DecodeBase64Image(base64);
+            string imageUrl = imageObj["url"]?.ToString();
+            if (!string.IsNullOrEmpty(imageUrl))
+            {
+                return await DownloadImageFromUrl(imageUrl);
+            }
         }
-        throw new Exception("Fal.ai response missing image data");
+        // Handle video responses (video generation models)
+        JToken video = response["video"];
+        if (video is not null)
+        {
+            string videoUrl = video["url"]?.ToString();
+            if (!string.IsNullOrEmpty(videoUrl))
+            {
+                return await DownloadImageFromUrl(videoUrl);
+            }
+        }
+        // Handle output array (some utility models)
+        JToken output = response["output"];
+        if (output is JArray outputArr && outputArr.Count > 0)
+        {
+            string outputUrl = outputArr[0]["url"]?.ToString();
+            if (!string.IsNullOrEmpty(outputUrl))
+            {
+                return await DownloadImageFromUrl(outputUrl);
+            }
+        }
+        throw new Exception($"Fal.ai response missing image/video data. Response keys: {string.Join(", ", response.Properties().Select(p => p.Name))}");
     }
 }
 

@@ -7,10 +7,12 @@ using System.Threading.Tasks;
 using FreneticUtilities.FreneticDataSyntax;
 using FreneticUtilities.FreneticExtensions;
 using Hartsy.Extensions.APIBackends.Models;
+using Hartsy.Extensions.APIBackends.Providers;
 using Newtonsoft.Json.Linq;
 using SwarmUI.Accounts;
 using SwarmUI.Backends;
 using SwarmUI.Core;
+using SwarmUI.Media;
 using SwarmUI.Text2Image;
 using SwarmUI.Utils;
 using SwarmUI.WebAPI;
@@ -213,6 +215,19 @@ public class DynamicAPIBackend : APIAbstractBackend
             string cleanName = modelName.Replace("API Models/Google/", "");
             string baseUrlForGoogle = cleanName.StartsWith("gemini-") ? $"{baseUrl}/{cleanName}:generateContent" : $"{baseUrl}/{cleanName}:predict";
             return baseUrlForGoogle;
+        }
+        else if (providerId is "fal_api")
+        {
+            string cleanName = modelName.Replace("API Models/Fal/", "");
+            foreach (ModelDefinition model in ProviderDefinitions.Fal.Models)
+            {
+                if (model.Id == cleanName)
+                {
+                    string path = !string.IsNullOrEmpty(model.EndpointOverride) ? model.EndpointOverride : model.Id;
+                    return $"{baseUrl}/{path}";
+                }
+            }
+            return $"{baseUrl}/{cleanName}";
         }
         Logs.Verbose($"[DynamicAPIBackend] Using base URL: {baseUrl}");
         return baseUrl;
@@ -479,6 +494,37 @@ public class DynamicAPIBackend : APIAbstractBackend
             ["local"] = false,
             ["api_source"] = providerId
         };
+    }
+
+    /// <summary>Generate with live output. For video models, wraps result as VideoFile
+    /// to avoid ImageSharp conversion (Image extends ImageFile, VideoFile extends MediaFile).</summary>
+    public override async Task GenerateLive(T2IParamInput user_input, string batchId, Action<object> takeOutput)
+    {
+        takeOutput(new JObject
+        {
+            ["gen_progress"] = new JObject
+            {
+                ["batch_index"] = batchId,
+                ["step"] = 0,
+                ["total_steps"] = 1
+            }
+        });
+        Image[] results = await Generate(user_input);
+        string modelName = user_input.Get(T2IParamTypes.Model)?.Name ?? "";
+        bool isVideoModel = modelName.EndsWith("-t2v") || modelName.EndsWith("-i2v");
+        foreach (Image img in results)
+        {
+            if (isVideoModel && img.Type.MetaType == MediaMetaType.Video)
+            {
+                // Wrap as VideoFile (extends MediaFile, NOT ImageFile) to skip ImageSharp conversion
+                VideoFile video = new(img.RawData, img.Type);
+                takeOutput(video);
+            }
+            else
+            {
+                takeOutput(img);
+            }
+        }
     }
 
     /// <summary>Shutdown the backend</summary>

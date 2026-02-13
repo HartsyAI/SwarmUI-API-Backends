@@ -12,7 +12,7 @@ const APIBackendsConfig = {
         bfl_api: ['flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params', 'flux_2_max_params', 'flux_2_pro_params'],
         grok_api: ['grok_2_image_params'],
         google_api: ['google_imagen_params', 'google_gemini_params'],
-        fal_api: ['fal_flux_params', 'fal_flux_pro_params', 'fal_flux_kontext_params', 'fal_flux_2_params', 'fal_recraft_params', 'fal_ideogram_params', 'fal_sd_params', 'fal_grok_params', 'fal_video_params', 'fal_utility_params']
+        fal_api: ['fal_t2i_params', 'fal_video_params', 'fal_utility_params']
     },
 
     // Core params to hide for all API models (no feature flags but incompatible)
@@ -49,6 +49,23 @@ const APIBackendsConfig = {
     // Get all flags to remove when not using API models
     get allApiFlags() {
         return [...this.providerIds, ...this.allModelFlags];
+    },
+
+    // Determine which Fal-specific flags to add based on the selected model name
+    getFalModelFlags(modelName) {
+        if (!modelName || !modelName.startsWith('API Models/Fal/')) {
+            return ['fal_t2i_params']; // fallback to image params
+        }
+        // Utility models
+        if (modelName.includes('/Utility/')) {
+            return ['fal_utility_params'];
+        }
+        // Video models: IDs end with -t2v or -i2v
+        if (modelName.endsWith('-t2v') || modelName.endsWith('-i2v')) {
+            return ['fal_video_params'];
+        }
+        // All other Fal models are text-to-image
+        return ['fal_t2i_params'];
     }
 };
 
@@ -83,15 +100,25 @@ featureSetChangers.push(() => {
         return [[], APIBackendsConfig.allApiFlags];
     }
 
-    // Build flags to remove (incompatible + other providers' model flags)
+    // Build flags to remove (incompatible + ALL provider model flags, we'll add back the relevant ones)
     const removeFlags = [
         ...APIBackendsConfig.incompatibleFlags,
         ...APIBackendsConfig.allModelFlags
     ];
 
-    // Build flags to add (base + current provider + its model flags)
-    const providerModelFlags = APIBackendsConfig.providers[curArch] || [];
-    const addFlags = ['prompt', 'images', curArch, ...providerModelFlags];
+    // Build flags to add
+    let addFlags = ['prompt', 'images', curArch];
+
+    if (curArch === 'fal_api') {
+        // For Fal.ai, only add flags relevant to the selected model type
+        const modelName = currentModelHelper.curModel || '';
+        const falFlags = APIBackendsConfig.getFalModelFlags(modelName);
+        addFlags.push(...falFlags);
+    } else {
+        // For other providers, add all provider model flags
+        const providerModelFlags = APIBackendsConfig.providers[curArch] || [];
+        addFlags.push(...providerModelFlags);
+    }
 
     return [addFlags, removeFlags];
 });
@@ -99,7 +126,7 @@ featureSetChangers.push(() => {
 // 2. Run setup when model changes
 if (typeof addModelChangeCallback === 'function') {
     addModelChangeCallback(() => {
-        console.log(`[api-backends] Model changed to: ${currentModelHelper.curArch}`);
+        console.log(`[api-backends] Model changed to: ${currentModelHelper.curArch} (${currentModelHelper.curModel})`);
 
         // Update the feature set and parameter visibility
         reviseBackendFeatureSet();

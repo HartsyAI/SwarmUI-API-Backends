@@ -106,12 +106,23 @@ public abstract class APIAbstractBackend : AbstractT2IBackend
         }
     }
 
+    /// <summary>Determines the media type from the API response JSON.
+    /// Override in subclasses for provider-specific detection.</summary>
+    protected virtual MediaType DetermineResponseMediaType(JObject responseJson)
+    {
+        if (responseJson["video"] is not null)
+        {
+            return MediaType.VideoMp4;
+        }
+        return MediaType.ImagePng;
+    }
+
     /// <summary>Generate images with the API</summary>
     public override async Task<Image[]> Generate(T2IParamInput input)
     {
         try
         {
-            Logs.Verbose($"[APIAbstractBackend] {GetType().Name} - Starting image generation with model: {CurrentModelName}");
+            Logs.Verbose($"[APIAbstractBackend] {GetType().Name} - Starting generation with model: {CurrentModelName}");
             CheckPermissions(input);
             string baseUrl = GetBaseUrl(input);
             Logs.Verbose($"[APIAbstractBackend] {GetType().Name} - Using base URL: {baseUrl}");
@@ -138,12 +149,14 @@ public abstract class APIAbstractBackend : AbstractT2IBackend
             Logs.Verbose($"[APIAbstractBackend] {GetType().Name} - Received successful response: {response.StatusCode}");
             JObject responseJson = JObject.Parse(await response.Content.ReadAsStringAsync());
             string apiKey = GetApiKey(input);
-            byte[] imageData = await ProcessResponse(responseJson, apiKey);
-            return [new Image(imageData, MediaType.ImagePng)];
+            byte[] data = await ProcessResponse(responseJson, apiKey);
+            MediaType mediaType = DetermineResponseMediaType(responseJson);
+            Logs.Verbose($"[APIAbstractBackend] {GetType().Name} - Response media type: {mediaType.Extension}");
+            return [new Image(data, mediaType)];
         }
         catch (Exception ex)
         {
-            Logs.Error($"[APIAbstractBackend] {GetType().Name} - Error during image generation: {ex.Message}");
+            Logs.Error($"[APIAbstractBackend] {GetType().Name} - Error during generation: {ex.Message}");
             throw;
         }
     }
