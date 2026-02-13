@@ -165,7 +165,7 @@ public class SwarmUIAPIBackends : Extension
             "'Base64' - Returns the image data directly encoded in base64\n" +
             "Base64 is preferred for immediate use, URLs for deferred processing.",
             "b64_json", GetValues: _ => ["url", "b64_json"], OrderPriority: -6,
-            Group: DallE3Group, FeatureFlag: "dalle3_params"));
+            IsAdvanced: true, Group: DallE3Group, FeatureFlag: "dalle3_params"));
 
         // gpt-image-1 parameters
         QualityParam_GPTImage1 = T2IParamTypes.Register<string>(new("Quality",
@@ -248,19 +248,19 @@ public class SwarmUIAPIBackends : Extension
             "Serves as a visual guide for generation.\n" +
             "Useful for variations, style matching, or guided compositions.\n" +
             null, null, OrderPriority: -2,
-            IsAdvanced: true, Group: IdeogramAdvancedGroup, FeatureFlag: "ideogram_api"));
+            Group: IdeogramAdvancedGroup, FeatureFlag: "ideogram_api"));
 
         ImageMaskPromptParam_Ideogram = T2IParamTypes.Register<Image>(new("Mask Image Prompt",
             "Optional input image (JPEG, PNG, or WebP, max 10MB) to use as a mask provided to the input image.\n" +
             "Serves as a visual guide for generation.\n" +
             "Useful for variations, style matching, or guided compositions.\n" +
             null, null, OrderPriority: -2,
-            IsAdvanced: true, Group: IdeogramAdvancedGroup, FeatureFlag: "ideogram_api"));
+            Group: IdeogramAdvancedGroup, FeatureFlag: "ideogram_api"));
 
         ImageWeightParam_Ideogram = T2IParamTypes.Register<double>(new("Image Weight",
             "Controls how strongly the input image influences the generation (when using image edit/mix).",
             "0.5", Min: 0.0, Max: 1.0, Step: 0.05, ViewType: ParamViewType.SLIDER,
-            OrderPriority: -1, IsAdvanced: true, Group: IdeogramAdvancedGroup, FeatureFlag: "ideogram_api"));
+            OrderPriority: -1, Group: IdeogramAdvancedGroup, FeatureFlag: "ideogram_api"));
 
         ColorPaletteParam_Ideogram = T2IParamTypes.Register<string>(new("Color Theme",
             "Apply a predefined color palette to influence image colors (V2 & V2_TURBO only):\n" +
@@ -284,7 +284,7 @@ public class SwarmUIAPIBackends : Extension
                 "PASTEL///Pastel - Soft Tones",
                 "ULTRAMARINE///Ultramarine - Ocean Blues"
             ],
-            OrderPriority: -3, Group: IdeogramAdvancedGroup, FeatureFlag: "ideogram_api"));
+            OrderPriority: -3, Group: IdeogramGeneralGroup, FeatureFlag: "ideogram_api"));
 
         // Black Forest Labs API Parameters
         GuidanceParam_BlackForest = T2IParamTypes.Register<double>(new("Prompt Guidance",
@@ -294,7 +294,7 @@ public class SwarmUIAPIBackends : Extension
             "Lower values (1.5-2.5): More creative but less controlled\n" +
             "Higher values (3.0-5.0): Stricter prompt following but may reduce realism.", "2.5",
             Min: 1.5, Max: 5.0, Step: 0.1, ViewType: ParamViewType.SLIDER, OrderPriority: -6,
-            Group: BlackForestGeneralGroup, FeatureFlag: "flux_dev_params"));
+            Group: BlackForestGeneralGroup, FeatureFlag: "bfl_api"));
 
         SafetyParam_BlackForest = T2IParamTypes.Register<int>(new("Safety Filter Level",
             "Controls content filtering strictness for both input and output.\n" +
@@ -317,21 +317,21 @@ public class SwarmUIAPIBackends : Extension
             "When enabled: Automatically expands prompts with additional details\n" +
             "Can help achieve more artistic results but may reduce prompt precision\n" +
             "Recommended for creative/artistic work, disable for exact prompt following.", "false",
-            OrderPriority: -4, IsAdvanced: true, Group: BlackForestAdvancedGroup, FeatureFlag: "bfl_api"));
+            OrderPriority: -4, Group: BlackForestAdvancedGroup, FeatureFlag: "bfl_api"));
 
         RawModeParam_BlackForest = T2IParamTypes.Register<bool>(new("Raw Mode",
             "Enables raw generation mode in Flux Pro 1.1.\n" +
             "When enabled: Generates less processed, more natural-looking images\n" +
             "Raw mode can produce more authentic results but may be less polished\n" +
             "Only available in Flux Pro 1.1 ultra mode.", "false", OrderPriority: -3,
-            IsAdvanced: true, Group: BlackForestAdvancedGroup, FeatureFlag: "flux_ultra_params"));
+            Group: BlackForestAdvancedGroup, FeatureFlag: "flux_ultra_params"));
 
         ImagePromptParam_BlackForest = T2IParamTypes.Register<Image>(new("Image Prompt",
             "Optional image to use as a starting point or reference.\n" +
             "Acts as a visual guide for the generation process.\n" +
             "Useful for variations, style matching, or guided compositions.\n" +
             "Use with Image Prompt Strength to control influence.", null, OrderPriority: -2,
-            IsAdvanced: true, Group: BlackForestAdvancedGroup, FeatureFlag: "bfl_api"));
+            Group: BlackForestAdvancedGroup, FeatureFlag: "bfl_api"));
 
         ImagePromptStrengthParam_BlackForest = T2IParamTypes.Register<double>(new("Image Prompt Strength",
             "Controls how much the Image Prompt influences the generation.\n" +
