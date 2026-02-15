@@ -6,17 +6,19 @@
 const APIBackendsConfig = {
     // Provider IDs mapped to their model-specific feature flags
     providers: {
-        openai_api: ['dalle2_params', 'dalle3_params', 'gpt-image-1_params', 'gpt-image-1.5_params'],
+        openai_api: ['dalle2_params', 'dalle3_params', 'gpt-image-1_params', 'gpt-image-1.5_params', 'openai_sora_params'],
         ideogram_api: ['ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params'],
         bfl_api: ['flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params', 'flux_2_max_params', 'flux_2_pro_params'],
         grok_api: ['grok_2_image_params'],
         google_api: ['google_imagen_params', 'google_gemini_params'],
-        fal_api: ['fal_t2i_params', 'fal_video_params', 'fal_utility_params']
+        fal_api: ['fal_t2i_params', 'fal_video_params', 'fal_utility_params', 'fal_sora_video_params', 'fal_kling_video_params', 'fal_veo_video_params', 'fal_minimax_video_params', 'fal_luma_video_params', 'fal_hunyuan_video_params']
     },
 
-    // Model name patterns to feature flags (order matters - more specific patterns first)
+    // Model name patterns to feature flags (order matters)
     modelPatterns: {
         openai_api: [
+            { pattern: 'sora-2-pro', flag: 'openai_sora_params' },
+            { pattern: 'sora-2', flag: 'openai_sora_params' },
             { pattern: 'gpt-image-1.5', flag: 'gpt-image-1.5_params' },
             { pattern: 'gpt-image-1', flag: 'gpt-image-1_params' },
             { pattern: 'dall-e-3', flag: 'dalle3_params' },
@@ -47,7 +49,6 @@ const APIBackendsConfig = {
     },
 
     // Core Swarm params to SHOW (unhide) for specific API models
-    // '*' matches all models for that provider
     coreParamsToShow: {
         bfl_api: {
             'flux-pro-1.1-ultra': ['seed'],
@@ -115,7 +116,14 @@ const APIBackendsConfig = {
         if (modelName.includes('/Utility/')) {
             return ['fal_utility_params'];
         }
+        // Model-specific video flags based on provider prefix
         if (modelName.endsWith('-t2v') || modelName.endsWith('-i2v')) {
+            if (modelName.includes('/Sora/')) return ['fal_sora_video_params'];
+            if (modelName.includes('/Kling/')) return ['fal_kling_video_params'];
+            if (modelName.includes('/Google/') && modelName.includes('veo')) return ['fal_veo_video_params'];
+            if (modelName.includes('/MiniMax/')) return ['fal_minimax_video_params'];
+            if (modelName.includes('/Luma/')) return ['fal_luma_video_params'];
+            if (modelName.includes('/Hunyuan/')) return ['fal_hunyuan_video_params'];
             return ['fal_video_params'];
         }
         return ['fal_t2i_params'];
@@ -128,7 +136,6 @@ const APIBackendsConfig = {
         if (providerConfig['*'] && providerConfig['*'].includes(paramId)) {
             return true;
         }
-        // Check model-specific patterns (longer patterns first for specificity)
         const sortedPatterns = Object.keys(providerConfig)
             .filter(p => p !== '*')
             .sort((a, b) => b.length - a.length);
@@ -159,39 +166,30 @@ featureSetChangers.push(() => {
                 if (!param.hasOwnProperty('original_feature_flag_api')) {
                     param.original_feature_flag_api = param.feature_flag;
                 }
-                param.feature_flag = param.original_feature_flag_api
-                    ? `${param.original_feature_flag_api},__api_incompatible__`
-                    : '__api_incompatible__';
+                param.feature_flag = param.original_feature_flag_api ? `${param.original_feature_flag_api},__api_incompatible__` : '__api_incompatible__';
             } else if (param.hasOwnProperty('original_feature_flag_api')) {
                 param.feature_flag = param.original_feature_flag_api;
                 delete param.original_feature_flag_api;
             }
         }
     }
-
     // Not using API model - remove all API-specific flags
     if (!isApiModel) {
         return [[], APIBackendsConfig.allApiFlags];
     }
-
     // Determine which model-specific flags should be active
     const activeModelFlags = APIBackendsConfig.getActiveModelFlags(curArch, modelName);
-
     // Remove: other providers + their model flags + inactive model flags from current provider
     const otherProviderIds = APIBackendsConfig.providerIds.filter(id => id !== curArch);
     const otherProviderModelFlags = otherProviderIds.flatMap(id => APIBackendsConfig.providers[id] || []);
-    const currentProviderInactiveFlags = (APIBackendsConfig.providers[curArch] || [])
-        .filter(f => !activeModelFlags.includes(f));
-
+    const currentProviderInactiveFlags = (APIBackendsConfig.providers[curArch] || []).filter(f => !activeModelFlags.includes(f));
     const removeFlags = [
         ...APIBackendsConfig.incompatibleFlags,
         ...otherProviderIds,
         ...otherProviderModelFlags,
         ...currentProviderInactiveFlags
     ];
-
     const addFlags = ['prompt', 'images', curArch, ...activeModelFlags];
-
     return [addFlags, removeFlags];
 });
 
