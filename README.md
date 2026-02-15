@@ -46,7 +46,7 @@ The APIBackends Extension for SwarmUI enables integration with multiple commerci
   - Black Forest Labs (FLUX Pro, Ultra, Dev, Kontext Pro/Max, FLUX 2 Pro/Max)
   - Grok (Grok 2 Image)
   - Google (Imagen 3.0, Gemini 2.0 Flash)
-  - Fal.ai (50 models -- image, video, and utility -- from 20 providers via a single API key)
+  - Fal.ai (120+ models -- image, video, and utility -- via a single API key)
 * Provider-specific parameter controls that show/hide automatically per model
 * Video generation support (Sora 2, Veo 3.1, Kling, Hailuo, PixVerse, Wan, and more)
 * Utility models for background removal and image upscaling
@@ -58,71 +58,11 @@ The APIBackends Extension for SwarmUI enables integration with multiple commerci
 
 Fal.ai acts as a unified gateway to models from many providers. With a single Fal API key you get access to all of them.
 
-<details>
-<summary><b>Image Models (19)</b></summary>
+**Image Models** include FLUX (dev, schnell, pro, ultra, kontext, flex), Recraft V3, Ideogram, Stability AI (SD 3.5), Grok, Google, Kling, Qwen, Bria, ByteDance Seedream, Reve, ImagineArt, F-Lite, HiDream, OmniGen, AuraFlow, Lumina, Sana, Playground, Kolors, MiniMax, Step1X, Hunyuan, UNO, and Instant Character.
 
-| Subfolder | Model | Description |
-|---|---|---|
-| FLUX | FLUX.1 [dev] | 12B parameter flow transformer |
-| FLUX | FLUX.1 [schnell] | Ultra-fast 1-4 step generation |
-| FLUX | FLUX 1.1 [pro] ultra | Up to 2K resolution, improved realism |
-| FLUX | FLUX.1 Kontext [pro] | Context-aware image editing |
-| FLUX | FLUX Kontext [max] | Premium context-aware editing |
-| FLUX | FLUX.2 [flex] | Enhanced typography and fine control |
-| Recraft | Recraft V3 | Vector art, typography, brand styles |
-| Ideogram | Ideogram V2 Turbo | Fast generation with text rendering |
-| StabilityAI | SD 3.5 Large (8B) | General purpose image generation |
-| StabilityAI | SD 3.5 Medium (2.5B) | Balanced quality and speed |
-| Grok | Grok Imagine Image | High aesthetic quality from xAI |
-| Google | Nano Banana Pro | Google image generation |
-| Kling | Kling Image V3 | Kling text-to-image |
-| Kling | Kling Omni 3 | Latest Kling image generation |
-| Qwen | Qwen Image | Complex text rendering and editing |
-| Bria | Bria FIBO Generate | Enterprise-grade, licensed data |
-| ByteDance | Seedream 4.0 | Unified generation and editing |
-| Reve | Reve Edit | High-quality image editing |
-| ImagineArt | ImagineArt 1.5 | Artistic image generation |
+**Video Models** include Sora 2, Veo 3.1, Kling (O3, V3), Grok Video, MiniMax Hailuo, PixVerse, Wan, LTX, Vidu, Hunyuan, Mochi, Luma Dream Machine, Pika, Kandinsky, Magi, CogVideoX, SkyReels, and Decart Lucy.
 
-</details>
-
-<details>
-<summary><b>Video Models (27 -- Text-to-Video and Image-to-Video)</b></summary>
-
-| Subfolder | Model | Type |
-|---|---|---|
-| Sora | Sora 2 | T2V |
-| Sora | Sora 2 Pro | T2V |
-| Sora | Sora 2 | I2V |
-| Sora | Sora 2 Pro | I2V |
-| Google | Veo 3.1 | T2V |
-| Google | Veo 3.1 Fast | T2V |
-| Google | Veo 3.1 | I2V |
-| Google | Veo 3.1 Fast | I2V |
-| Kling | Kling O3 Pro | T2V, I2V |
-| Kling | Kling O3 Standard | T2V, I2V |
-| Kling | Kling V3 Pro | T2V, I2V |
-| Grok | Grok Imagine Video | T2V, I2V |
-| MiniMax | Hailuo-02 | T2V, I2V |
-| PixVerse | PixVerse V5 | T2V, I2V |
-| Wan | Wan 2.2 | T2V, I2V |
-| Vidu | Vidu Q3 | T2V, I2V |
-| LTX | LTX-2 19B | I2V |
-| LTX | LTX 13B Distilled | I2V |
-| Decart | Lucy-14B | I2V |
-
-</details>
-
-<details>
-<summary><b>Utility Models (4)</b></summary>
-
-| Model | Description |
-|---|---|
-| Remove Background (rembg) | Automatic background removal |
-| Clarity Upscaler | AI upscaling with detail enhancement |
-| Topaz Upscale | Professional image upscaling |
-| Bria RMBG 2.0 | High-quality background removal |
-
-</details>
+**Utility Models** include background removal (rembg, Bria RMBG 2.0) and upscaling (Clarity, Topaz).
 
 > [!NOTE]
 > Future Features:
@@ -179,7 +119,7 @@ If you prefer to install manually:
    - Enable OpenAI (DALL-E, GPT Image)
    - Enable Grok
    - Enable Google (Imagen, Gemini)
-   - Enable Fal.ai (600+ Models)
+   - Enable Fal.ai
 5. Click **Save** then **Restart Backend**
 
 ### 2. Add Your API Keys
@@ -221,7 +161,7 @@ Each API provider requires an API key. Get yours here:
 | Ideogram | https://developer.ideogram.ai/ideogram-api/api-setup |
 | Grok (xAI) | https://accounts.x.ai/ |
 | Google (Imagen, Gemini) | https://ai.google.dev/gemini-api/docs/api-key |
-| Fal.ai (600+ Models) | https://fal.ai/dashboard/keys |
+| Fal.ai | https://fal.ai/dashboard/keys |
 
 ### Provider Parameters
 
@@ -233,12 +173,12 @@ Parameters are shown/hidden automatically based on which model you select.
 * **Grok:** Number of images, response format
 * **Google:** Number of images (Imagen), response modalities (Gemini)
 * **Fal.ai Image:** Image Size, Guidance Scale, Inference Steps, Seed, Output Format, Safety Checker
-* **Fal.ai Video:** Duration (3-15s), Aspect Ratio, Resolution (480p-1080p), Generate Audio, Negative Prompt
+* **Fal.ai Video:** Each video model has its own parameter set (e.g., Sora, Kling, Veo, Luma, MiniMax, Hunyuan) with model-specific Duration, Aspect Ratio, Resolution, Generate Audio, and Negative Prompt options
 
 ## Architecture
 ---------------
 
-This extension uses a data-driven factory pattern to keep providers modular and scalable (including providers with hundreds of models).
+This extension uses a data-driven factory pattern to keep providers modular and scalable.
 
 ```
 SwarmUI-API-Backends/
@@ -247,13 +187,20 @@ SwarmUI-API-Backends/
     DynamicAPIBackend.cs       -- Runtime backend that routes to providers
     APIProviderInit.cs         -- Builds provider metadata from definitions
   Models/
-    ModelDefinition.cs         -- Model data structure
+    ModelDefinition.cs         -- Model data structure + fluent builder
     ModelFactory.cs            -- Converts definitions to SwarmUI T2IModel
     APIProviderMetadata.cs     -- Provider metadata + request config
     APIProviderRegistry.cs     -- Singleton registry of all providers
+    IProviderSource.cs         -- Interface for provider sources
   Providers/
-    ProviderDefinitions.cs     -- All provider and model declarations
-    RequestBuilders.cs         -- Provider-specific request/response logic
+    ProviderDefinitions.cs     -- Aggregates all provider definitions
+    RequestBuilder.cs          -- Provider-specific request/response logic
+    OpenAI.cs                  -- OpenAI provider (DALL-E, GPT Image)
+    BlackForestLabs.cs         -- BFL provider (FLUX models)
+    Ideogram.cs                -- Ideogram provider
+    Grok.cs                    -- Grok/xAI provider
+    Google.cs                  -- Google provider (Imagen, Gemini)
+    Fal.cs                     -- Fal.ai provider (120+ models)
   Assets/
     api-backends.js            -- UI parameter visibility (feature flags)
   SwarmUIAPIBackends.cs        -- Extension entry point, param registration
@@ -261,11 +208,12 @@ SwarmUI-API-Backends/
 
 **How it works:**
 
-1. On startup, `ProviderDefinitions` declares all providers and their models
-2. `APIProviderInit` + `ModelFactory` convert these into SwarmUI-compatible `T2IModel` objects
-3. `DynamicAPIBackend.Init()` registers models only for the providers you enabled
-4. When you select an API model and generate, `DynamicAPIBackend` determines the provider, builds the request via `RequestBuilders`, calls the API, and returns the result
-5. `api-backends.js` controls which parameters are visible based on the selected model's provider and type (image/video/utility)
+1. Each provider class (e.g., `OpenAI.cs`, `Fal.cs`) implements `IProviderSource` and defines its models
+2. `ProviderDefinitions` aggregates all provider sources into a single list
+3. `APIProviderInit` + `ModelFactory` convert these into SwarmUI-compatible `T2IModel` objects
+4. `DynamicAPIBackend.Init()` registers models only for the providers you enabled
+5. When you generate, `DynamicAPIBackend` routes to the correct provider and uses `RequestBuilder` to call the API
+6. `api-backends.js` controls which parameters are visible based on the selected model's feature flags
 
 ### Model naming / UI grouping
 
@@ -347,7 +295,7 @@ For further help, join the [Hartsy Discord Community](https://discord.gg/nWfCupj
 ## Changelog
 ------------
 
-* Version 1.2: Fal.ai video generation support (50 models), automatic parameter visibility per model type, video output as .mp4
+* Version 1.2: Fal.ai video generation support (120+ models), automatic parameter visibility per model type, video output as .mp4
 * Version 1.1: Modular provider/model factory architecture, unified `API Models/<Provider>/...` model naming
 
 ## License

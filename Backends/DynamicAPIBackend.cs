@@ -90,7 +90,7 @@ public class DynamicAPIBackend : APIAbstractBackend
     /// <summary>Gets the list of currently enabled provider IDs based on settings.</summary>
     private List<string> GetEnabledProviderIds()
     {
-        List<string> enabled = new List<string>();
+        List<string> enabled = new();
         foreach (KeyValuePair<string, Func<DynamicAPISettings, bool>> kvp in ProviderSettingsMap)
         {
             string providerId = kvp.Key;
@@ -197,7 +197,6 @@ public class DynamicAPIBackend : APIAbstractBackend
         string baseUrl = !string.IsNullOrEmpty(CustomBaseUrl) ? CustomBaseUrl : ActiveProvider.RequestConfig.BaseUrl;
         string modelName = input.Get(T2IParamTypes.Model).Name;
         string providerId = GetProviderIdFromModel(modelName);
-
         if (providerId is "bfl_api")
         {
             string cleanName = modelName.Replace("API Models/BFL/", "").Replace(".safetensors", "");
@@ -228,6 +227,16 @@ public class DynamicAPIBackend : APIAbstractBackend
                 }
             }
             return $"{baseUrl}/{cleanName}";
+        }
+        else if (providerId is "openai_api")
+        {
+            string cleanName = modelName.Replace("API Models/OpenAI/", "").Replace(".safetensors", "");
+            // Route Sora video models to the /v1/videos endpoint
+            if (cleanName.StartsWith("sora-"))
+            {
+                return "https://api.openai.com/v1/videos";
+            }
+            return baseUrl;
         }
         Logs.Verbose($"[DynamicAPIBackend] Using base URL: {baseUrl}");
         return baseUrl;
@@ -316,7 +325,7 @@ public class DynamicAPIBackend : APIAbstractBackend
     protected bool ValidateApiKeysForEnabledProviders(List<string> enabledProviders)
     {
         User user = Program.Sessions.GetUser(SessionHandler.LocalUserID);
-        List<string> missingKeys = new List<string>();
+        List<string> missingKeys = new();
         foreach (string providerId in enabledProviders)
         {
             string apiKey = user.GetGenericData(providerId, "key");
@@ -343,7 +352,6 @@ public class DynamicAPIBackend : APIAbstractBackend
         SupportedFeatureSet.Clear();
         RegisteredApiModels.Clear();
         RemoteModels.Clear();
-        // Unsubscribe first to avoid duplicate subscriptions on re-init
         Program.ModelRefreshEvent -= ReRegisterModelsAfterRefresh;
         List<string> enabledProviders = GetEnabledProviderIds();
         if (enabledProviders.Count is 0)
@@ -367,13 +375,11 @@ public class DynamicAPIBackend : APIAbstractBackend
                     Logs.Warning($"[DynamicAPIBackend] Provider '{providerId}' not found in registry, skipping.");
                     continue;
                 }
-                // Add feature flag for this provider so params are displayed in the UI
                 SupportedFeatureSet.Add(providerId);
                 await RegisterModelsForProvider(providerMeta);
                 Logs.Verbose($"[DynamicAPIBackend] Registered models for provider: {providerId}");
             }
             UpdateRemoteModels();
-            // Subscribe to refresh events so API models are re-added after filesystem refresh wipes them
             Program.ModelRefreshEvent += ReRegisterModelsAfterRefresh;
             Status = BackendStatus.RUNNING;
             Logs.Info($"[DynamicAPIBackend] Initialized with {enabledProviders.Count} provider(s): {string.Join(", ", enabledProviders)}");
@@ -389,7 +395,7 @@ public class DynamicAPIBackend : APIAbstractBackend
     private async Task RegisterModelsForProvider(APIProviderMetadata provider)
     {
         Logs.Debug($"[DynamicAPIBackend] RegisterModelsForProvider called for {provider.Name}, provider.Models.Count = {provider.Models?.Count ?? 0}");
-        List<string> modelNames = new List<string>();
+        List<string> modelNames = new();
         foreach (KeyValuePair<string, T2IModel> kvp in provider.Models)
         {
             string name = kvp.Key;
@@ -446,7 +452,6 @@ public class DynamicAPIBackend : APIAbstractBackend
         {
             remoteSD[kvp.Key] = CreateModelMetadata(kvp.Value, kvp.Key);
         }
-        // Also ensure models are in MainSDModels for direct handler.Models access
         ReRegisterModelsAfterRefresh();
         Logs.Verbose($"[DynamicAPIBackend] Published {remoteSD.Count} API models to RemoteModels");
     }
@@ -455,7 +460,7 @@ public class DynamicAPIBackend : APIAbstractBackend
     /// Called by ModelRefreshEvent and during UpdateRemoteModels.</summary>
     private void ReRegisterModelsAfterRefresh()
     {
-        if (Status != BackendStatus.RUNNING && Status != BackendStatus.LOADING)
+        if (Status is not BackendStatus.RUNNING && Status is not BackendStatus.LOADING)
         {
             return;
         }
@@ -490,7 +495,7 @@ public class DynamicAPIBackend : APIAbstractBackend
             ["standard_width"] = model.StandardWidth > 0 ? model.StandardWidth : 1024,
             ["standard_height"] = model.StandardHeight > 0 ? model.StandardHeight : 1024,
             ["is_supported_model_format"] = true,
-            ["tags"] = model.Metadata?.Tags != null ? new JArray(model.Metadata.Tags) : new JArray("api", providerId),
+            ["tags"] = model.Metadata?.Tags is not null ? new JArray(model.Metadata.Tags) : new JArray("api", providerId),
             ["local"] = false,
             ["api_source"] = providerId
         };
@@ -516,7 +521,7 @@ public class DynamicAPIBackend : APIAbstractBackend
         {
             if (isVideoModel && img.Type.MetaType == MediaMetaType.Video)
             {
-                // Wrap as VideoFile (extends MediaFile, NOT ImageFile) to skip ImageSharp conversion
+                // Wrap as VideoFile (extends MediaFile) to skip ImageSharp conversion
                 VideoFile video = new(img.RawData, img.Type);
                 takeOutput(video);
             }
@@ -530,14 +535,13 @@ public class DynamicAPIBackend : APIAbstractBackend
     /// <summary>Shutdown the backend</summary>
     public override async Task Shutdown()
     {
-        Logs.Verbose($"[APIAbstractBackend] {GetType().Name} - Shutting down backend");
+        Logs.Verbose($"[APIBackend] {GetType().Name} - Shutting down backend");
         Program.ModelRefreshEvent -= ReRegisterModelsAfterRefresh;
-        // Properly clean up model registrations
         foreach (string modelName in RegisteredApiModels.Keys)
         {
             if (Program.MainSDModels.Models.ContainsKey(modelName))
             {
-                Logs.Verbose($"[DynamicAPIBackend] Removing API model from global registry: {modelName}");
+                Logs.Verbose($"[APIBackend] Removing API model from global registry: {modelName}");
                 Program.MainSDModels.Models.Remove(modelName, out _);
             }
         }

@@ -109,9 +109,16 @@ public abstract class BaseRequestBuilder : IRequestBuilder
 
 public sealed class OpenAIRequestBuilder : BaseRequestBuilder
 {
+    private const string OpenAIVideoBaseUrl = "https://api.openai.com/v1/videos";
+
     public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
     {
         string modelName = model.Id;
+        // Sora video models use different request structure
+        if (IsSoraModel(modelName))
+        {
+            return BuildSoraVideoRequest(input, modelName);
+        }
         JObject request = new()
         {
             ["prompt"] = input.Get(T2IParamTypes.Prompt),
@@ -140,8 +147,35 @@ public sealed class OpenAIRequestBuilder : BaseRequestBuilder
         return request;
     }
 
+    private static bool IsSoraModel(string modelName) => modelName.StartsWith("sora-");
+
+    private static JObject BuildSoraVideoRequest(T2IParamInput input, string modelName)
+    {
+        // Map model IDs to API model names (sora-2-t2v -> sora-2, sora-2-pro-t2v -> sora-2-pro)
+        string apiModel = modelName.Replace("-t2v", "").Replace("-i2v", "");
+        JObject request = new()
+        {
+            ["prompt"] = input.Get(T2IParamTypes.Prompt),
+            ["model"] = apiModel
+        };
+        if (input.TryGet(SwarmUIAPIBackends.SizeParam_OpenAISora, out string size))
+        {
+            request["size"] = size;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.SecondsParam_OpenAISora, out int seconds))
+        {
+            request["seconds"] = seconds;
+        }
+        return request;
+    }
+
     public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
     {
+        // Check if this is a Sora video response (has "id" and "status" fields)
+        if (response["id"] != null && response["status"] != null)
+        {
+            return await ProcessSoraVideoResponse(response, apiKey);
+        }
         JArray data = response["data"] as JArray;
         if (data is null || data.Count is 0)
         {
@@ -157,6 +191,56 @@ public sealed class OpenAIRequestBuilder : BaseRequestBuilder
             return await DownloadImageFromUrl(firstImage["url"].ToString());
         }
         throw new Exception("OpenAI response missing image data");
+    }
+
+    private async Task<byte[]> ProcessSoraVideoResponse(JObject initialResponse, string apiKey)
+    {
+        string videoId = initialResponse["id"]?.ToString();
+        if (string.IsNullOrEmpty(videoId))
+        {
+            throw new Exception("OpenAI Sora response missing video ID");
+        }
+        string status = initialResponse["status"]?.ToString();
+        int maxAttempts = 120; // 10 minutes max (5 second intervals)
+        int attempts = 0;
+        // Poll for completion
+        while (status is "queued" or "in_progress" && attempts < maxAttempts)
+        {
+            await Task.Delay(5000); // Wait 5 seconds between polls
+            attempts++;
+            using HttpRequestMessage pollRequest = new(HttpMethod.Get, $"{OpenAIVideoBaseUrl}/{videoId}");
+            pollRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+            using HttpResponseMessage pollResponse = await HttpClient.SendAsync(pollRequest);
+            string pollContent = await pollResponse.Content.ReadAsStringAsync();
+            if (!pollResponse.IsSuccessStatusCode)
+            {
+                throw new Exception($"OpenAI Sora polling failed: {pollContent}");
+            }
+            JObject statusResponse = JObject.Parse(pollContent);
+            status = statusResponse["status"]?.ToString();
+            if (status == "failed")
+            {
+                string error = statusResponse["error"]?.ToString() ?? "Unknown error";
+                throw new Exception($"OpenAI Sora video generation failed: {error}");
+            }
+            Logs.Verbose($"[OpenAI Sora] Video {videoId} status: {status}, progress: {statusResponse["progress"]}%");
+        }
+        if (status != "completed")
+        {
+            throw new Exception($"OpenAI Sora video generation timed out or failed. Status: {status}");
+        }
+        // Download the completed video
+        using HttpRequestMessage downloadRequest = new(HttpMethod.Get, $"{OpenAIVideoBaseUrl}/{videoId}/content");
+        downloadRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+        using HttpResponseMessage downloadResponse = await HttpClient.SendAsync(downloadRequest);
+        if (!downloadResponse.IsSuccessStatusCode)
+        {
+            string error = await downloadResponse.Content.ReadAsStringAsync();
+            throw new Exception($"OpenAI Sora video download failed: {error}");
+        }
+        byte[] videoData = await downloadResponse.Content.ReadAsByteArrayAsync();
+        Logs.Verbose($"[OpenAI Sora] Downloaded video {videoId}, size: {videoData.Length} bytes");
+        return videoData;
     }
 }
 

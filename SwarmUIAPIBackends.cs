@@ -28,6 +28,7 @@ public class SwarmUIAPIBackends : Extension
     public static T2IParamGroup DallE2Group;
     public static T2IParamGroup DallE3Group;
     public static T2IParamGroup GPTImage1Group;
+    public static T2IParamGroup OpenAISoraGroup;
     public static T2IParamGroup GrokParamGroup;
     public static T2IParamGroup Grok2ImageGroup;
     public static T2IParamGroup IdeogramParamGroup;
@@ -61,6 +62,10 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<string> ModerationParam_GPTImage1_5 => ModerationParam_GPTImage1;
     public static T2IRegisteredParam<string> OutputFormatParam_GPTImage1_5 => OutputFormatParam_GPTImage1;
     public static T2IRegisteredParam<int> OutputCompressionParam_GPTImage1_5 => OutputCompressionParam_GPTImage1;
+
+    // OpenAI Sora Video Parameters
+    public static T2IRegisteredParam<string> SizeParam_OpenAISora;
+    public static T2IRegisteredParam<int> SecondsParam_OpenAISora;
 
     // Ideogram Parameters
     public static T2IRegisteredParam<string> StyleParam_Ideogram;
@@ -146,6 +151,7 @@ public class SwarmUIAPIBackends : Extension
         DallE2Group = new("DALL-E 2 Settings", Toggles: false, Open: true, OrderPriority: 10, Description: "Parameters specific to OpenAI's DALL-E 2 model generation.");
         DallE3Group = new("DALL-E 3 Settings", Toggles: false, Open: true, OrderPriority: 11, Description: "Parameters specific to OpenAI's DALL-E 3 model, featuring enhanced quality and style options.");
         GPTImage1Group = new("GPT Image 1 Settings", Toggles: false, Open: true, OrderPriority: 12, Description: "Able to generate images with stronger instruction following, contextual awareness, and world knowledge.");
+        OpenAISoraGroup = new("OpenAI Sora Video Settings", Toggles: false, Open: true, OrderPriority: 13, Description: "Parameters for OpenAI's Sora video generation models.\nGenerate high-quality videos directly from OpenAI.");
 
         IdeogramParamGroup = new("Ideogram API", Toggles: false, Open: true, OrderPriority: 20);
         IdeogramGeneralGroup = new("Ideogram Basic Settings", Toggles: false, Open: true, OrderPriority: 20, Description: "Core parameters for Ideogram image generation.");
@@ -241,6 +247,23 @@ public class SwarmUIAPIBackends : Extension
             "Default is 100% (maximum quality).",
             "100", Min: 0, Max: 100, ViewType: ParamViewType.SLIDER,
             OrderPriority: -4, Group: GPTImage1Group, FeatureFlag: "gpt-image-1_params"));
+
+        // OpenAI Sora Video Parameters
+        SizeParam_OpenAISora = T2IParamTypes.Register<string>(new("OpenAI Sora Video Size",
+            "Controls the resolution of the generated video.\n" +
+            "'1920x1080' - Full HD landscape (16:9)\n" +
+            "'1080x1920' - Full HD portrait (9:16)\n" +
+            "'1280x720' - HD landscape (16:9)\n" +
+            "'480x480' - Square format",
+            "1280x720", GetValues: _ => ["1920x1080///Full HD Landscape (1920x1080)", "1080x1920///Full HD Portrait (1080x1920)", "1280x720///HD Landscape (1280x720)", "480x480///Square (480x480)"],
+            OrderPriority: -10, Group: OpenAISoraGroup, FeatureFlag: "openai_sora_params"));
+
+        SecondsParam_OpenAISora = T2IParamTypes.Register<int>(new("OpenAI Sora Video Duration",
+            "Controls the duration of the generated video in seconds.\n" +
+            "Sora supports videos from 5 to 20 seconds.\n" +
+            "Longer videos take more time and cost more credits.",
+            "10", Min: 5, Max: 20, ViewType: ParamViewType.SLIDER,
+            OrderPriority: -9, Group: OpenAISoraGroup, FeatureFlag: "openai_sora_params"));
 
         // Ideogram Parameters
         StyleParam_Ideogram = T2IParamTypes.Register<string>(new("Generation Style",
