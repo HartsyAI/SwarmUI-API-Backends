@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
@@ -532,13 +533,217 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         {
             ["prompt"] = input.Get(T2IParamTypes.Prompt)
         };
-        if (input.TryGet(SwarmUIAPIBackends.DurationParam_FalVideo, out string duration)) request["duration"] = duration;
-        if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_FalVideo, out string aspectRatio)) request["aspect_ratio"] = aspectRatio;
-        if (input.TryGet(SwarmUIAPIBackends.ResolutionParam_FalVideo, out string resolution)) request["resolution"] = resolution;
-        if (input.TryGet(SwarmUIAPIBackends.GenerateAudioParam_FalVideo, out bool genAudio)) request["generate_audio"] = genAudio;
-        if (input.TryGet(SwarmUIAPIBackends.NegativePromptParam_FalVideo, out string negPrompt) && !string.IsNullOrEmpty(negPrompt)) request["negative_prompt"] = negPrompt;
-        if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0) request["seed"] = seed;
+        string modelId = model.Id;
+        // Determine model family for parameter handling
+        if (modelId.StartsWith("Sora/"))
+        {
+            BuildSoraVideoParams(input, request);
+        }
+        else if (modelId.StartsWith("Kling/"))
+        {
+            BuildKlingVideoParams(input, request);
+        }
+        else if (modelId.StartsWith("Google/") && modelId.Contains("veo"))
+        {
+            BuildVeoVideoParams(input, request);
+        }
+        else if (modelId.StartsWith("Luma/"))
+        {
+            BuildLumaVideoParams(input, request);
+        }
+        else if (modelId.StartsWith("MiniMax/"))
+        {
+            BuildMiniMaxVideoParams(input, request);
+        }
+        else if (modelId.StartsWith("Hunyuan/") && modelId.Contains("video"))
+        {
+            BuildHunyuanVideoParams(input, request);
+        }
+        else if (modelId.StartsWith("Grok/") && modelId.Contains("video"))
+        {
+            BuildGrokVideoParams(input, request);
+        }
+        else
+        {
+            // Generic video params for other models (Wan, Pika, PixVerse, Vidu, LTX, Mochi, etc.)
+            BuildGenericVideoParams(input, request);
+        }
         return request;
+    }
+
+    /// <summary>Sora 2: duration (int: 4,8,12), aspect_ratio (16:9,9:16), resolution (720p,1080p). NO: generate_audio, negative_prompt, seed</summary>
+    private static void BuildSoraVideoParams(T2IParamInput input, JObject request)
+    {
+        if (input.TryGet(SwarmUIAPIBackends.DurationParam_Sora, out string duration) && int.TryParse(duration, out int durationInt))
+        {
+            request["duration"] = durationInt;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Sora, out string aspectRatio))
+        {
+            request["aspect_ratio"] = aspectRatio;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.ResolutionParam_Sora, out string resolution))
+        {
+            request["resolution"] = resolution;
+        }
+    }
+
+    /// <summary>Kling: duration (string: 3-15), aspect_ratio (16:9,9:16,1:1), generate_audio, negative_prompt. NO: seed, resolution</summary>
+    private static void BuildKlingVideoParams(T2IParamInput input, JObject request)
+    {
+        if (input.TryGet(SwarmUIAPIBackends.DurationParam_Kling, out string duration))
+        {
+            request["duration"] = duration;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Kling, out string aspectRatio))
+        {
+            request["aspect_ratio"] = aspectRatio;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.GenerateAudioParam_Kling, out bool genAudio))
+        {
+            request["generate_audio"] = genAudio;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.NegativePromptParam_Kling, out string negPrompt) && !string.IsNullOrEmpty(negPrompt))
+        {
+            request["negative_prompt"] = negPrompt;
+        }
+    }
+
+    /// <summary>Veo 3: duration (string: 4s,6s,8s), aspect_ratio (16:9,9:16), resolution (720p,1080p), generate_audio, negative_prompt, seed</summary>
+    private static void BuildVeoVideoParams(T2IParamInput input, JObject request)
+    {
+        if (input.TryGet(SwarmUIAPIBackends.DurationParam_Veo, out string duration))
+        {
+            request["duration"] = duration;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Veo, out string aspectRatio))
+        {
+            request["aspect_ratio"] = aspectRatio;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.ResolutionParam_Veo, out string resolution))
+        {
+            request["resolution"] = resolution;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.GenerateAudioParam_Veo, out bool genAudio))
+        {
+            request["generate_audio"] = genAudio;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.NegativePromptParam_Veo, out string negPrompt) && !string.IsNullOrEmpty(negPrompt))
+        {
+            request["negative_prompt"] = negPrompt;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0)
+        {
+            request["seed"] = seed;
+        }
+    }
+
+    /// <summary>Luma Ray 2: duration (string: 5s,9s), aspect_ratio (many), resolution (540p,720p,1080p). NO: generate_audio, negative_prompt, seed</summary>
+    private static void BuildLumaVideoParams(T2IParamInput input, JObject request)
+    {
+        if (input.TryGet(SwarmUIAPIBackends.DurationParam_Luma, out string duration))
+        {
+            request["duration"] = duration;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Luma, out string aspectRatio))
+        {
+            request["aspect_ratio"] = aspectRatio;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.ResolutionParam_Luma, out string resolution))
+        {
+            request["resolution"] = resolution;
+        }
+    }
+
+    /// <summary>MiniMax Hailuo: duration (string: 6,10). NO: aspect_ratio, resolution, generate_audio, negative_prompt, seed</summary>
+    private static void BuildMiniMaxVideoParams(T2IParamInput input, JObject request)
+    {
+        if (input.TryGet(SwarmUIAPIBackends.DurationParam_MiniMax, out string duration))
+        {
+            request["duration"] = duration;
+        }
+    }
+
+    /// <summary>Hunyuan Video: aspect_ratio (16:9,9:16), resolution (480p,580p,720p), seed. NO: duration, generate_audio, negative_prompt</summary>
+    private static void BuildHunyuanVideoParams(T2IParamInput input, JObject request)
+    {
+        if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Hunyuan, out string aspectRatio))
+        {
+            request["aspect_ratio"] = aspectRatio;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.ResolutionParam_Hunyuan, out string resolution))
+        {
+            request["resolution"] = resolution;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0)
+        {
+            request["seed"] = seed;
+        }
+    }
+
+    /// <summary>Grok Imagine Video: duration, aspect_ratio, generate_audio, negative_prompt, seed</summary>
+    private static void BuildGrokVideoParams(T2IParamInput input, JObject request)
+    {
+        if (input.TryGet(SwarmUIAPIBackends.DurationParam_FalVideo, out string duration))
+        {
+            if (int.TryParse(duration, out int durationInt))
+            {
+                request["duration"] = durationInt;
+            }
+        }
+        if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_FalVideo, out string aspectRatio))
+        {
+            request["aspect_ratio"] = aspectRatio;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.GenerateAudioParam_FalVideo, out bool genAudio))
+        {
+            request["generate_audio"] = genAudio;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.NegativePromptParam_FalVideo, out string negPrompt) && !string.IsNullOrEmpty(negPrompt))
+        {
+            request["negative_prompt"] = negPrompt;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0)
+        {
+            request["seed"] = seed;
+        }
+    }
+
+    /// <summary>Generic video params for models without specific handling (Wan, Pika, PixVerse, Vidu, LTX, Mochi, CogVideoX, etc.)</summary>
+    private static void BuildGenericVideoParams(T2IParamInput input, JObject request)
+    {
+        if (input.TryGet(SwarmUIAPIBackends.DurationParam_FalVideo, out string duration))
+        {
+            // Try to parse as int first, otherwise send as string
+            if (int.TryParse(duration, out int durationInt))
+            {
+                request["duration"] = durationInt;
+            }
+            else
+            {
+                request["duration"] = duration;
+            }
+        }
+        if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_FalVideo, out string aspectRatio))
+        {
+            request["aspect_ratio"] = aspectRatio;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.ResolutionParam_FalVideo, out string resolution))
+        {
+            request["resolution"] = resolution;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.GenerateAudioParam_FalVideo, out bool genAudio))
+        {
+            request["generate_audio"] = genAudio;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.NegativePromptParam_FalVideo, out string negPrompt) && !string.IsNullOrEmpty(negPrompt))
+        {
+            request["negative_prompt"] = negPrompt;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0)
+        {
+            request["seed"] = seed;
+        }
     }
 
     private static JObject BuildUtilityRequest(T2IParamInput input, ModelDefinition model)

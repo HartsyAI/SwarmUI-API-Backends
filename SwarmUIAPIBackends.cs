@@ -98,12 +98,42 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<string> OutputFormatParam_Fal;
     public static T2IRegisteredParam<bool> SafetyCheckerParam_Fal;
 
-    // Fal.ai Video Parameters
+    // Fal.ai Video Parameters (generic - used by models without specific params)
     public static T2IRegisteredParam<string> DurationParam_FalVideo;
     public static T2IRegisteredParam<string> AspectRatioParam_FalVideo;
     public static T2IRegisteredParam<string> ResolutionParam_FalVideo;
     public static T2IRegisteredParam<bool> GenerateAudioParam_FalVideo;
     public static T2IRegisteredParam<string> NegativePromptParam_FalVideo;
+
+    // Sora-specific video parameters (duration: 4,8,12; aspect: 16:9,9:16; resolution: 720p,1080p; NO audio/negative)
+    public static T2IRegisteredParam<string> DurationParam_Sora;
+    public static T2IRegisteredParam<string> AspectRatioParam_Sora;
+    public static T2IRegisteredParam<string> ResolutionParam_Sora;
+
+    // Kling-specific video parameters (duration: 3-15; aspect: 16:9,9:16,1:1; audio; negative; NO resolution)
+    public static T2IRegisteredParam<string> DurationParam_Kling;
+    public static T2IRegisteredParam<string> AspectRatioParam_Kling;
+    public static T2IRegisteredParam<bool> GenerateAudioParam_Kling;
+    public static T2IRegisteredParam<string> NegativePromptParam_Kling;
+
+    // Veo-specific video parameters (duration: 4s,6s,8s; aspect: 16:9,9:16; resolution: 720p,1080p; audio; negative; seed)
+    public static T2IRegisteredParam<string> DurationParam_Veo;
+    public static T2IRegisteredParam<string> AspectRatioParam_Veo;
+    public static T2IRegisteredParam<string> ResolutionParam_Veo;
+    public static T2IRegisteredParam<bool> GenerateAudioParam_Veo;
+    public static T2IRegisteredParam<string> NegativePromptParam_Veo;
+
+    // Luma-specific video parameters (duration: 5s,9s; aspect: many; resolution: 540p,720p,1080p; NO audio/negative)
+    public static T2IRegisteredParam<string> DurationParam_Luma;
+    public static T2IRegisteredParam<string> AspectRatioParam_Luma;
+    public static T2IRegisteredParam<string> ResolutionParam_Luma;
+
+    // MiniMax-specific video parameters (duration: 6,10 only; NO aspect/resolution/audio/negative)
+    public static T2IRegisteredParam<string> DurationParam_MiniMax;
+
+    // Hunyuan-specific video parameters (NO duration; aspect: 16:9,9:16; resolution: 480p,580p,720p; seed)
+    public static T2IRegisteredParam<string> AspectRatioParam_Hunyuan;
+    public static T2IRegisteredParam<string> ResolutionParam_Hunyuan;
 
     public override void OnPreInit()
     {
@@ -448,6 +478,179 @@ public class SwarmUIAPIBackends : Extension
             "Supported by Veo, Wan, PixVerse, and some other video models.",
             "", OrderPriority: -5, Group: FalVideoAdvancedGroup, FeatureFlag: "fal_video_params"));
 
+        // ===== SORA-SPECIFIC PARAMETERS =====
+        DurationParam_Sora = T2IParamTypes.Register<string>(new("Sora Video Duration",
+            "Length of the generated video in seconds.\n" +
+            "Sora supports 4, 8, or 12 second videos.",
+            "4", GetValues: _ => [
+                "4///4 seconds",
+                "8///8 seconds",
+                "12///12 seconds"
+            ],
+            OrderPriority: -10, Group: FalVideoGroup, FeatureFlag: "fal_sora_video_params"));
+
+        AspectRatioParam_Sora = T2IParamTypes.Register<string>(new("Sora Video Aspect Ratio",
+            "Aspect ratio for the generated video.\n" +
+            "Sora supports 16:9 (widescreen) and 9:16 (portrait).",
+            "16:9", GetValues: _ => [
+                "16:9///Widescreen (16:9)",
+                "9:16///Portrait (9:16)"
+            ],
+            OrderPriority: -9, Group: FalVideoGroup, FeatureFlag: "fal_sora_video_params"));
+
+        ResolutionParam_Sora = T2IParamTypes.Register<string>(new("Sora Video Resolution",
+            "Resolution of the generated video.\n" +
+            "Sora supports 720p and 1080p.",
+            "720p", GetValues: _ => [
+                "720p///720p (Standard)",
+                "1080p///1080p (HD)"
+            ],
+            OrderPriority: -8, Group: FalVideoGroup, FeatureFlag: "fal_sora_video_params"));
+
+        // ===== KLING-SPECIFIC PARAMETERS =====
+        DurationParam_Kling = T2IParamTypes.Register<string>(new("Kling Video Duration",
+            "Length of the generated video in seconds.\n" +
+            "Kling supports 3-15 second videos.",
+            "5", GetValues: _ => [
+                "3///3 seconds",
+                "4///4 seconds",
+                "5///5 seconds (Default)",
+                "6///6 seconds",
+                "7///7 seconds",
+                "8///8 seconds",
+                "9///9 seconds",
+                "10///10 seconds",
+                "11///11 seconds",
+                "12///12 seconds",
+                "13///13 seconds",
+                "14///14 seconds",
+                "15///15 seconds"
+            ],
+            OrderPriority: -10, Group: FalVideoGroup, FeatureFlag: "fal_kling_video_params"));
+
+        AspectRatioParam_Kling = T2IParamTypes.Register<string>(new("Kling Video Aspect Ratio",
+            "Aspect ratio for the generated video.\n" +
+            "Kling supports 16:9, 9:16, and 1:1.",
+            "16:9", GetValues: _ => [
+                "16:9///Widescreen (16:9)",
+                "9:16///Portrait (9:16)",
+                "1:1///Square (1:1)"
+            ],
+            OrderPriority: -9, Group: FalVideoGroup, FeatureFlag: "fal_kling_video_params"));
+
+        GenerateAudioParam_Kling = T2IParamTypes.Register<bool>(new("Kling Generate Audio",
+            "Generate audio alongside the video.\n" +
+            "Kling supports native audio generation in Chinese and English.",
+            "true",
+            OrderPriority: -7, Group: FalVideoGroup, FeatureFlag: "fal_kling_video_params"));
+
+        NegativePromptParam_Kling = T2IParamTypes.Register<string>(new("Kling Negative Prompt",
+            "Describe what you don't want in the generated video.\n" +
+            "Default: blur, distort, and low quality",
+            "", OrderPriority: -5, Group: FalVideoAdvancedGroup, FeatureFlag: "fal_kling_video_params"));
+
+        // ===== VEO-SPECIFIC PARAMETERS =====
+        DurationParam_Veo = T2IParamTypes.Register<string>(new("Veo Video Duration",
+            "Length of the generated video.\n" +
+            "Veo supports 4, 6, or 8 second videos.",
+            "8s", GetValues: _ => [
+                "4s///4 seconds",
+                "6s///6 seconds",
+                "8s///8 seconds (Default)"
+            ],
+            OrderPriority: -10, Group: FalVideoGroup, FeatureFlag: "fal_veo_video_params"));
+
+        AspectRatioParam_Veo = T2IParamTypes.Register<string>(new("Veo Video Aspect Ratio",
+            "Aspect ratio for the generated video.\n" +
+            "Veo supports 16:9 and 9:16.",
+            "16:9", GetValues: _ => [
+                "16:9///Widescreen (16:9)",
+                "9:16///Portrait (9:16)"
+            ],
+            OrderPriority: -9, Group: FalVideoGroup, FeatureFlag: "fal_veo_video_params"));
+
+        ResolutionParam_Veo = T2IParamTypes.Register<string>(new("Veo Video Resolution",
+            "Resolution of the generated video.\n" +
+            "Veo supports 720p and 1080p.",
+            "720p", GetValues: _ => [
+                "720p///720p (Standard)",
+                "1080p///1080p (HD)"
+            ],
+            OrderPriority: -8, Group: FalVideoGroup, FeatureFlag: "fal_veo_video_params"));
+
+        GenerateAudioParam_Veo = T2IParamTypes.Register<bool>(new("Veo Generate Audio",
+            "Generate audio alongside the video.\n" +
+            "Veo 3 supports native audio generation.",
+            "true",
+            OrderPriority: -7, Group: FalVideoGroup, FeatureFlag: "fal_veo_video_params"));
+
+        NegativePromptParam_Veo = T2IParamTypes.Register<string>(new("Veo Negative Prompt",
+            "Describe what you don't want in the generated video.",
+            "", OrderPriority: -5, Group: FalVideoAdvancedGroup, FeatureFlag: "fal_veo_video_params"));
+
+        // ===== LUMA-SPECIFIC PARAMETERS =====
+        DurationParam_Luma = T2IParamTypes.Register<string>(new("Luma Video Duration",
+            "Length of the generated video.\n" +
+            "Luma Ray 2 supports 5 or 9 second videos (9s costs 2x more).",
+            "5s", GetValues: _ => [
+                "5s///5 seconds",
+                "9s///9 seconds (2x cost)"
+            ],
+            OrderPriority: -10, Group: FalVideoGroup, FeatureFlag: "fal_luma_video_params"));
+
+        AspectRatioParam_Luma = T2IParamTypes.Register<string>(new("Luma Video Aspect Ratio",
+            "Aspect ratio for the generated video.\n" +
+            "Luma supports many aspect ratios.",
+            "16:9", GetValues: _ => [
+                "16:9///Widescreen (16:9)",
+                "9:16///Portrait (9:16)",
+                "4:3///Standard (4:3)",
+                "3:4///Portrait (3:4)",
+                "21:9///Ultrawide (21:9)",
+                "9:21///Tall (9:21)"
+            ],
+            OrderPriority: -9, Group: FalVideoGroup, FeatureFlag: "fal_luma_video_params"));
+
+        ResolutionParam_Luma = T2IParamTypes.Register<string>(new("Luma Video Resolution",
+            "Resolution of the generated video.\n" +
+            "720p costs 2x, 1080p costs 4x more than 540p.",
+            "540p", GetValues: _ => [
+                "540p///540p (Standard)",
+                "720p///720p (2x cost)",
+                "1080p///1080p (4x cost)"
+            ],
+            OrderPriority: -8, Group: FalVideoGroup, FeatureFlag: "fal_luma_video_params"));
+
+        // ===== MINIMAX-SPECIFIC PARAMETERS =====
+        DurationParam_MiniMax = T2IParamTypes.Register<string>(new("MiniMax Video Duration",
+            "Length of the generated video.\n" +
+            "MiniMax Hailuo supports 6 or 10 second videos.",
+            "6", GetValues: _ => [
+                "6///6 seconds",
+                "10///10 seconds"
+            ],
+            OrderPriority: -10, Group: FalVideoGroup, FeatureFlag: "fal_minimax_video_params"));
+
+        // ===== HUNYUAN-SPECIFIC PARAMETERS =====
+        AspectRatioParam_Hunyuan = T2IParamTypes.Register<string>(new("Hunyuan Video Aspect Ratio",
+            "Aspect ratio for the generated video.\n" +
+            "Hunyuan supports 16:9 and 9:16.",
+            "16:9", GetValues: _ => [
+                "16:9///Widescreen (16:9)",
+                "9:16///Portrait (9:16)"
+            ],
+            OrderPriority: -9, Group: FalVideoGroup, FeatureFlag: "fal_hunyuan_video_params"));
+
+        ResolutionParam_Hunyuan = T2IParamTypes.Register<string>(new("Hunyuan Video Resolution",
+            "Resolution of the generated video.\n" +
+            "Hunyuan supports 480p, 580p, and 720p.",
+            "720p", GetValues: _ => [
+                "480p///480p (Fast)",
+                "580p///580p",
+                "720p///720p (Standard)"
+            ],
+            OrderPriority: -8, Group: FalVideoGroup, FeatureFlag: "fal_hunyuan_video_params"));
+
         RegisterFeatureFlags();
         Program.Backends.RegisterBackendType<DynamicAPIBackend>("dynamic_api_backend", "3rd Party Paid API Backends", "Generate images using various API services (OpenAI, Ideogram, Black Forest Labs, Grok, Google, Fal.ai)", true);
         // All key types must be added to the accepted list first
@@ -500,7 +703,9 @@ public class SwarmUIAPIBackends : Extension
             "flux_ultra_params", "flux_pro_params", "flux_dev_params",
             "flux_kontext_pro_params", "flux_kontext_max_params", "flux_2_max_params", "flux_2_pro_params",
             "grok_2_image_params", "google_imagen_params", "google_gemini_params",
-            "fal_t2i_params", "fal_video_params", "fal_utility_params"
+            "fal_t2i_params", "fal_video_params", "fal_utility_params",
+            "fal_sora_video_params", "fal_kling_video_params", "fal_veo_video_params",
+            "fal_luma_video_params", "fal_minimax_video_params", "fal_hunyuan_video_params"
         ];
 
         // Features incompatible with API backends (local-only features)

@@ -219,7 +219,7 @@ public class DynamicAPIBackend : APIAbstractBackend
         else if (providerId is "fal_api")
         {
             string cleanName = modelName.Replace("API Models/Fal/", "");
-            foreach (ModelDefinition model in ProviderDefinitions.Fal.Models)
+            foreach (ModelDefinition model in FalProvider.Instance.GetProvider().Models)
             {
                 if (model.Id == cleanName)
                 {
