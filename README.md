@@ -1,7 +1,6 @@
 # SwarmUI APIBackends Extension
-===========================================================================
-
-![APIBackends](url_to_image_placeholder)
+---------------
+![APIBackends](./Images/banner.png)
 
 ## Table of Contents
 -----------------
@@ -25,7 +24,6 @@
 
 The APIBackends Extension for SwarmUI enables integration with multiple commercial image and video generation APIs. It registers API-hosted models into SwarmUI's normal model list so they can be selected and used from the **Generate** tab like local models.
 
-* Usage Example:
 - Generate images using DALL-E 3 or GPT Image 1.5
 - Access Black Forest Labs' Flux models
 - Generate with Ideogram V3
@@ -40,8 +38,8 @@ The APIBackends Extension for SwarmUI enables integration with multiple commerci
 ## Features
 ------------
 
-* Support for 6 API providers:
-  - OpenAI (DALL-E 2, DALL-E 3, GPT Image 1, GPT Image 1.5)
+* Currently supports 6 API providers:
+  - OpenAI (DALL-E 2, DALL-E 3, GPT Image 1, GPT Image 1.5, Sora)
   - Ideogram (V1, V2, V2 Turbo, V3)
   - Black Forest Labs (FLUX Pro, Ultra, Dev, Kontext Pro/Max, FLUX 2 Pro/Max)
   - Grok (Grok 2 Image)
@@ -116,16 +114,16 @@ If you prefer to install manually:
 4. Check the providers you want to use:
    - Enable Black Forest Labs (Flux)
    - Enable Ideogram
-   - Enable OpenAI (DALL-E, GPT Image)
+   - Enable OpenAI
    - Enable Grok
-   - Enable Google (Imagen, Gemini)
+   - Enable Google
    - Enable Fal.ai
 5. Click **Save** then **Restart Backend**
 
 ### 2. Add Your API Keys
 
 1. Go to the **User** tab
-2. Scroll to the API key section -- you will see entries for each provider you enabled
+2. Scroll to the API key section -- you will see entries for each provider
 3. Paste your API key for each provider and click **Save**
 
 ### 3. Generate
