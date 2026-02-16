@@ -112,7 +112,7 @@ public sealed class FalProvider : IProviderSource
             .WithDate("2024")
             .WithUsageHint("Best for image editing with text and reference images")
             .WithTags("flux", "image-to-image", "editing", "kontext")
-            .WithFeatureFlag("fal_t2i_params")
+            .WithFeatureFlag("fal_i2i_params")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("FLUX/flux-kontext-max")
@@ -125,7 +125,7 @@ public sealed class FalProvider : IProviderSource
             .WithDate("2024")
             .WithUsageHint("Premium image editing with maximum quality")
             .WithTags("flux", "image-to-image", "editing", "kontext", "premium")
-            .WithFeatureFlag("fal_t2i_params")
+            .WithFeatureFlag("fal_i2i_params")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("FLUX/flux-2-flex")
@@ -177,7 +177,7 @@ public sealed class FalProvider : IProviderSource
             .WithDate("2025")
             .WithUsageHint("Image editing with LoRA personalization")
             .WithTags("flux", "image-to-image", "editing", "kontext", "lora")
-            .WithFeatureFlag("fal_t2i_params")
+            .WithFeatureFlag("fal_i2i_params")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("FLUX/flux-2-pro-edit")
@@ -190,7 +190,7 @@ public sealed class FalProvider : IProviderSource
             .WithDate("2025")
             .WithUsageHint("Premium image editing with photorealism")
             .WithTags("flux", "image-to-image", "editing", "flux2", "professional")
-            .WithFeatureFlag("fal_t2i_params")
+            .WithFeatureFlag("fal_i2i_params")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("FLUX/flux-2-max-edit")
@@ -203,7 +203,7 @@ public sealed class FalProvider : IProviderSource
             .WithDate("2025")
             .WithUsageHint("Maximum quality image editing")
             .WithTags("flux", "image-to-image", "editing", "flux2", "premium")
-            .WithFeatureFlag("fal_t2i_params")
+            .WithFeatureFlag("fal_i2i_params")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("FLUX/flux-2-dev-edit")
@@ -216,7 +216,7 @@ public sealed class FalProvider : IProviderSource
             .WithDate("2025")
             .WithUsageHint("Precise image editing with color control")
             .WithTags("flux", "image-to-image", "editing", "flux2")
-            .WithFeatureFlag("fal_t2i_params")
+            .WithFeatureFlag("fal_i2i_params")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("FLUX/flux-2-flex-edit")
@@ -229,7 +229,7 @@ public sealed class FalProvider : IProviderSource
             .WithDate("2025")
             .WithUsageHint("Multi-reference editing with typography support")
             .WithTags("flux", "image-to-image", "editing", "flux2", "typography")
-            .WithFeatureFlag("fal_t2i_params")
+            .WithFeatureFlag("fal_i2i_params")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("FLUX/flux-general")
@@ -323,7 +323,7 @@ public sealed class FalProvider : IProviderSource
             .WithDate("2025")
             .WithUsageHint("Precise image editing with text rendering")
             .WithTags("ideogram", "image-to-image", "image-editing", "v3")
-            .WithFeatureFlag("fal_t2i_params")
+            .WithFeatureFlag("fal_i2i_params")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Ideogram/ideogram-v2a")
@@ -482,7 +482,7 @@ public sealed class FalProvider : IProviderSource
             .WithDate("2025")
             .WithUsageHint("Precise image editing with text guidance")
             .WithTags("grok", "xai", "image-to-image", "image-editing")
-            .WithFeatureFlag("fal_t2i_params")
+            .WithFeatureFlag("fal_i2i_params")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Grok/grok-imagine-video-edit")
@@ -581,7 +581,7 @@ public sealed class FalProvider : IProviderSource
             .WithDate("2025")
             .WithUsageHint("High-quality image editing from Google")
             .WithTags("google", "image-to-image", "image-editing", "realism", "typography")
-            .WithFeatureFlag("fal_t2i_params")
+            .WithFeatureFlag("fal_i2i_params")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Google/imagen-3")
@@ -620,7 +620,7 @@ public sealed class FalProvider : IProviderSource
             .WithDate("2025")
             .WithUsageHint("AI-powered image editing with Gemini")
             .WithTags("google", "image-to-image", "image-editing", "gemini")
-            .WithFeatureFlag("fal_t2i_params")
+            .WithFeatureFlag("fal_i2i_params")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Google/veo-3-t2v")
@@ -719,7 +719,7 @@ public sealed class FalProvider : IProviderSource
             .WithDate("2025")
             .WithUsageHint("Image-to-image editing")
             .WithTags("kling", "image-to-image", "image-editing")
-            .WithFeatureFlag("fal_t2i_params")
+            .WithFeatureFlag("fal_i2i_params")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Kling/kling-image-o3-i2i")
@@ -732,7 +732,7 @@ public sealed class FalProvider : IProviderSource
             .WithDate("2025")
             .WithUsageHint("High-consistency image editing")
             .WithTags("kling", "image-to-image", "omni", "image-editing")
-            .WithFeatureFlag("fal_t2i_params")
+            .WithFeatureFlag("fal_i2i_params")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Kling/kling-o3-pro-t2v")
@@ -917,7 +917,7 @@ public sealed class FalProvider : IProviderSource
             .WithDate("2025")
             .WithUsageHint("Commercially safe precise image editing")
             .WithTags("bria", "image-to-image", "enterprise", "licensed", "image-editing")
-            .WithFeatureFlag("fal_t2i_params")
+            .WithFeatureFlag("fal_i2i_params")
             .Build()
     ];
 
@@ -938,7 +938,7 @@ public sealed class FalProvider : IProviderSource
             .WithDate("2025")
             .WithUsageHint("Unified generation and editing")
             .WithTags("bytedance", "seedream", "text-to-image", "image-editing")
-            .WithFeatureFlag("fal_t2i_params")
+            .WithFeatureFlag("fal_i2i_params")
             .Build()
     ];
 
@@ -959,7 +959,7 @@ public sealed class FalProvider : IProviderSource
             .WithDate("2025")
             .WithUsageHint("Precise image editing")
             .WithTags("reve", "image-editing")
-            .WithFeatureFlag("fal_t2i_params")
+            .WithFeatureFlag("fal_i2i_params")
             .Build()
     ];
 
@@ -1074,7 +1074,7 @@ public sealed class FalProvider : IProviderSource
             .WithDate("2025")
             .WithUsageHint("Image editing with HiDream")
             .WithTags("hidream", "image-to-image", "image-editing")
-            .WithFeatureFlag("fal_t2i_params")
+            .WithFeatureFlag("fal_i2i_params")
             .Build()
     ];
 
@@ -1095,7 +1095,7 @@ public sealed class FalProvider : IProviderSource
             .WithDate("2024")
             .WithUsageHint("Multi-task image generation and editing")
             .WithTags("omnigen", "text-to-image", "image-editing", "multi-modal")
-            .WithFeatureFlag("fal_t2i_params")
+            .WithFeatureFlag("fal_i2i_params")
             .Build()
     ];
 
@@ -1255,7 +1255,7 @@ public sealed class FalProvider : IProviderSource
             .WithDate("2025")
             .WithUsageHint("Precise image editing")
             .WithTags("step1x", "image-to-image", "image-editing")
-            .WithFeatureFlag("fal_t2i_params")
+            .WithFeatureFlag("fal_i2i_params")
             .Build()
     ];
 

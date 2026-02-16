@@ -40,6 +40,7 @@ public class SwarmUIAPIBackends : Extension
     public static T2IParamGroup FalParamGroup;
     public static T2IParamGroup FalGeneralGroup;
     public static T2IParamGroup FalAdvancedGroup;
+    public static T2IParamGroup FalEditGroup;
     public static T2IParamGroup FalVideoGroup;
     public static T2IParamGroup FalVideoAdvancedGroup;
 
@@ -102,6 +103,9 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<int> NumInferenceStepsParam_Fal;
     public static T2IRegisteredParam<string> OutputFormatParam_Fal;
     public static T2IRegisteredParam<bool> SafetyCheckerParam_Fal;
+
+    // Fal.ai Image-to-Image / Edit Parameters
+    public static T2IRegisteredParam<Image> ImagePromptParam_Fal;
 
     // Fal.ai Video Parameters (generic - used by models without specific params)
     public static T2IRegisteredParam<string> DurationParam_FalVideo;
@@ -167,6 +171,7 @@ public class SwarmUIAPIBackends : Extension
         FalParamGroup = new("Fal.ai API", Toggles: false, Open: true, OrderPriority: 50, Description: "API access to Fal.ai's 600+ production-ready AI models.");
         FalGeneralGroup = new("Fal.ai Image Settings", Toggles: false, Open: true, OrderPriority: 50, Description: "Core parameters for Fal.ai image generation.\nAccess to FLUX, Stable Diffusion, Recraft, and many more models.");
         FalAdvancedGroup = new("Fal.ai Image Advanced Settings", Toggles: true, Open: false, OrderPriority: 51, Description: "Additional options for fine-tuning Fal.ai image generations.");
+        FalEditGroup = new("Fal.ai Image Edit Settings", Toggles: false, Open: true, OrderPriority: 51, Description: "Parameters for Fal.ai image editing models.\nProvide an input image to edit with models like Kontext, nano-banana-pro-edit, and more.");
         FalVideoGroup = new("Fal.ai Video Settings", Toggles: false, Open: true, OrderPriority: 52, Description: "Parameters for Fal.ai video generation models.\nAccess to Sora, Veo, Kling, MiniMax, and many more video models.");
         FalVideoAdvancedGroup = new("Fal.ai Video Advanced Settings", Toggles: true, Open: false, OrderPriority: 53, Description: "Additional options for fine-tuning Fal.ai video generations.");
         SizeParam_OpenAI = T2IParamTypes.Register<string>(new("Output Resolution", "Controls the dimensions of the generated image.\n" + "DALL-E 2: 256x256, 512x512, or 1024x1024\n" + "DALL-E 3: 1024x1024, 1792x1024, or 1024x1792\n" +
@@ -447,6 +452,14 @@ public class SwarmUIAPIBackends : Extension
             "jpeg", GetValues: _ => ["jpeg///JPEG (Smaller)", "png///PNG (Lossless)"],
             OrderPriority: -2, Group: FalAdvancedGroup, FeatureFlag: "fal_t2i_params"));
 
+        // Fal.ai Image Edit Parameters
+        ImagePromptParam_Fal = T2IParamTypes.Register<Image>(new("Input Image",
+            "Input image for editing models.\n" +
+            "Required for image editing models (nano-banana-pro-edit, Kontext, gemini-flash-edit, etc.).\n" +
+            "Optional for dual-mode models (SeDream, OmniGen) that support both generation and editing.",
+            null, OrderPriority: -10,
+            Group: FalEditGroup, FeatureFlag: "fal_i2i_params"));
+
         // Fal.ai Video Parameters
         DurationParam_FalVideo = T2IParamTypes.Register<string>(new("Video Duration",
             "Length of the generated video in seconds.\n" +
@@ -726,7 +739,7 @@ public class SwarmUIAPIBackends : Extension
             "flux_ultra_params", "flux_pro_params", "flux_dev_params",
             "flux_kontext_pro_params", "flux_kontext_max_params", "flux_2_max_params", "flux_2_pro_params",
             "grok_2_image_params", "google_imagen_params", "google_gemini_params",
-            "fal_t2i_params", "fal_video_params", "fal_utility_params",
+            "fal_t2i_params", "fal_i2i_params", "fal_video_params", "fal_utility_params",
             "fal_sora_video_params", "fal_kling_video_params", "fal_veo_video_params",
             "fal_luma_video_params", "fal_minimax_video_params", "fal_hunyuan_video_params"
         ];

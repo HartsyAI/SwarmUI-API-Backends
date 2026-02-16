@@ -11,7 +11,7 @@ const APIBackendsConfig = {
         bfl_api: ['flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params', 'flux_2_max_params', 'flux_2_pro_params'],
         grok_api: ['grok_2_image_params'],
         google_api: ['google_imagen_params', 'google_gemini_params'],
-        fal_api: ['fal_t2i_params', 'fal_video_params', 'fal_utility_params', 'fal_sora_video_params', 'fal_kling_video_params', 'fal_veo_video_params', 'fal_minimax_video_params', 'fal_luma_video_params', 'fal_hunyuan_video_params']
+        fal_api: ['fal_t2i_params', 'fal_i2i_params', 'fal_video_params', 'fal_utility_params', 'fal_sora_video_params', 'fal_kling_video_params', 'fal_veo_video_params', 'fal_minimax_video_params', 'fal_luma_video_params', 'fal_hunyuan_video_params']
     },
 
     // Model name patterns to feature flags (order matters)
@@ -84,6 +84,12 @@ const APIBackendsConfig = {
         'flux-dev', 'zero_negative', 'sdcpp'
     ],
 
+    // Core parameter groups that are local-only and should be hidden for all API models
+    coreGroupsToHide: [
+        'regionalprompting', 'segmentrefining', 'segmentparamoverrides',
+        'advancedsampling', 'initimage'
+    ],
+
     get providerIds() {
         return Object.keys(this.providers);
     },
@@ -126,7 +132,24 @@ const APIBackendsConfig = {
             if (modelName.includes('/Hunyuan/')) return ['fal_hunyuan_video_params'];
             return ['fal_video_params'];
         }
+        // Image editing / image-to-image models: show both t2i and i2i params
+        if (this.isFalEditModel(modelName)) {
+            return ['fal_t2i_params', 'fal_i2i_params'];
+        }
         return ['fal_t2i_params'];
+    },
+
+    // Check if a Fal model is an image editing / image-to-image model
+    isFalEditModel(modelName) {
+        // Explicit edit model patterns
+        if (modelName.endsWith('-edit')) return true;
+        if (modelName.endsWith('-i2i')) return true;
+        if (modelName.includes('kontext')) return true;
+        if (modelName.includes('hidream-e1')) return true;
+        // Dual models that support both t2i and editing (image input optional)
+        if (modelName.includes('seedream')) return true;
+        if (modelName.includes('omnigen')) return true;
+        return false;
     },
 
     // Check if a core Swarm param should be shown for the current API model
@@ -160,6 +183,7 @@ featureSetChangers.push(() => {
 
     // Handle core Swarm param visibility for API models
     for (let param of gen_param_types) {
+        // Hide individual core params that don't apply to API models
         if (APIBackendsConfig.coreParamsToHide.includes(param.id)) {
             const shouldShow = isApiModel && APIBackendsConfig.shouldShowCoreParam(curArch, modelName, param.id);
             if (isApiModel && !shouldShow) {
@@ -170,6 +194,27 @@ featureSetChangers.push(() => {
             } else if (param.hasOwnProperty('original_feature_flag_api')) {
                 param.feature_flag = param.original_feature_flag_api;
                 delete param.original_feature_flag_api;
+            }
+        }
+        // Hide params belonging to local-only groups (Regional Prompting, Segment Refining, etc.)
+        let inHiddenGroup = false;
+        let currentGroup = param.group;
+        while (currentGroup) {
+            if (APIBackendsConfig.coreGroupsToHide.includes(currentGroup.id)) {
+                inHiddenGroup = true;
+                break;
+            }
+            currentGroup = currentGroup.parent;
+        }
+        if (inHiddenGroup) {
+            if (isApiModel) {
+                if (!param.hasOwnProperty('original_feature_flag_api_group')) {
+                    param.original_feature_flag_api_group = param.feature_flag;
+                }
+                param.feature_flag = '__api_incompatible__';
+            } else if (param.hasOwnProperty('original_feature_flag_api_group')) {
+                param.feature_flag = param.original_feature_flag_api_group;
+                delete param.original_feature_flag_api_group;
             }
         }
     }

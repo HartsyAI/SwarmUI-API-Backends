@@ -599,6 +599,14 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         {
             ["prompt"] = input.Get(T2IParamTypes.Prompt)
         };
+        bool hasInputImage = input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Fal, out Image inputImg) && inputImg?.RawData is not null;
+        if (hasInputImage)
+        {
+            string base64Image = Convert.ToBase64String(inputImg.RawData);
+            string dataUrl = $"data:image/png;base64,{base64Image}";
+            request["image_url"] = dataUrl;
+            request["image_urls"] = new JArray(dataUrl);
+        }
         if (input.TryGet(SwarmUIAPIBackends.ImageSizeParam_Fal, out string imageSize)) request["image_size"] = imageSize;
         else request["image_size"] = "landscape_4_3";
         request["num_images"] = GetNumImages(input);
