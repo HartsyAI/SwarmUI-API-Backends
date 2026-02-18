@@ -83,7 +83,6 @@ public class SwarmUIAPIBackends : Extension
     // Black Forest Labs API Parameters
     public static T2IRegisteredParam<double> GuidanceParam_BlackForest;
     public static T2IRegisteredParam<int> SafetyParam_BlackForest;
-    public static T2IRegisteredParam<double> IntervalParam_BlackForest;
     public static T2IRegisteredParam<bool> PromptEnhanceParam_BlackForest;
     public static T2IRegisteredParam<string> OutputFormatParam_BlackForest;
     public static T2IRegisteredParam<bool> RawModeParam_BlackForest;
@@ -91,6 +90,7 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<double> ImagePromptStrengthParam_BlackForest;
     public static T2IRegisteredParam<int> WidthParam_BlackForest => T2IParamTypes.Width;
     public static T2IRegisteredParam<int> HeightParam_BlackForest => T2IParamTypes.Height;
+    public static T2IRegisteredParam<string> AspectRatioParam_BlackForest => T2IParamTypes.AspectRatio;
     public static T2IRegisteredParam<bool> PromptUpsampling_BlackForest => PromptEnhanceParam_BlackForest;
     public static T2IRegisteredParam<int> SafetyTolerance_BlackForest => SafetyParam_BlackForest;
     public static T2IRegisteredParam<long> SeedParam_BlackForest => T2IParamTypes.Seed;
@@ -346,13 +346,12 @@ public class SwarmUIAPIBackends : Extension
 
         // Black Forest Labs API Parameters
         GuidanceParam_BlackForest = T2IParamTypes.Register<double>(new("Prompt Guidance",
-            "Controls how strictly the generation follows the prompt.\n" +
-            "Flux Pro/1.1: Default 2.5 for balanced results\n" +
-            "Flux Dev: Default 3.0 for increased prompt adherence\n" +
+            "Controls how strictly the generation follows the prompt (Flux Dev only).\n" +
+            "Default 3.0 for balanced results.\n" +
             "Lower values (1.5-2.5): More creative but less controlled\n" +
-            "Higher values (3.0-5.0): Stricter prompt following but may reduce realism.", "2.5",
+            "Higher values (3.0-5.0): Stricter prompt following but may reduce realism.", "3.0",
             Min: 1.5, Max: 5.0, Step: 0.1, ViewType: ParamViewType.SLIDER, OrderPriority: -6,
-            Group: BlackForestGeneralGroup, FeatureFlag: "bfl_api"));
+            Group: BlackForestGeneralGroup, FeatureFlag: "flux_dev_params"));
 
         SafetyParam_BlackForest = T2IParamTypes.Register<int>(new("Safety Filter Level",
             "Controls content filtering strictness for both input and output.\n" +
@@ -361,21 +360,13 @@ public class SwarmUIAPIBackends : Extension
             "Default 2 provides balanced filtering suitable for most use cases.", "2", Min: 0, Max: 6,
             ViewType: ParamViewType.SLIDER, OrderPriority: -5, Group: BlackForestGeneralGroup, FeatureFlag: "bfl_api"));
 
-        IntervalParam_BlackForest = T2IParamTypes.Register<double>(new("Guidance Interval",
-            "Fine-tunes how guidance is applied during generation.\n" +
-            "Only available in Flux Pro and Pro 1.1 models.\n" +
-            "Lower values (1.0-2.0): More precise, controlled results\n" +
-            "Higher values (2.0-4.0): More creative freedom and variation\n" +
-            "Default 2.0 provides good balance of control and creativity.", "2.0", Min: 1.0, Max: 4.0, Step: 0.1,
-            ViewType: ParamViewType.SLIDER, OrderPriority: -5, Group: BlackForestAdvancedGroup,
-            FeatureFlag: "flux_pro_params"));
-
         PromptEnhanceParam_BlackForest = T2IParamTypes.Register<bool>(new("Prompt Enhancement",
             "Enables Flux's automatic prompt enhancement system.\n" +
             "When enabled: Automatically expands prompts with additional details\n" +
             "Can help achieve more artistic results but may reduce prompt precision\n" +
-            "Recommended for creative/artistic work, disable for exact prompt following.", "false",
-            OrderPriority: -4, Group: BlackForestAdvancedGroup, FeatureFlag: "bfl_api"));
+            "Recommended for creative/artistic work, disable for exact prompt following.\n" +
+            "Supported by: Flux Dev, Flux Pro 1.1, Flux Ultra, Kontext Pro, Kontext Max.", "false",
+            OrderPriority: -4, Group: BlackForestAdvancedGroup, FeatureFlag: "bfl_prompt_enhance"));
 
         RawModeParam_BlackForest = T2IParamTypes.Register<bool>(new("Raw Mode",
             "Enables raw generation mode in Flux Pro 1.1.\n" +
@@ -388,8 +379,8 @@ public class SwarmUIAPIBackends : Extension
             "Optional image to use as a starting point or reference.\n" +
             "Acts as a visual guide for the generation process.\n" +
             "Useful for variations, style matching, or guided compositions.\n" +
-            "Use with Image Prompt Strength to control influence.", null, OrderPriority: -2,
-            Group: BlackForestAdvancedGroup, FeatureFlag: "bfl_api"));
+            "Supported by: Flux Dev, Flux Pro 1.1, Flux Ultra.", null, OrderPriority: -2,
+            Group: BlackForestAdvancedGroup, FeatureFlag: "bfl_image_prompt"));
 
         ImagePromptStrengthParam_BlackForest = T2IParamTypes.Register<double>(new("Image Prompt Strength",
             "Controls how much the Image Prompt influences the generation.\n" +
@@ -738,6 +729,7 @@ public class SwarmUIAPIBackends : Extension
             "ideogram_v1_params", "ideogram_v2_params", "ideogram_v3_params",
             "flux_ultra_params", "flux_pro_params", "flux_dev_params",
             "flux_kontext_pro_params", "flux_kontext_max_params", "flux_2_max_params", "flux_2_pro_params",
+            "bfl_prompt_enhance", "bfl_image_prompt",
             "grok_2_image_params", "google_imagen_params", "google_gemini_params",
             "fal_t2i_params", "fal_i2i_params", "fal_video_params", "fal_utility_params",
             "fal_sora_video_params", "fal_kling_video_params", "fal_veo_video_params",

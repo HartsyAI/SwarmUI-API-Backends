@@ -8,7 +8,7 @@ const APIBackendsConfig = {
     providers: {
         openai_api: ['dalle2_params', 'dalle3_params', 'gpt-image-1_params', 'gpt-image-1.5_params', 'openai_sora_params'],
         ideogram_api: ['ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params'],
-        bfl_api: ['flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params', 'flux_2_max_params', 'flux_2_pro_params'],
+        bfl_api: ['flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params', 'flux_2_max_params', 'flux_2_pro_params', 'bfl_prompt_enhance', 'bfl_image_prompt'],
         grok_api: ['grok_2_image_params'],
         google_api: ['google_imagen_params', 'google_gemini_params'],
         fal_api: ['fal_t2i_params', 'fal_i2i_params', 'fal_video_params', 'fal_utility_params', 'fal_sora_video_params', 'fal_kling_video_params', 'fal_veo_video_params', 'fal_minimax_video_params', 'fal_luma_video_params', 'fal_hunyuan_video_params']
@@ -30,15 +30,6 @@ const APIBackendsConfig = {
             { pattern: 'V_2', flag: 'ideogram_v2_params' },
             { pattern: 'V_1', flag: 'ideogram_v1_params' }
         ],
-        bfl_api: [
-            { pattern: 'flux-pro-1.1-ultra', flag: 'flux_ultra_params' },
-            { pattern: 'flux-pro-1.1', flag: 'flux_pro_params' },
-            { pattern: 'flux-dev', flag: 'flux_dev_params' },
-            { pattern: 'flux-kontext-pro', flag: 'flux_kontext_pro_params' },
-            { pattern: 'flux-kontext-max', flag: 'flux_kontext_max_params' },
-            { pattern: 'flux-2-pro', flag: 'flux_2_pro_params' },
-            { pattern: 'flux-2-max', flag: 'flux_2_max_params' }
-        ],
         grok_api: [
             { pattern: 'grok-2-image', flag: 'grok_2_image_params' }
         ],
@@ -51,13 +42,13 @@ const APIBackendsConfig = {
     // Core Swarm params to SHOW (unhide) for specific API models
     coreParamsToShow: {
         bfl_api: {
-            'flux-pro-1.1-ultra': ['seed'],
-            'flux-pro-1.1': ['seed', 'width', 'height'],
-            'flux-dev': ['seed', 'width', 'height', 'steps'],
-            'flux-kontext-pro': ['seed'],
-            'flux-kontext-max': ['seed'],
-            'flux-2-pro': ['seed', 'width', 'height'],
-            'flux-2-max': ['seed', 'width', 'height']
+            'flux-pro-1.1-ultra': ['seed', 'aspectratio', 'initimage'],
+            'flux-pro-1.1': ['seed', 'width', 'height', 'initimage'],
+            'flux-dev': ['seed', 'width', 'height', 'steps', 'initimage'],
+            'flux-kontext-pro': ['seed', 'aspectratio', 'initimage'],
+            'flux-kontext-max': ['seed', 'aspectratio', 'initimage'],
+            'flux-2-pro': ['seed', 'width', 'height', 'initimage'],
+            'flux-2-max': ['seed', 'width', 'height', 'initimage']
         },
         ideogram_api: { '*': ['seed'] },
         fal_api: { '*': ['seed'] }
@@ -66,9 +57,9 @@ const APIBackendsConfig = {
     // All core params to potentially hide for API models
     coreParamsToHide: [
         'steps', 'cfgscale', 'width', 'height', 'sidelength', 'aspectratio',
-        'seed', 'batchsize', 'initimagecreativity', 'initimageresettonorm',
-        'initimagenoise', 'maskblur', 'maskgrow', 'maskshrinkgrow',
-        'useinpaintingencode', 'initimagerecompositemask', 'zeronegative',
+        'seed', 'batchsize', 'initimage', 'initimagecreativity', 'initimageresettonorm',
+        'initimagenoise', 'maskimage', 'maskblur', 'maskgrow', 'maskshrinkgrow',
+        'useinpaintingencode', 'initimagerecompositemask', 'unsamplepprompt', 'zeronegative',
         'seamlesstileable', 'cascadelatentcompression', 'sd3textencs',
         'fluxguidancescale', 'fluxdisableguidance', 'clipstopatlayer',
         'vaetilesize', 'vaetileoverlap', 'removebackground', 'automaticvae',
@@ -85,9 +76,29 @@ const APIBackendsConfig = {
     ],
 
     // Core parameter groups that are local-only and should be hidden for all API models
+    // Child groups are caught automatically by the parent-chain walk (e.g. controlnettwo via controlnet)
+    // NOTE: 'resolution' is intentionally NOT here - BFL models need width/height from that group
     coreGroupsToHide: [
-        'regionalprompting', 'segmentrefining', 'segmentparamoverrides',
-        'advancedsampling', 'initimage'
+        'refineupscale',        // Refine / Upscale (+ child refinerparamoverrides)
+        'controlnet',           // ControlNet (+ children controlnettwo, controlnetthree)
+        'swarminternal',        // Swarm Internal (BatchSize, VAE format, wildcards, etc.)
+        'advancedvideo',        // Advanced Video (+ child videoobscureoptions)
+        'videoextend',          // Video Extend
+        'advancedmodeladdons',  // Advanced Model Addons (VAE, LoRAs, CLIP models, etc.)
+        'magicpromptautoenable',// Magic Prompt Auto Enable (extension)
+        'dynamicthresholding',  // Dynamic Thresholding (extension)
+        'regionalprompting',    // Regional Prompting (+ child segments)
+        'segmentrefining',      // Segment Refining
+        'segmentparamoverrides',// Segment Param Overrides
+        'advancedsampling',     // Advanced Sampling
+        // NOTE: 'initimage' intentionally NOT here - BFL models use Init Image for image_prompt/input_image
+        'freeu',                // FreeU
+        'texttovideo',          // Text to Video (local video gen)
+        'texttoaudio',          // Text to Audio
+        'alternateguidance'     // Alternate Guidance
+        // NOTE: 'sampling', 'variation', 'resolution' are NOT here - they auto-hide via
+        // incompatibleFlags, and individual params (steps, width, height) need to be
+        // selectively shown for some BFL models via coreParamsToShow.
     ],
 
     get providerIds() {
@@ -104,15 +115,32 @@ const APIBackendsConfig = {
 
     // Determine the active model-specific feature flag based on the selected model
     getActiveModelFlags(curArch, modelName) {
-        if (curArch === 'fal_api') {
-            return this.getFalModelFlags(modelName);
-        }
+        if (curArch === 'fal_api') return this.getFalModelFlags(modelName);
+        if (curArch === 'bfl_api') return this.getBflModelFlags(modelName);
         const patterns = this.modelPatterns[curArch];
         if (!patterns) return this.providers[curArch] || [];
         for (const { pattern, flag } of patterns) {
             if (modelName.includes(pattern)) return [flag];
         }
         return this.providers[curArch] || [];
+    },
+
+    // BFL capability-based flags per model (returns multiple flags)
+    getBflModelFlags(modelName) {
+        let flags = [];
+        // Model-specific flag
+        if (modelName.includes('flux-pro-1.1-ultra')) flags.push('flux_ultra_params');
+        else if (modelName.includes('flux-pro-1.1')) flags.push('flux_pro_params');
+        else if (modelName.includes('flux-dev')) flags.push('flux_dev_params');
+        else if (modelName.includes('flux-kontext-pro')) flags.push('flux_kontext_pro_params');
+        else if (modelName.includes('flux-kontext-max')) flags.push('flux_kontext_max_params');
+        else if (modelName.includes('flux-2-pro')) flags.push('flux_2_pro_params');
+        else if (modelName.includes('flux-2-max')) flags.push('flux_2_max_params');
+        // Prompt enhancement: all except flux-2-* models
+        if (!modelName.includes('flux-2-')) flags.push('bfl_prompt_enhance');
+        // Image prompt (single): flux-dev, flux-pro-1.1, flux-ultra
+        if (modelName.includes('flux-dev') || modelName.includes('flux-pro-1.1')) flags.push('bfl_image_prompt');
+        return flags;
     },
 
     getFalModelFlags(modelName) {
@@ -185,13 +213,21 @@ featureSetChangers.push(() => {
     for (let param of gen_param_types) {
         // Hide individual core params that don't apply to API models
         if (APIBackendsConfig.coreParamsToHide.includes(param.id)) {
-            const shouldShow = isApiModel && APIBackendsConfig.shouldShowCoreParam(curArch, modelName, param.id);
-            if (isApiModel && !shouldShow) {
+            if (isApiModel) {
+                // Save original feature flag on first encounter
                 if (!param.hasOwnProperty('original_feature_flag_api')) {
                     param.original_feature_flag_api = param.feature_flag;
                 }
-                param.feature_flag = param.original_feature_flag_api ? `${param.original_feature_flag_api},__api_incompatible__` : '__api_incompatible__';
+                const shouldShow = APIBackendsConfig.shouldShowCoreParam(curArch, modelName, param.id);
+                if (shouldShow) {
+                    // Clear feature flag entirely so the param is always visible
+                    // (restoring original would fail if original flag like "sampling" is incompatible)
+                    param.feature_flag = null;
+                } else {
+                    param.feature_flag = '__api_incompatible__';
+                }
             } else if (param.hasOwnProperty('original_feature_flag_api')) {
+                // Restore original when switching back to a local model
                 param.feature_flag = param.original_feature_flag_api;
                 delete param.original_feature_flag_api;
             }

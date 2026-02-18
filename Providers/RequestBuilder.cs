@@ -374,19 +374,61 @@ public sealed class BlackForestRequestBuilder : BaseRequestBuilder
 {
     public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
     {
+        string modelId = model.Id;
+        bool usesAspectRatio = modelId is "flux-pro-1.1-ultra" or "flux-kontext-pro" or "flux-kontext-max";
         JObject request = new()
         {
             ["prompt"] = input.Get(T2IParamTypes.Prompt)
         };
-        if (input.TryGet(SwarmUIAPIBackends.WidthParam_BlackForest, out int width)) request["width"] = width;
-        if (input.TryGet(SwarmUIAPIBackends.HeightParam_BlackForest, out int height)) request["height"] = height;
-        if (input.TryGet(SwarmUIAPIBackends.PromptUpsampling_BlackForest, out bool upsample)) request["prompt_upsampling"] = upsample;
+        // Size: aspect_ratio for ultra/kontext, width+height for others
+        if (usesAspectRatio)
+        {
+            if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_BlackForest, out string aspectRatio) && aspectRatio != "Custom")
+                request["aspect_ratio"] = aspectRatio;
+        }
+        else
+        {
+            if (input.TryGet(SwarmUIAPIBackends.WidthParam_BlackForest, out int width)) request["width"] = width;
+            if (input.TryGet(SwarmUIAPIBackends.HeightParam_BlackForest, out int height)) request["height"] = height;
+        }
+        // Common params
         if (input.TryGet(SwarmUIAPIBackends.SafetyTolerance_BlackForest, out int safety)) request["safety_tolerance"] = safety;
         if (input.TryGet(SwarmUIAPIBackends.SeedParam_BlackForest, out long seed) && seed >= 0) request["seed"] = seed;
-        if (input.TryGet(SwarmUIAPIBackends.GuidanceParam_BlackForest, out double guidance)) request["guidance"] = guidance;
-        if (input.TryGet(SwarmUIAPIBackends.StepsParam_BlackForest, out int steps)) request["steps"] = steps;
-        if (input.TryGet(SwarmUIAPIBackends.IntervalParam_BlackForest, out double interval)) request["interval"] = interval;
         if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_BlackForest, out string format)) request["output_format"] = format;
+        // Guidance and steps: flux-dev only
+        if (modelId == "flux-dev")
+        {
+            if (input.TryGet(SwarmUIAPIBackends.GuidanceParam_BlackForest, out double guidance)) request["guidance"] = guidance;
+            if (input.TryGet(SwarmUIAPIBackends.StepsParam_BlackForest, out int steps)) request["steps"] = steps;
+        }
+        // Prompt upsampling: all except flux-2-* models
+        if (!modelId.StartsWith("flux-2-"))
+        {
+            if (input.TryGet(SwarmUIAPIBackends.PromptUpsampling_BlackForest, out bool upsample)) request["prompt_upsampling"] = upsample;
+        }
+        // Raw mode: ultra only
+        if (modelId == "flux-pro-1.1-ultra")
+        {
+            if (input.TryGet(SwarmUIAPIBackends.RawModeParam_BlackForest, out bool raw)) request["raw"] = raw;
+        }
+        // Image input: use core Swarm InitImage, sent as image_prompt or input_image depending on model
+        if (input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null)
+        {
+            string base64Image = Convert.ToBase64String(initImg.RawData);
+            if (modelId is "flux-kontext-pro" or "flux-kontext-max" or "flux-2-pro" or "flux-2-max")
+            {
+                request["input_image"] = base64Image;
+            }
+            else
+            {
+                request["image_prompt"] = base64Image;
+            }
+        }
+        // Image prompt strength: ultra only (controls blend between prompt and image)
+        if (modelId == "flux-pro-1.1-ultra")
+        {
+            if (input.TryGet(SwarmUIAPIBackends.ImagePromptStrengthParam_BlackForest, out double strength)) request["image_prompt_strength"] = strength;
+        }
         return request;
     }
 
