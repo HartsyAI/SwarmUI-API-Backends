@@ -201,7 +201,7 @@ public class SwarmUIAPIBackends : Extension
                 else return ["1024x1024", "1792x1024", "1024x1792"];
             },
             OrderPriority: -10, ViewType: ParamViewType.POT_SLIDER,
-            Group: T2IParamTypes.GroupResolution, FeatureFlag: "openai_api"));
+            Group: T2IParamTypes.GroupResolution, FeatureFlag: "openai_image_size"));
 
         QualityParam_OpenAI = T2IParamTypes.Register<string>(new("Generation Quality",
             "Controls the level of detail and consistency in DALL-E 3 images.\n" +
@@ -236,7 +236,7 @@ public class SwarmUIAPIBackends : Extension
             "'Low' - Faster generation with reduced quality\n" +
             "Higher quality levels may increase generation time and cost.",
             "auto", GetValues: _ => ["auto///Auto (Recommended)", "high///High Quality", "medium///Medium Quality", "low///Low Quality"],
-            OrderPriority: -8, Group: GPTImage1Group, FeatureFlag: "gpt-image-1_params"));
+            OrderPriority: -8, Group: GPTImage1Group, FeatureFlag: "gpt_image_params"));
 
         BackgroundParam_GPTImage1 = T2IParamTypes.Register<string>(new("Background",
             "Controls the background transparency of the generated image.\n" +
@@ -245,7 +245,7 @@ public class SwarmUIAPIBackends : Extension
             "'Opaque' - Creates a solid background with no transparency\n" +
             "Note: Transparent backgrounds require PNG or WebP output format.",
             "auto", GetValues: _ => ["auto///Auto (Recommended)", "transparent///Transparent", "opaque///Opaque"],
-            OrderPriority: -7, Group: GPTImage1Group, FeatureFlag: "gpt-image-1_params"));
+            OrderPriority: -7, Group: GPTImage1Group, FeatureFlag: "gpt_image_params"));
 
         ModerationParam_GPTImage1 = T2IParamTypes.Register<string>(new("Content Moderation",
             "Controls the content moderation level for generated images.\n" +
@@ -253,7 +253,7 @@ public class SwarmUIAPIBackends : Extension
             "'Low' - Less restrictive content filtering (use with caution)\n" +
             "Auto setting provides balanced content safety.",
             "auto", GetValues: _ => ["auto///Auto (Recommended)", "low///Low Filtering"],
-            OrderPriority: -6, Group: GPTImage1Group, FeatureFlag: "gpt-image-1_params"));
+            OrderPriority: -6, Group: GPTImage1Group, FeatureFlag: "gpt_image_params"));
 
         OutputFormatParam_GPTImage1 = T2IParamTypes.Register<string>(new("Image Output Format",
             "The format for the generated image.\n" +
@@ -262,7 +262,7 @@ public class SwarmUIAPIBackends : Extension
             "'WebP' - Modern format, good compression and transparency support\n" +
             "PNG is recommended for images with transparency.",
             "png", GetValues: _ => ["png///PNG (Lossless)", "jpeg///JPEG (Compressed)", "webp///WebP (Modern)"],
-            OrderPriority: -5, Group: GPTImage1Group, FeatureFlag: "gpt-image-1_params"));
+            OrderPriority: -5, Group: GPTImage1Group, FeatureFlag: "gpt_image_params"));
 
         OutputCompressionParam_GPTImage1 = T2IParamTypes.Register<int>(new("Output Compression",
             "The compression level (0-100%) for JPEG and WebP formats.\n" +
@@ -270,7 +270,7 @@ public class SwarmUIAPIBackends : Extension
             "Only applies to JPEG and WebP output formats.\n" +
             "Default is 100% (maximum quality).",
             "100", Min: 0, Max: 100, ViewType: ParamViewType.SLIDER,
-            OrderPriority: -4, Group: GPTImage1Group, FeatureFlag: "gpt-image-1_params"));
+            OrderPriority: -4, Group: GPTImage1Group, FeatureFlag: "gpt_image_params"));
 
         // OpenAI Sora Video Parameters
         SizeParam_OpenAISora = T2IParamTypes.Register<string>(new("OpenAI Sora Video Size",
@@ -783,7 +783,7 @@ public class SwarmUIAPIBackends : Extension
 
         // Model-specific feature flags
         string[] modelFlags = [
-            "dalle2_params", "dalle3_params", "gpt-image-1_params", "gpt-image-1.5_params",
+            "dalle2_params", "dalle3_params", "gpt-image-1_params", "gpt-image-1.5_params", "gpt_image_params", "openai_image_size",
             "ideogram_v1_params", "ideogram_v2_params", "ideogram_v3_params", "ideogram_style",
             "flux_ultra_params", "flux_pro_params", "flux_dev_params",
             "flux_kontext_pro_params", "flux_kontext_max_params", "flux_2_max_params", "flux_2_pro_params",
