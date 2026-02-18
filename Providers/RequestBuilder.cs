@@ -686,10 +686,12 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
 
     private static JObject BuildImageRequest(T2IParamInput input, ModelDefinition model)
     {
+        string modelId = model.Id;
         JObject request = new()
         {
             ["prompt"] = input.Get(T2IParamTypes.Prompt)
         };
+        // Input image for edit/i2i models (custom Fal param)
         bool hasInputImage = input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Fal, out Image inputImg) && inputImg?.RawData is not null;
         if (hasInputImage)
         {
@@ -698,6 +700,40 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
             request["image_url"] = dataUrl;
             request["image_urls"] = new JArray(dataUrl);
         }
+        // Determine model family for param handling
+        if (modelId.StartsWith("Recraft/"))
+        {
+            BuildRecraftImageParams(input, request);
+        }
+        else if (modelId.StartsWith("Bria/") && !modelId.EndsWith("-edit"))
+        {
+            BuildBriaImageParams(input, request);
+        }
+        else if (IsAspectRatioImageModel(modelId))
+        {
+            BuildAspectRatioImageParams(input, request, modelId);
+        }
+        else
+        {
+            BuildStandardImageParams(input, request);
+        }
+        request["sync_mode"] = true;
+        return request;
+    }
+
+    /// <summary>Check if a Fal image model uses aspect_ratio instead of image_size.</summary>
+    private static bool IsAspectRatioImageModel(string modelId) =>
+        modelId is "FLUX/flux-pro-ultra"
+        || modelId.StartsWith("Kling/kling-image")
+        || modelId.StartsWith("Google/nano-banana-pro")
+        || modelId.StartsWith("Google/imagen-3")
+        || modelId.StartsWith("Grok/grok-imagine-image") && !modelId.Contains("-video")
+        || modelId is "MiniMax/minimax-image-01"
+        || modelId.StartsWith("ImagineArt/");
+
+    /// <summary>Standard Fal image params: image_size, guidance, steps, seed, safety_checker, output_format, negative_prompt.</summary>
+    private static void BuildStandardImageParams(T2IParamInput input, JObject request)
+    {
         if (input.TryGet(SwarmUIAPIBackends.ImageSizeParam_Fal, out string imageSize)) request["image_size"] = imageSize;
         else request["image_size"] = "landscape_4_3";
         request["num_images"] = GetNumImages(input);
@@ -706,8 +742,55 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         if (input.TryGet(SwarmUIAPIBackends.NumInferenceStepsParam_Fal, out int steps)) request["num_inference_steps"] = steps;
         if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_Fal, out string format)) request["output_format"] = format;
         if (input.TryGet(SwarmUIAPIBackends.SafetyCheckerParam_Fal, out bool safety)) request["enable_safety_checker"] = safety;
-        request["sync_mode"] = true;
-        return request;
+        // Negative prompt: SD, HiDream, Qwen, Sana, Lumina, Kolors, Playground
+        if (input.TryGet(SwarmUIAPIBackends.NegativePromptParam_FalImage, out string negPrompt) && !string.IsNullOrEmpty(negPrompt))
+            request["negative_prompt"] = negPrompt;
+    }
+
+    /// <summary>Aspect ratio models: FLUX Ultra, Kling Image, Nano Banana, Imagen 3. Use aspect_ratio + resolution instead of image_size.</summary>
+    private static void BuildAspectRatioImageParams(T2IParamInput input, JObject request, string modelId)
+    {
+        if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_FalImage, out string aspectRatio) && aspectRatio != "auto")
+            request["aspect_ratio"] = aspectRatio;
+        // Resolution: Kling Image (1K/2K), Nano Banana (1K/2K/4K)
+        if (input.TryGet(SwarmUIAPIBackends.ResolutionParam_FalImage, out string resolution))
+            request["resolution"] = resolution;
+        request["num_images"] = GetNumImages(input);
+        // Seed: supported by FLUX Ultra, Nano Banana, Imagen 3 (NOT Kling Image)
+        if (!modelId.StartsWith("Kling/"))
+        {
+            if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0) request["seed"] = seed;
+        }
+        // Output format: all aspect ratio models support it
+        if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_FalAspect, out string format)) request["output_format"] = format;
+        // Negative prompt: Imagen 3 only
+        if (modelId.StartsWith("Google/imagen-3"))
+        {
+            if (input.TryGet(SwarmUIAPIBackends.NegativePromptParam_FalImage, out string negPrompt) && !string.IsNullOrEmpty(negPrompt))
+                request["negative_prompt"] = negPrompt;
+        }
+    }
+
+    /// <summary>Recraft V3: image_size + style, NO steps/guidance/seed.</summary>
+    private static void BuildRecraftImageParams(T2IParamInput input, JObject request)
+    {
+        if (input.TryGet(SwarmUIAPIBackends.ImageSizeParam_Fal, out string imageSize)) request["image_size"] = imageSize;
+        else request["image_size"] = "square_hd";
+        if (input.TryGet(SwarmUIAPIBackends.StyleParam_Recraft, out string style) && !string.IsNullOrEmpty(style))
+            request["style"] = style;
+    }
+
+    /// <summary>Bria FIBO: aspect_ratio + steps_num + guidance_scale + negative_prompt + seed. Uses non-standard param name 'steps_num'.</summary>
+    private static void BuildBriaImageParams(T2IParamInput input, JObject request)
+    {
+        if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_FalImage, out string aspectRatio) && aspectRatio != "auto")
+            request["aspect_ratio"] = aspectRatio;
+        if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0) request["seed"] = seed;
+        if (input.TryGet(SwarmUIAPIBackends.GuidanceScaleParam_Fal, out double guidance)) request["guidance_scale"] = guidance;
+        // Bria uses 'steps_num' instead of standard 'num_inference_steps'
+        if (input.TryGet(SwarmUIAPIBackends.NumInferenceStepsParam_Fal, out int steps)) request["steps_num"] = steps;
+        if (input.TryGet(SwarmUIAPIBackends.NegativePromptParam_FalImage, out string negPrompt) && !string.IsNullOrEmpty(negPrompt))
+            request["negative_prompt"] = negPrompt;
     }
 
     private static JObject BuildVideoRequest(T2IParamInput input, ModelDefinition model)
@@ -716,6 +799,13 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         {
             ["prompt"] = input.Get(T2IParamTypes.Prompt)
         };
+        // I2V models: send input image via core Swarm InitImage
+        bool isI2V = model.Id.EndsWith("-i2v");
+        if (isI2V && input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null)
+        {
+            string base64Image = Convert.ToBase64String(initImg.RawData);
+            request["image_url"] = $"data:image/png;base64,{base64Image}";
+        }
         string modelId = model.Id;
         // Determine model family for parameter handling
         if (modelId.StartsWith("Sora/"))
@@ -932,6 +1022,12 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
     private static JObject BuildUtilityRequest(T2IParamInput input, ModelDefinition model)
     {
         JObject request = new();
+        // Utility models (upscalers, bg removers, face restoration) need input image
+        if (input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null)
+        {
+            string base64Image = Convert.ToBase64String(initImg.RawData);
+            request["image_url"] = $"data:image/png;base64,{base64Image}";
+        }
         request["sync_mode"] = true;
         return request;
     }

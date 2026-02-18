@@ -11,7 +11,7 @@ const APIBackendsConfig = {
         bfl_api: ['flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params', 'flux_2_max_params', 'flux_2_pro_params', 'bfl_prompt_enhance', 'bfl_image_prompt'],
         grok_api: ['grok_2_image_params'],
         google_api: ['google_imagen_params', 'google_gemini_params'],
-        fal_api: ['fal_t2i_params', 'fal_i2i_params', 'fal_video_params', 'fal_utility_params', 'fal_sora_video_params', 'fal_kling_video_params', 'fal_veo_video_params', 'fal_minimax_video_params', 'fal_luma_video_params', 'fal_hunyuan_video_params']
+        fal_api: ['fal_t2i_params', 'fal_i2i_params', 'fal_video_params', 'fal_utility_params', 'fal_aspect_image', 'fal_resolution_image', 'fal_recraft_params', 'fal_sora_video_params', 'fal_kling_video_params', 'fal_veo_video_params', 'fal_minimax_video_params', 'fal_luma_video_params', 'fal_hunyuan_video_params']
     },
 
     // Model name patterns to feature flags (order matters)
@@ -46,7 +46,14 @@ const APIBackendsConfig = {
             'gemini-': ['seed', 'initimage'],
             '*': ['seed']
         },
-        fal_api: { '*': ['seed'] }
+        fal_api: {
+            '/Utility/': ['initimage'],
+            '-i2v': ['seed', 'initimage'],
+            'flux-pro-ultra': ['seed'],
+            'nano-banana-pro': ['seed'],
+            '/Google/imagen-3': ['seed'],
+            '*': ['seed']
+        }
     },
 
     // All core params to potentially hide for API models
@@ -187,11 +194,59 @@ const APIBackendsConfig = {
             if (modelName.includes('/Hunyuan/')) return ['fal_hunyuan_video_params'];
             return ['fal_video_params'];
         }
-        // Image editing / image-to-image models: show both t2i and i2i params
-        if (this.isFalEditModel(modelName)) {
-            return ['fal_t2i_params', 'fal_i2i_params'];
+        // === IMAGE MODEL FLAGS (per-family) ===
+        let flags = [];
+        let isEdit = this.isFalEditModel(modelName);
+        if (isEdit) flags.push('fal_i2i_params');
+        // FLUX Pro Ultra: aspect_ratio, NO image_size/steps/guidance
+        if (modelName.includes('flux-pro-ultra')) {
+            flags.push('fal_aspect_image');
+            return flags;
         }
-        return ['fal_t2i_params'];
+        // Kling Image: aspect_ratio + resolution, NO image_size/steps/guidance/seed
+        if (modelName.includes('/Kling/') && modelName.includes('kling-image')) {
+            flags.push('fal_aspect_image', 'fal_resolution_image');
+            return flags;
+        }
+        // Nano Banana Pro (Google via Fal): aspect_ratio + resolution, NO image_size/steps/guidance
+        if (modelName.includes('nano-banana-pro')) {
+            flags.push('fal_aspect_image', 'fal_resolution_image');
+            return flags;
+        }
+        // Google Imagen 3: aspect_ratio, NO image_size/steps/guidance
+        if (modelName.includes('/Google/imagen-3')) {
+            flags.push('fal_aspect_image');
+            return flags;
+        }
+        // Grok Imagine Image (+ edit): aspect_ratio, NO image_size/steps/guidance/seed
+        if (modelName.includes('/Grok/grok-imagine-image') && !modelName.includes('-video')) {
+            flags.push('fal_aspect_image');
+            return flags;
+        }
+        // MiniMax Image: aspect_ratio, NO image_size/steps/guidance/seed
+        if (modelName.includes('/MiniMax/minimax-image')) {
+            flags.push('fal_aspect_image');
+            return flags;
+        }
+        // Bria FIBO: aspect_ratio + steps/guidance (uses standard t2i for steps/guidance/seed)
+        if (modelName.includes('/Bria/bria-fibo') && !modelName.includes('-edit')) {
+            flags.push('fal_aspect_image', 'fal_t2i_params');
+            return flags;
+        }
+        // ImagineArt: aspect_ratio + seed only, NO image_size/steps/guidance
+        if (modelName.includes('/ImagineArt/')) {
+            flags.push('fal_aspect_image');
+            return flags;
+        }
+        // Recraft V3: image_size + style, NO steps/guidance/seed
+        if (modelName.includes('/Recraft/')) {
+            flags.push('fal_recraft_params');
+            return flags;
+        }
+        // Standard models get fal_t2i_params (image_size, steps, guidance, seed, safety, output_format)
+        // Negative prompt uses core Swarm NegativePrompt param (no separate flag needed)
+        flags.push('fal_t2i_params');
+        return flags;
     },
 
     // Check if a Fal model is an image editing / image-to-image model

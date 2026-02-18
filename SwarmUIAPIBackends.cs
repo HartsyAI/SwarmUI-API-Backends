@@ -39,12 +39,6 @@ public class SwarmUIAPIBackends : Extension
     public static T2IParamGroup BlackForestGroup;
     public static T2IParamGroup BlackForestGeneralGroup;
     public static T2IParamGroup BlackForestAdvancedGroup;
-    public static T2IParamGroup FalParamGroup;
-    public static T2IParamGroup FalGeneralGroup;
-    public static T2IParamGroup FalAdvancedGroup;
-    public static T2IParamGroup FalEditGroup;
-    public static T2IParamGroup FalVideoGroup;
-    public static T2IParamGroup FalVideoAdvancedGroup;
 
     // OpenAI Parameters
     public static T2IRegisteredParam<string> SizeParam_OpenAI;
@@ -112,13 +106,24 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<string> ImageSizeParam_Google;
     public static T2IRegisteredParam<Image> InitImageParam_Google => T2IParamTypes.InitImage;
 
-    // Fal.ai Text-to-Image Parameters
+    // Fal.ai Text-to-Image Parameters (standard models: FLUX dev/schnell/pro, SD, HiDream, Qwen, Sana, etc.)
     public static T2IRegisteredParam<string> ImageSizeParam_Fal;
     public static T2IRegisteredParam<long> SeedParam_Fal => T2IParamTypes.Seed;
     public static T2IRegisteredParam<double> GuidanceScaleParam_Fal;
     public static T2IRegisteredParam<int> NumInferenceStepsParam_Fal;
     public static T2IRegisteredParam<string> OutputFormatParam_Fal;
     public static T2IRegisteredParam<bool> SafetyCheckerParam_Fal;
+
+    // Fal.ai Aspect Ratio Image Parameters (FLUX Ultra, Kling Image, Nano Banana, Imagen 3)
+    public static T2IRegisteredParam<string> AspectRatioParam_FalImage;
+    public static T2IRegisteredParam<string> ResolutionParam_FalImage;
+    public static T2IRegisteredParam<string> OutputFormatParam_FalAspect;
+
+    // Fal.ai Negative Prompt — aliased to core NegativePrompt (same as SeedParam_Fal => T2IParamTypes.Seed)
+    public static T2IRegisteredParam<string> NegativePromptParam_FalImage => T2IParamTypes.NegativePrompt;
+
+    // Fal.ai Recraft Parameters
+    public static T2IRegisteredParam<string> StyleParam_Recraft;
 
     // Fal.ai Image-to-Image / Edit Parameters
     public static T2IRegisteredParam<Image> ImagePromptParam_Fal;
@@ -187,12 +192,6 @@ public class SwarmUIAPIBackends : Extension
         BlackForestGeneralGroup = new("Flux Core Settings", Toggles: false, Open: true, OrderPriority: 40, Description: "Core parameters for Flux image generation.\nFlux models excel at high-quality image generation with strong artistic control.");
         BlackForestAdvancedGroup = new("Flux Advanced Settings", Toggles: true, Open: false, OrderPriority: 41, Description: "Additional options for fine-tuning Flux generations and output processing.");
 
-        FalParamGroup = new("Fal.ai API", Toggles: false, Open: true, OrderPriority: 50, Description: "API access to Fal.ai's 600+ production-ready AI models.");
-        FalGeneralGroup = new("Fal.ai Image Settings", Toggles: false, Open: true, OrderPriority: 50, Description: "Core parameters for Fal.ai image generation.\nAccess to FLUX, Stable Diffusion, Recraft, and many more models.");
-        FalAdvancedGroup = new("Fal.ai Image Advanced Settings", Toggles: true, Open: false, OrderPriority: 51, Description: "Additional options for fine-tuning Fal.ai image generations.");
-        FalEditGroup = new("Fal.ai Image Edit Settings", Toggles: false, Open: true, OrderPriority: 51, Description: "Parameters for Fal.ai image editing models.\nProvide an input image to edit with models like Kontext, nano-banana-pro-edit, and more.");
-        FalVideoGroup = new("Fal.ai Video Settings", Toggles: false, Open: true, OrderPriority: 52, Description: "Parameters for Fal.ai video generation models.\nAccess to Sora, Veo, Kling, MiniMax, and many more video models.");
-        FalVideoAdvancedGroup = new("Fal.ai Video Advanced Settings", Toggles: true, Open: false, OrderPriority: 53, Description: "Additional options for fine-tuning Fal.ai video generations.");
         SizeParam_OpenAI = T2IParamTypes.Register<string>(new("Output Resolution", "Controls the dimensions of the generated image.\n" + "DALL-E 2: 256x256, 512x512, or 1024x1024\n" + "DALL-E 3: 1024x1024, 1792x1024, or 1024x1792\n" +
             "GPT Image 1: auto, 1024x1024, 1536x1024, or 1024x1536", "1024x1024", GetValues: model =>
             {
@@ -470,7 +469,7 @@ public class SwarmUIAPIBackends : Extension
                 "landscape_4_3///Landscape 4:3",
                 "landscape_16_9///Landscape 16:9"
             ],
-            OrderPriority: -10, Group: FalGeneralGroup, FeatureFlag: "fal_t2i_params"));
+            OrderPriority: -10, Group: T2IParamTypes.GroupResolution, FeatureFlag: "fal_t2i_params"));
 
         GuidanceScaleParam_Fal = T2IParamTypes.Register<double>(new("Guidance Scale",
             "Controls how closely the model follows your prompt:\n" +
@@ -478,7 +477,7 @@ public class SwarmUIAPIBackends : Extension
             "Medium values (3.5-7): Balanced\n" +
             "Higher values (7-15): Stricter prompt adherence",
             "3.5", Min: 1.0, Max: 20.0, Step: 0.5, ViewType: ParamViewType.SLIDER,
-            OrderPriority: -6, Group: FalGeneralGroup, FeatureFlag: "fal_t2i_params"));
+            OrderPriority: -6, Group: T2IParamTypes.GroupCore, FeatureFlag: "fal_t2i_params"));
 
         NumInferenceStepsParam_Fal = T2IParamTypes.Register<int>(new("Inference Steps",
             "Number of denoising steps. More steps = higher quality but slower.\n" +
@@ -486,20 +485,81 @@ public class SwarmUIAPIBackends : Extension
             "FLUX dev: 20-50 steps (quality)\n" +
             "Other models: 20-30 steps typical",
             "28", Min: 1, Max: 100, ViewType: ParamViewType.SLIDER,
-            OrderPriority: -5, Group: FalAdvancedGroup, FeatureFlag: "fal_t2i_params"));
+            OrderPriority: -5, Group: T2IParamTypes.GroupCore, FeatureFlag: "fal_t2i_params"));
 
         SafetyCheckerParam_Fal = T2IParamTypes.Register<bool>(new("Safety Checker",
             "Enable or disable the NSFW safety checker.\n" +
             "When enabled, inappropriate content will be filtered.",
             "true",
-            OrderPriority: -3, Group: FalAdvancedGroup, FeatureFlag: "fal_t2i_params"));
+            OrderPriority: -3, Group: T2IParamTypes.GroupSampling, FeatureFlag: "fal_t2i_params"));
 
         OutputFormatParam_Fal = T2IParamTypes.Register<string>(new("Output File Format",
             "Choose the file format for generated images:\n" +
             "JPEG: Smaller files, slight quality loss, good for sharing\n" +
             "PNG: Lossless quality, larger files, best for editing.",
             "jpeg", GetValues: _ => ["jpeg///JPEG (Smaller)", "png///PNG (Lossless)"],
-            OrderPriority: -2, Group: FalAdvancedGroup, FeatureFlag: "fal_t2i_params"));
+            OrderPriority: -2, Group: T2IParamTypes.GroupSampling, FeatureFlag: "fal_t2i_params"));
+
+        // Fal.ai Aspect Ratio Image Parameters (FLUX Ultra, Kling Image, Nano Banana, Imagen 3)
+        AspectRatioParam_FalImage = T2IParamTypes.Register<string>(new("Image Aspect Ratio",
+            "Aspect ratio for models that use aspect ratio instead of image size.\n" +
+            "16:9: Widescreen, 9:16: Portrait, 1:1: Square, etc.",
+            "16:9", GetValues: _ => [
+                "auto///Auto (model decides)",
+                "21:9///Ultrawide (21:9)",
+                "16:9///Widescreen (16:9)",
+                "3:2///Standard (3:2)",
+                "4:3///Classic (4:3)",
+                "5:4///Photo (5:4)",
+                "1:1///Square (1:1)",
+                "4:5///Portrait Photo (4:5)",
+                "3:4///Portrait Classic (3:4)",
+                "2:3///Portrait Standard (2:3)",
+                "9:16///Portrait (9:16)",
+                "9:21///Tall (9:21)"
+            ],
+            OrderPriority: -10, Group: T2IParamTypes.GroupResolution, FeatureFlag: "fal_aspect_image"));
+
+        ResolutionParam_FalImage = T2IParamTypes.Register<string>(new("Image Resolution",
+            "Resolution quality for the generated image.\n" +
+            "1K: Standard, 2K: High-res, 4K: Ultra high-res (some models only).",
+            "1K", GetValues: _ => [
+                "1K///1K (Standard)",
+                "2K///2K (High-res)",
+                "4K///4K (Ultra, some models)"
+            ],
+            OrderPriority: -9, Group: T2IParamTypes.GroupResolution, FeatureFlag: "fal_resolution_image"));
+
+        OutputFormatParam_FalAspect = T2IParamTypes.Register<string>(new("Fal Image Output Format",
+            "Choose the file format for generated images.",
+            "png", GetValues: _ => ["jpeg///JPEG", "png///PNG", "webp///WebP"],
+            OrderPriority: -2, Group: T2IParamTypes.GroupSampling, FeatureFlag: "fal_aspect_image"));
+
+        // Fal.ai Recraft Parameters
+        StyleParam_Recraft = T2IParamTypes.Register<string>(new("Recraft Style",
+            "The visual style for Recraft V3 image generation.\n" +
+            "Choose a base style category. Sub-styles available via API.",
+            "realistic_image", GetValues: _ => [
+                "any///Any Style",
+                "realistic_image///Realistic Image",
+                "realistic_image/b_and_w///Realistic B&W",
+                "realistic_image/hdr///Realistic HDR",
+                "realistic_image/natural_light///Natural Light",
+                "realistic_image/studio_portrait///Studio Portrait",
+                "digital_illustration///Digital Illustration",
+                "digital_illustration/pixel_art///Pixel Art",
+                "digital_illustration/hand_drawn///Hand Drawn",
+                "digital_illustration/2d_art_poster///2D Art Poster",
+                "digital_illustration/handmade_3d///Handmade 3D",
+                "digital_illustration/pop_art///Pop Art",
+                "digital_illustration/noir///Noir",
+                "vector_illustration///Vector Illustration",
+                "vector_illustration/line_art///Line Art",
+                "vector_illustration/bold_stroke///Bold Stroke",
+                "vector_illustration/flat///Emotional Flat",
+                "vector_illustration/linocut///Linocut"
+            ],
+            OrderPriority: -8, Group: T2IParamTypes.GroupSampling, FeatureFlag: "fal_recraft_params"));
 
         // Fal.ai Image Edit Parameters
         ImagePromptParam_Fal = T2IParamTypes.Register<Image>(new("Input Image",
@@ -507,7 +567,7 @@ public class SwarmUIAPIBackends : Extension
             "Required for image editing models (nano-banana-pro-edit, Kontext, gemini-flash-edit, etc.).\n" +
             "Optional for dual-mode models (SeDream, OmniGen) that support both generation and editing.",
             null, OrderPriority: -10,
-            Group: FalEditGroup, FeatureFlag: "fal_i2i_params"));
+            Group: T2IParamTypes.GroupInitImage, FeatureFlag: "fal_i2i_params"));
 
         // Fal.ai Video Parameters
         DurationParam_FalVideo = T2IParamTypes.Register<string>(new("Video Duration",
@@ -524,7 +584,7 @@ public class SwarmUIAPIBackends : Extension
                 "12///12 seconds",
                 "15///15 seconds"
             ],
-            OrderPriority: -10, Group: FalVideoGroup, FeatureFlag: "fal_video_params"));
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_video_params"));
 
         AspectRatioParam_FalVideo = T2IParamTypes.Register<string>(new("Video Aspect Ratio",
             "Aspect ratio for the generated video.\n" +
@@ -538,7 +598,7 @@ public class SwarmUIAPIBackends : Extension
                 "4:3///Standard (4:3)",
                 "3:4///Portrait (3:4)"
             ],
-            OrderPriority: -9, Group: FalVideoGroup, FeatureFlag: "fal_video_params"));
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_video_params"));
 
         ResolutionParam_FalVideo = T2IParamTypes.Register<string>(new("Video Output Resolution",
             "Resolution of the generated video.\n" +
@@ -549,19 +609,19 @@ public class SwarmUIAPIBackends : Extension
                 "720p///720p (Standard)",
                 "1080p///1080p (HD)"
             ],
-            OrderPriority: -8, Group: FalVideoGroup, FeatureFlag: "fal_video_params"));
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_video_params"));
 
         GenerateAudioParam_FalVideo = T2IParamTypes.Register<bool>(new("Generate Audio",
             "Generate audio alongside the video.\n" +
             "When enabled, the model will create matching audio/sound effects.\n" +
             "Supported by Sora, Veo, Kling, and other models.",
             "true",
-            OrderPriority: -7, Group: FalVideoGroup, FeatureFlag: "fal_video_params"));
+            OrderPriority: -7, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_video_params"));
 
         NegativePromptParam_FalVideo = T2IParamTypes.Register<string>(new("Video Negative Prompt",
             "Describe what you don't want in the generated video.\n" +
             "Supported by Veo, Wan, PixVerse, and some other video models.",
-            "", OrderPriority: -5, Group: FalVideoAdvancedGroup, FeatureFlag: "fal_video_params"));
+            "", OrderPriority: -5, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_video_params"));
 
         // ===== SORA-SPECIFIC PARAMETERS =====
         DurationParam_Sora = T2IParamTypes.Register<string>(new("Sora Video Duration",
@@ -572,7 +632,7 @@ public class SwarmUIAPIBackends : Extension
                 "8///8 seconds",
                 "12///12 seconds"
             ],
-            OrderPriority: -10, Group: FalVideoGroup, FeatureFlag: "fal_sora_video_params"));
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_sora_video_params"));
 
         AspectRatioParam_Sora = T2IParamTypes.Register<string>(new("Sora Video Aspect Ratio",
             "Aspect ratio for the generated video.\n" +
@@ -581,7 +641,7 @@ public class SwarmUIAPIBackends : Extension
                 "16:9///Widescreen (16:9)",
                 "9:16///Portrait (9:16)"
             ],
-            OrderPriority: -9, Group: FalVideoGroup, FeatureFlag: "fal_sora_video_params"));
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_sora_video_params"));
 
         ResolutionParam_Sora = T2IParamTypes.Register<string>(new("Sora Video Resolution",
             "Resolution of the generated video.\n" +
@@ -590,7 +650,7 @@ public class SwarmUIAPIBackends : Extension
                 "720p///720p (Standard)",
                 "1080p///1080p (HD)"
             ],
-            OrderPriority: -8, Group: FalVideoGroup, FeatureFlag: "fal_sora_video_params"));
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_sora_video_params"));
 
         // ===== KLING-SPECIFIC PARAMETERS =====
         DurationParam_Kling = T2IParamTypes.Register<string>(new("Kling Video Duration",
@@ -611,7 +671,7 @@ public class SwarmUIAPIBackends : Extension
                 "14///14 seconds",
                 "15///15 seconds"
             ],
-            OrderPriority: -10, Group: FalVideoGroup, FeatureFlag: "fal_kling_video_params"));
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_kling_video_params"));
 
         AspectRatioParam_Kling = T2IParamTypes.Register<string>(new("Kling Video Aspect Ratio",
             "Aspect ratio for the generated video.\n" +
@@ -621,18 +681,18 @@ public class SwarmUIAPIBackends : Extension
                 "9:16///Portrait (9:16)",
                 "1:1///Square (1:1)"
             ],
-            OrderPriority: -9, Group: FalVideoGroup, FeatureFlag: "fal_kling_video_params"));
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_kling_video_params"));
 
         GenerateAudioParam_Kling = T2IParamTypes.Register<bool>(new("Kling Generate Audio",
             "Generate audio alongside the video.\n" +
             "Kling supports native audio generation in Chinese and English.",
             "true",
-            OrderPriority: -7, Group: FalVideoGroup, FeatureFlag: "fal_kling_video_params"));
+            OrderPriority: -7, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_kling_video_params"));
 
         NegativePromptParam_Kling = T2IParamTypes.Register<string>(new("Kling Negative Prompt",
             "Describe what you don't want in the generated video.\n" +
             "Default: blur, distort, and low quality",
-            "", OrderPriority: -5, Group: FalVideoAdvancedGroup, FeatureFlag: "fal_kling_video_params"));
+            "", OrderPriority: -5, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_kling_video_params"));
 
         // ===== VEO-SPECIFIC PARAMETERS =====
         DurationParam_Veo = T2IParamTypes.Register<string>(new("Veo Video Duration",
@@ -643,7 +703,7 @@ public class SwarmUIAPIBackends : Extension
                 "6s///6 seconds",
                 "8s///8 seconds (Default)"
             ],
-            OrderPriority: -10, Group: FalVideoGroup, FeatureFlag: "fal_veo_video_params"));
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_veo_video_params"));
 
         AspectRatioParam_Veo = T2IParamTypes.Register<string>(new("Veo Video Aspect Ratio",
             "Aspect ratio for the generated video.\n" +
@@ -652,7 +712,7 @@ public class SwarmUIAPIBackends : Extension
                 "16:9///Widescreen (16:9)",
                 "9:16///Portrait (9:16)"
             ],
-            OrderPriority: -9, Group: FalVideoGroup, FeatureFlag: "fal_veo_video_params"));
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_veo_video_params"));
 
         ResolutionParam_Veo = T2IParamTypes.Register<string>(new("Veo Video Resolution",
             "Resolution of the generated video.\n" +
@@ -661,17 +721,17 @@ public class SwarmUIAPIBackends : Extension
                 "720p///720p (Standard)",
                 "1080p///1080p (HD)"
             ],
-            OrderPriority: -8, Group: FalVideoGroup, FeatureFlag: "fal_veo_video_params"));
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_veo_video_params"));
 
         GenerateAudioParam_Veo = T2IParamTypes.Register<bool>(new("Veo Generate Audio",
             "Generate audio alongside the video.\n" +
             "Veo 3 supports native audio generation.",
             "true",
-            OrderPriority: -7, Group: FalVideoGroup, FeatureFlag: "fal_veo_video_params"));
+            OrderPriority: -7, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_veo_video_params"));
 
         NegativePromptParam_Veo = T2IParamTypes.Register<string>(new("Veo Negative Prompt",
             "Describe what you don't want in the generated video.",
-            "", OrderPriority: -5, Group: FalVideoAdvancedGroup, FeatureFlag: "fal_veo_video_params"));
+            "", OrderPriority: -5, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_veo_video_params"));
 
         // ===== LUMA-SPECIFIC PARAMETERS =====
         DurationParam_Luma = T2IParamTypes.Register<string>(new("Luma Video Duration",
@@ -681,7 +741,7 @@ public class SwarmUIAPIBackends : Extension
                 "5s///5 seconds",
                 "9s///9 seconds (2x cost)"
             ],
-            OrderPriority: -10, Group: FalVideoGroup, FeatureFlag: "fal_luma_video_params"));
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_luma_video_params"));
 
         AspectRatioParam_Luma = T2IParamTypes.Register<string>(new("Luma Video Aspect Ratio",
             "Aspect ratio for the generated video.\n" +
@@ -694,7 +754,7 @@ public class SwarmUIAPIBackends : Extension
                 "21:9///Ultrawide (21:9)",
                 "9:21///Tall (9:21)"
             ],
-            OrderPriority: -9, Group: FalVideoGroup, FeatureFlag: "fal_luma_video_params"));
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_luma_video_params"));
 
         ResolutionParam_Luma = T2IParamTypes.Register<string>(new("Luma Video Resolution",
             "Resolution of the generated video.\n" +
@@ -704,7 +764,7 @@ public class SwarmUIAPIBackends : Extension
                 "720p///720p (2x cost)",
                 "1080p///1080p (4x cost)"
             ],
-            OrderPriority: -8, Group: FalVideoGroup, FeatureFlag: "fal_luma_video_params"));
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_luma_video_params"));
 
         // ===== MINIMAX-SPECIFIC PARAMETERS =====
         DurationParam_MiniMax = T2IParamTypes.Register<string>(new("MiniMax Video Duration",
@@ -714,7 +774,7 @@ public class SwarmUIAPIBackends : Extension
                 "6///6 seconds",
                 "10///10 seconds"
             ],
-            OrderPriority: -10, Group: FalVideoGroup, FeatureFlag: "fal_minimax_video_params"));
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_minimax_video_params"));
 
         // ===== HUNYUAN-SPECIFIC PARAMETERS =====
         AspectRatioParam_Hunyuan = T2IParamTypes.Register<string>(new("Hunyuan Video Aspect Ratio",
@@ -724,7 +784,7 @@ public class SwarmUIAPIBackends : Extension
                 "16:9///Widescreen (16:9)",
                 "9:16///Portrait (9:16)"
             ],
-            OrderPriority: -9, Group: FalVideoGroup, FeatureFlag: "fal_hunyuan_video_params"));
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_hunyuan_video_params"));
 
         ResolutionParam_Hunyuan = T2IParamTypes.Register<string>(new("Hunyuan Video Resolution",
             "Resolution of the generated video.\n" +
@@ -734,7 +794,7 @@ public class SwarmUIAPIBackends : Extension
                 "580p///580p",
                 "720p///720p (Standard)"
             ],
-            OrderPriority: -8, Group: FalVideoGroup, FeatureFlag: "fal_hunyuan_video_params"));
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_hunyuan_video_params"));
 
         RegisterFeatureFlags();
         Program.Backends.RegisterBackendType<DynamicAPIBackend>("dynamic_api_backend", "3rd Party Paid API Backends", "Generate images using various API services (OpenAI, Ideogram, Black Forest Labs, Grok, Google, Fal.ai)", true);
@@ -790,6 +850,7 @@ public class SwarmUIAPIBackends : Extension
             "bfl_prompt_enhance", "bfl_image_prompt",
             "grok_2_image_params", "google_imagen_params", "google_gemini_params",
             "fal_t2i_params", "fal_i2i_params", "fal_video_params", "fal_utility_params",
+            "fal_aspect_image", "fal_resolution_image", "fal_recraft_params",
             "fal_sora_video_params", "fal_kling_video_params", "fal_veo_video_params",
             "fal_luma_video_params", "fal_minimax_video_params", "fal_hunyuan_video_params"
         ];
