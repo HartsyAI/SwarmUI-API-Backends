@@ -31,6 +31,8 @@ public class SwarmUIAPIBackends : Extension
     public static T2IParamGroup OpenAISoraGroup;
     public static T2IParamGroup GrokParamGroup;
     public static T2IParamGroup Grok2ImageGroup;
+    public static T2IParamGroup GoogleParamGroup;
+    public static T2IParamGroup GoogleImagenGroup;
     public static T2IParamGroup IdeogramParamGroup;
     public static T2IParamGroup IdeogramGeneralGroup;
     public static T2IParamGroup IdeogramAdvancedGroup;
@@ -71,6 +73,7 @@ public class SwarmUIAPIBackends : Extension
     // Ideogram Parameters
     public static T2IRegisteredParam<string> StyleParam_Ideogram;
     public static T2IRegisteredParam<string> MagicPromptParam_Ideogram;
+    public static T2IRegisteredParam<string> RenderingSpeedParam_Ideogram;
 
     public static T2IRegisteredParam<string> ColorPaletteParam_Ideogram;
     public static T2IRegisteredParam<Image> ImagePromptParam_Ideogram;
@@ -79,6 +82,8 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<string> StyleTypeParam_Ideogram => StyleParam_Ideogram;
     public static T2IRegisteredParam<string> NegativePromptParam_Ideogram => T2IParamTypes.NegativePrompt;
     public static T2IRegisteredParam<double> ImageWeightParam_Ideogram;
+    public static T2IRegisteredParam<Image> InitImageParam_Ideogram => T2IParamTypes.InitImage;
+    public static T2IRegisteredParam<Image> MaskImageParam_Ideogram => T2IParamTypes.MaskImage;
 
     // Black Forest Labs API Parameters
     public static T2IRegisteredParam<double> GuidanceParam_BlackForest;
@@ -95,6 +100,17 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<int> SafetyTolerance_BlackForest => SafetyParam_BlackForest;
     public static T2IRegisteredParam<long> SeedParam_BlackForest => T2IParamTypes.Seed;
     public static T2IRegisteredParam<int> StepsParam_BlackForest => T2IParamTypes.Steps;
+
+    // Grok Parameters
+    public static T2IRegisteredParam<string> AspectRatioParam_Grok;
+    public static T2IRegisteredParam<string> ResolutionParam_Grok;
+    public static T2IRegisteredParam<Image> InitImageParam_Grok => T2IParamTypes.InitImage;
+
+    // Google Parameters
+    public static T2IRegisteredParam<string> AspectRatioParam_Google;
+    public static T2IRegisteredParam<string> PersonGenerationParam_Google;
+    public static T2IRegisteredParam<string> ImageSizeParam_Google;
+    public static T2IRegisteredParam<Image> InitImageParam_Google => T2IParamTypes.InitImage;
 
     // Fal.ai Text-to-Image Parameters
     public static T2IRegisteredParam<string> ImageSizeParam_Fal;
@@ -163,6 +179,9 @@ public class SwarmUIAPIBackends : Extension
 
         GrokParamGroup = new("Grok API", Toggles: false, Open: true, OrderPriority: 30, Description: "API access to Grok's image generation models.");
         Grok2ImageGroup = new("Grok 2 Image Settings", Toggles: false, Open: true, OrderPriority: 37, Description: "Parameters specific to Grok's 2 Image model generation.");
+
+        GoogleParamGroup = new("Google API", Toggles: false, Open: true, OrderPriority: 35, Description: "API access to Google's image generation models.");
+        GoogleImagenGroup = new("Google Image Settings", Toggles: false, Open: true, OrderPriority: 35, Description: "Parameters for Google Imagen and Gemini image generation.");
 
         BlackForestGroup = new("Black Forest Labs API", Toggles: false, Open: true, OrderPriority: 40, Description: "API access to Black Forest Labs' high quality Flux image generation models.");
         BlackForestGeneralGroup = new("Flux Core Settings", Toggles: false, Open: true, OrderPriority: 40, Description: "Core parameters for Flux image generation.\nFlux models excel at high-quality image generation with strong artistic control.");
@@ -280,10 +299,10 @@ public class SwarmUIAPIBackends : Extension
             "'Render_3D' - 3D rendered style with depth and lighting\n" +
             "'Anime' - Anime/manga inspired artistic style",
             "AUTO",
-            GetValues: _ => ["AUTO///Auto (Recommended, V2+)", "GENERAL///General Purpose (V2+)",
-                "REALISTIC///Photorealistic (V2+)", "DESIGN///Graphic Design (V2+)",
-                "RENDER_3D///3D Rendered (V2+)", "ANIME///Anime Style (V2+)"],
-            OrderPriority: -10, Group: IdeogramGeneralGroup, FeatureFlag: "ideogram_api"
+            GetValues: _ => ["AUTO///Auto (Recommended)", "GENERAL///General Purpose",
+                "REALISTIC///Photorealistic", "DESIGN///Graphic Design",
+                "RENDER_3D///3D Rendered", "ANIME///Anime Style"],
+            OrderPriority: -10, Group: IdeogramGeneralGroup, FeatureFlag: "ideogram_style"
             ));
 
         AspectRatioParam_Ideogram = T2IParamTypes.Register<string>(new("Ideogram Aspect Ratio",
@@ -301,27 +320,21 @@ public class SwarmUIAPIBackends : Extension
             GetValues: _ => ["AUTO///Auto (Recommended)", "ON///Always Enhance", "OFF///Exact Prompts"],
             OrderPriority: -7, Group: IdeogramAdvancedGroup, FeatureFlag: "ideogram_api"));
 
-        ImagePromptParam_Ideogram = T2IParamTypes.Register<Image>(new("Input Image Prompt",
-            "Optional input image (JPEG, PNG, or WebP, max 10MB) to use as a starting point or reference.\n" +
-            "Serves as a visual guide for generation.\n" +
-            "Useful for variations, style matching, or guided compositions.\n" +
-            null, null, OrderPriority: -2,
-            Group: IdeogramAdvancedGroup, FeatureFlag: "ideogram_api"));
+        RenderingSpeedParam_Ideogram = T2IParamTypes.Register<string>(new("Rendering Speed",
+            "Controls the rendering speed for V3 generation:\n" +
+            "'Default' - Standard quality rendering\n" +
+            "'Turbo' - Faster generation with slightly reduced quality",
+            "DEFAULT", GetValues: _ => ["DEFAULT///Default (Standard Quality)", "TURBO///Turbo (Faster)"],
+            OrderPriority: -6, Group: IdeogramAdvancedGroup, FeatureFlag: "ideogram_v3_params"));
 
-        ImageMaskPromptParam_Ideogram = T2IParamTypes.Register<Image>(new("Mask Image Prompt",
-            "Optional input image (JPEG, PNG, or WebP, max 10MB) to use as a mask provided to the input image.\n" +
-            "Serves as a visual guide for generation.\n" +
-            "Useful for variations, style matching, or guided compositions.\n" +
-            null, null, OrderPriority: -2,
-            Group: IdeogramAdvancedGroup, FeatureFlag: "ideogram_api"));
-
-        ImageWeightParam_Ideogram = T2IParamTypes.Register<double>(new("Image Weight",
-            "Controls how strongly the input image influences the generation (when using image edit/mix).",
+        ImageWeightParam_Ideogram = T2IParamTypes.Register<double>(new("Image Remix Weight",
+            "Controls how strongly the input image influences the remixed generation (V3 only).\n" +
+            "Lower values give more creative freedom, higher values stay closer to the original.",
             "0.5", Min: 0.0, Max: 1.0, Step: 0.05, ViewType: ParamViewType.SLIDER,
-            OrderPriority: -1, Group: IdeogramAdvancedGroup, FeatureFlag: "ideogram_api"));
+            OrderPriority: -1, Group: IdeogramAdvancedGroup, FeatureFlag: "ideogram_v3_params"));
 
         ColorPaletteParam_Ideogram = T2IParamTypes.Register<string>(new("Color Theme",
-            "Apply a predefined color palette to influence image colors (V2 & V2_TURBO only):\n" +
+            "Apply a predefined color palette to influence image colors (V2+ models):\n" +
             "'None' - No color preference\n" +
             "'Ember' - Warm, fiery tones\n" +
             "'Fresh' - Bright, clean colors\n" +
@@ -342,7 +355,7 @@ public class SwarmUIAPIBackends : Extension
                 "PASTEL///Pastel - Soft Tones",
                 "ULTRAMARINE///Ultramarine - Ocean Blues"
             ],
-            OrderPriority: -3, Group: IdeogramGeneralGroup, FeatureFlag: "ideogram_api"));
+            OrderPriority: -3, Group: IdeogramGeneralGroup, FeatureFlag: "ideogram_style"));
 
         // Black Forest Labs API Parameters
         GuidanceParam_BlackForest = T2IParamTypes.Register<double>(new("Prompt Guidance",
@@ -396,6 +409,51 @@ public class SwarmUIAPIBackends : Extension
             "PNG: Lossless quality, larger files, best for editing.",
             "jpeg", GetValues: _ => ["jpeg///JPEG (Smaller)", "png///PNG (Lossless)"],
             OrderPriority: 0, Group: BlackForestAdvancedGroup, FeatureFlag: "bfl_api"));
+
+        // Grok Parameters
+        AspectRatioParam_Grok = T2IParamTypes.Register<string>(new("Grok Aspect Ratio",
+            "Sets the aspect ratio for the generated image.\n" +
+            "'Auto' lets the model choose the best ratio for your prompt.",
+            "1:1", GetValues: _ => [
+                "auto///Auto (Model Chooses)", "1:1///Square (1:1)",
+                "16:9///Landscape (16:9)", "9:16///Portrait (9:16)",
+                "4:3///Landscape (4:3)", "3:4///Portrait (3:4)",
+                "3:2///Landscape (3:2)", "2:3///Portrait (2:3)",
+                "2:1///Wide (2:1)", "1:2///Tall (1:2)"
+            ],
+            OrderPriority: -10, Group: Grok2ImageGroup, FeatureFlag: "grok_2_image_params"));
+
+        ResolutionParam_Grok = T2IParamTypes.Register<string>(new("Grok Output Resolution",
+            "Controls the output resolution of the generated image.\n" +
+            "'1k' - ~1024px on the longest side\n" +
+            "'2k' - ~2048px on the longest side (higher quality, slower)",
+            "1k", GetValues: _ => ["1k///1K (~1024px)", "2k///2K (~2048px)"],
+            OrderPriority: -9, Group: Grok2ImageGroup, FeatureFlag: "grok_2_image_params"));
+
+        // Google Parameters
+        AspectRatioParam_Google = T2IParamTypes.Register<string>(new("Google Aspect Ratio",
+            "Sets the aspect ratio for the generated image.",
+            "1:1", GetValues: _ => ["1:1///Square (1:1)", "16:9///Landscape (16:9)", "9:16///Portrait (9:16)", "4:3///Landscape (4:3)", "3:4///Portrait (3:4)"],
+            OrderPriority: -10, Group: GoogleImagenGroup, FeatureFlag: "google_api"));
+
+        PersonGenerationParam_Google = T2IParamTypes.Register<string>(new("Person Generation",
+            "Controls whether the model can generate images of people (Imagen only).\n" +
+            "'Allow Adult' - Generate images of adults only (default)\n" +
+            "'Allow All' - Generate images of adults and children\n" +
+            "'Don't Allow' - Block all person generation",
+            "allow_adult", GetValues: _ => [
+                "allow_adult///Allow Adults (Default)",
+                "allow_all///Allow All (Adults & Children)",
+                "dont_allow///Don't Allow"
+            ],
+            OrderPriority: -8, Group: GoogleImagenGroup, FeatureFlag: "google_imagen_params"));
+
+        ImageSizeParam_Google = T2IParamTypes.Register<string>(new("Google Image Size",
+            "Controls the output resolution (Imagen only).\n" +
+            "'1K' - Standard resolution (~1024px)\n" +
+            "'2K' - Higher resolution (~2048px)",
+            "1K", GetValues: _ => ["1K///1K (Standard)", "2K///2K (Higher Quality)"],
+            OrderPriority: -7, Group: GoogleImagenGroup, FeatureFlag: "google_imagen_params"));
 
         // Fal.ai Text-to-Image Parameters
         ImageSizeParam_Fal = T2IParamTypes.Register<string>(new("Image Size",
@@ -726,7 +784,7 @@ public class SwarmUIAPIBackends : Extension
         // Model-specific feature flags
         string[] modelFlags = [
             "dalle2_params", "dalle3_params", "gpt-image-1_params", "gpt-image-1.5_params",
-            "ideogram_v1_params", "ideogram_v2_params", "ideogram_v3_params",
+            "ideogram_v1_params", "ideogram_v2_params", "ideogram_v3_params", "ideogram_style",
             "flux_ultra_params", "flux_pro_params", "flux_dev_params",
             "flux_kontext_pro_params", "flux_kontext_max_params", "flux_2_max_params", "flux_2_pro_params",
             "bfl_prompt_enhance", "bfl_image_prompt",

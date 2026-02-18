@@ -306,8 +306,9 @@ public sealed class IdeogramRequestBuilder : BaseRequestBuilder
 
     public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
     {
-        bool hasInputImage = input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Ideogram, out Image inputImg) && inputImg?.RawData is not null;
         bool isV3 = IsV3Model(model);
+        bool hasInitImage = input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null;
+        bool hasMask = input.TryGet(T2IParamTypes.MaskImage, out Image maskImg) && maskImg?.RawData is not null;
         JObject requestBody = new()
         {
             ["prompt"] = input.Get(T2IParamTypes.Prompt)
@@ -316,17 +317,35 @@ public sealed class IdeogramRequestBuilder : BaseRequestBuilder
         {
             requestBody["model"] = model.Id;
         }
+        // Common params
         if (input.TryGet(SwarmUIAPIBackends.MagicPromptParam_Ideogram, out string magic)) requestBody["magic_prompt_option"] = magic;
         else requestBody["magic_prompt_option"] = "AUTO";
         if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Ideogram, out string aspect)) requestBody["aspect_ratio"] = isV3 ? MapAspectRatioV3(aspect) : MapAspectRatioLegacy(aspect);
         if (input.TryGet(SwarmUIAPIBackends.StyleTypeParam_Ideogram, out string style) && !string.IsNullOrEmpty(style)) requestBody["style_type"] = style;
-        if (input.TryGet(SwarmUIAPIBackends.NegativePromptParam_Ideogram, out string negPrompt) && !string.IsNullOrEmpty(negPrompt)) requestBody["negative_prompt"] = negPrompt;
         if (input.TryGet(T2IParamTypes.Seed, out long seed) && seed >= 0) requestBody["seed"] = (int)seed;
-        if (hasInputImage)
+        // Negative prompt: legacy models only (V3 doesn't support it)
+        if (!isV3 && input.TryGet(SwarmUIAPIBackends.NegativePromptParam_Ideogram, out string negPrompt) && !string.IsNullOrEmpty(negPrompt))
+            requestBody["negative_prompt"] = negPrompt;
+        // Color palette (V2+ only, handled by feature flag)
+        if (input.TryGet(SwarmUIAPIBackends.ColorPaletteParam_Ideogram, out string palette) && !string.IsNullOrEmpty(palette) && palette != "None")
+            requestBody["color_palette"] = new JObject { ["name"] = palette };
+        // V3-specific params
+        if (isV3)
         {
-            string base64Image = Convert.ToBase64String(inputImg.RawData);
+            if (input.TryGet(SwarmUIAPIBackends.RenderingSpeedParam_Ideogram, out string speed)) requestBody["rendering_speed"] = speed;
+        }
+        // Image input: use core Swarm InitImage
+        if (hasInitImage)
+        {
+            string base64Image = Convert.ToBase64String(initImg.RawData);
             requestBody["image"] = base64Image;
-            if (input.TryGet(SwarmUIAPIBackends.ImageWeightParam_Ideogram, out double weight)) requestBody["image_weight"] = weight;
+            if (hasMask)
+            {
+                requestBody["mask"] = Convert.ToBase64String(maskImg.RawData);
+            }
+            // Image weight: V3 remix only (scale 0-1 to 1-100)
+            if (isV3 && !hasMask && input.TryGet(SwarmUIAPIBackends.ImageWeightParam_Ideogram, out double weight))
+                requestBody["image_weight"] = (int)Math.Round(weight * 100);
         }
         if (isV3)
         {
@@ -337,12 +356,15 @@ public sealed class IdeogramRequestBuilder : BaseRequestBuilder
 
     public override string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input)
     {
-        bool hasInputImage = input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Ideogram, out Image inputImg) && inputImg?.RawData != null;
-        if (model.Id.Contains("V_3") || model.Id.Contains("v3"))
+        bool hasInitImage = input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null;
+        bool hasMask = input.TryGet(T2IParamTypes.MaskImage, out Image maskImg) && maskImg?.RawData is not null;
+        if (IsV3Model(model))
         {
-            return hasInputImage ? "https://api.ideogram.ai/v1/ideogram-v3/edit" : "https://api.ideogram.ai/v1/ideogram-v3/generate";
+            if (hasInitImage && hasMask) return "https://api.ideogram.ai/v1/ideogram-v3/edit";
+            if (hasInitImage) return "https://api.ideogram.ai/v1/ideogram-v3/remix";
+            return "https://api.ideogram.ai/v1/ideogram-v3/generate";
         }
-        return hasInputImage ? "https://api.ideogram.ai/edit" : provider.BaseUrl;
+        return hasInitImage ? "https://api.ideogram.ai/edit" : provider.BaseUrl;
     }
 
     public override void AddAuthHeaders(HttpRequestMessage request, string apiKey, ProviderDefinition provider)
@@ -503,13 +525,24 @@ public sealed class GrokRequestBuilder : BaseRequestBuilder
 {
     public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
     {
-        return new JObject
+        JObject request = new()
         {
             ["prompt"] = input.Get(T2IParamTypes.Prompt),
-            ["model"] = "grok-2-image",
+            ["model"] = model.Id,
             ["n"] = GetNumImages(input),
             ["response_format"] = "b64_json"
         };
+        if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Grok, out string aspect) && !string.IsNullOrEmpty(aspect))
+            request["aspect_ratio"] = aspect;
+        if (input.TryGet(SwarmUIAPIBackends.ResolutionParam_Grok, out string resolution) && !string.IsNullOrEmpty(resolution))
+            request["resolution"] = resolution;
+        // Image editing: use core Swarm InitImage
+        if (input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null)
+        {
+            string base64Image = Convert.ToBase64String(initImg.RawData);
+            request["image_url"] = $"data:image/png;base64,{base64Image}";
+        }
+        return request;
     }
 
     public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
@@ -543,34 +576,50 @@ public sealed class GoogleRequestBuilder : BaseRequestBuilder
         bool isGemini = model.Id.StartsWith("gemini-");
         if (isGemini)
         {
+            JArray parts = new() { new JObject { ["text"] = input.Get(T2IParamTypes.Prompt) } };
+            // Image editing: send init image as inline data in contents
+            if (input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null)
+            {
+                string base64Image = Convert.ToBase64String(initImg.RawData);
+                parts.Insert(0, new JObject
+                {
+                    ["inlineData"] = new JObject
+                    {
+                        ["mimeType"] = "image/png",
+                        ["data"] = base64Image
+                    }
+                });
+            }
+            JObject genConfig = new()
+            {
+                ["responseModalities"] = new JArray { "TEXT", "IMAGE" }
+            };
+            // Aspect ratio via image_config
+            if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Google, out string geminiAspect) && !string.IsNullOrEmpty(geminiAspect))
+            {
+                genConfig["image_config"] = new JObject { ["aspect_ratio"] = geminiAspect };
+            }
             return new JObject
             {
-                ["contents"] = new JArray
-                {
-                    new JObject
-                    {
-                        ["parts"] = new JArray
-                        {
-                            new JObject { ["text"] = input.Get(T2IParamTypes.Prompt) }
-                        }
-                    }
-                },
-                ["generationConfig"] = new JObject
-                {
-                    ["responseModalities"] = new JArray { "TEXT", "IMAGE" }
-                }
+                ["contents"] = new JArray { new JObject { ["parts"] = parts } },
+                ["generationConfig"] = genConfig
             };
         }
+        // Imagen
+        JObject parameters = new() { ["sampleCount"] = GetNumImages(input) };
+        if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Google, out string aspect) && !string.IsNullOrEmpty(aspect))
+            parameters["aspectRatio"] = aspect;
+        if (input.TryGet(SwarmUIAPIBackends.PersonGenerationParam_Google, out string person) && !string.IsNullOrEmpty(person))
+            parameters["personGeneration"] = person;
+        if (input.TryGet(SwarmUIAPIBackends.ImageSizeParam_Google, out string imageSize) && !string.IsNullOrEmpty(imageSize))
+            parameters["imageSize"] = imageSize;
         return new JObject
         {
             ["instances"] = new JArray
             {
                 new JObject { ["prompt"] = input.Get(T2IParamTypes.Prompt) }
             },
-            ["parameters"] = new JObject
-            {
-                ["sampleCount"] = GetNumImages(input)
-            }
+            ["parameters"] = parameters
         };
     }
 

@@ -7,7 +7,7 @@ const APIBackendsConfig = {
     // Provider IDs mapped to their model-specific feature flags
     providers: {
         openai_api: ['dalle2_params', 'dalle3_params', 'gpt-image-1_params', 'gpt-image-1.5_params', 'openai_sora_params'],
-        ideogram_api: ['ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params'],
+        ideogram_api: ['ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params', 'ideogram_style'],
         bfl_api: ['flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params', 'flux_2_max_params', 'flux_2_pro_params', 'bfl_prompt_enhance', 'bfl_image_prompt'],
         grok_api: ['grok_2_image_params'],
         google_api: ['google_imagen_params', 'google_gemini_params'],
@@ -23,12 +23,6 @@ const APIBackendsConfig = {
             { pattern: 'gpt-image-1', flag: 'gpt-image-1_params' },
             { pattern: 'dall-e-3', flag: 'dalle3_params' },
             { pattern: 'dall-e-2', flag: 'dalle2_params' }
-        ],
-        ideogram_api: [
-            { pattern: 'V_3', flag: 'ideogram_v3_params' },
-            { pattern: 'V_2_TURBO', flag: 'ideogram_v2_params' },
-            { pattern: 'V_2', flag: 'ideogram_v2_params' },
-            { pattern: 'V_1', flag: 'ideogram_v1_params' }
         ],
         grok_api: [
             { pattern: 'grok-2-image', flag: 'grok_2_image_params' }
@@ -50,7 +44,16 @@ const APIBackendsConfig = {
             'flux-2-pro': ['seed', 'width', 'height', 'initimage'],
             'flux-2-max': ['seed', 'width', 'height', 'initimage']
         },
-        ideogram_api: { '*': ['seed'] },
+        ideogram_api: {
+            '*': ['seed', 'initimage', 'maskimage']
+        },
+        grok_api: {
+            '*': ['seed', 'initimage']
+        },
+        google_api: {
+            'gemini-': ['seed', 'initimage'],
+            '*': ['seed']
+        },
         fal_api: { '*': ['seed'] }
     },
 
@@ -117,12 +120,26 @@ const APIBackendsConfig = {
     getActiveModelFlags(curArch, modelName) {
         if (curArch === 'fal_api') return this.getFalModelFlags(modelName);
         if (curArch === 'bfl_api') return this.getBflModelFlags(modelName);
+        if (curArch === 'ideogram_api') return this.getIdeogramModelFlags(modelName);
         const patterns = this.modelPatterns[curArch];
         if (!patterns) return this.providers[curArch] || [];
         for (const { pattern, flag } of patterns) {
             if (modelName.includes(pattern)) return [flag];
         }
         return this.providers[curArch] || [];
+    },
+
+    // Ideogram capability-based flags per model
+    getIdeogramModelFlags(modelName) {
+        let flags = [];
+        // Model-specific flag
+        if (modelName.includes('V_3')) flags.push('ideogram_v3_params');
+        else if (modelName.includes('V_2_TURBO')) flags.push('ideogram_v2_params');
+        else if (modelName.includes('V_2')) flags.push('ideogram_v2_params');
+        else if (modelName.includes('V_1')) flags.push('ideogram_v1_params');
+        // Style and color palette: V2+ only (not V1)
+        if (!modelName.includes('V_1')) flags.push('ideogram_style');
+        return flags;
     },
 
     // BFL capability-based flags per model (returns multiple flags)
