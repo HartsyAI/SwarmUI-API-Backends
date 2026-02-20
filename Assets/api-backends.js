@@ -184,8 +184,15 @@ const APIBackendsConfig = {
         if (modelName.includes('/Utility/')) {
             return ['fal_utility_params'];
         }
-        // Model-specific video flags based on provider prefix
-        if (modelName.endsWith('-t2v') || modelName.endsWith('-i2v')) {
+        // Video model detection: check suffix OR known video model patterns
+        let isVideo = modelName.endsWith('-t2v') || modelName.endsWith('-i2v');
+        if (!isVideo) {
+            // Catch video models that don't follow -t2v/-i2v naming
+            if (modelName.includes('/CogVideoX/')) isVideo = true;
+            if (modelName.includes('/Mochi/')) isVideo = true;
+            if (modelName.includes('grok-imagine-video-edit')) isVideo = true;
+        }
+        if (isVideo) {
             if (modelName.includes('/Sora/')) return ['fal_sora_video_params'];
             if (modelName.includes('/Kling/')) return ['fal_kling_video_params'];
             if (modelName.includes('/Google/') && modelName.includes('veo')) return ['fal_veo_video_params'];
@@ -264,6 +271,14 @@ const APIBackendsConfig = {
 
     // Check if a core Swarm param should be shown for the current API model
     shouldShowCoreParam(curArch, modelName, paramId) {
+        // Flag-based core param visibility for Fal models
+        if (curArch === 'fal_api') {
+            const flags = this.getFalModelFlags(modelName);
+            // Models with fal_t2i_params use core Steps + CFG Scale
+            if (['steps', 'cfgscale'].includes(paramId) && flags.includes('fal_t2i_params')) return true;
+            // Edit/I2I models use core Init Image
+            if (paramId === 'initimage' && flags.includes('fal_i2i_params')) return true;
+        }
         const providerConfig = this.coreParamsToShow[curArch];
         if (!providerConfig) return false;
         if (providerConfig['*'] && providerConfig['*'].includes(paramId)) {

@@ -109,8 +109,8 @@ public class SwarmUIAPIBackends : Extension
     // Fal.ai Text-to-Image Parameters (standard models: FLUX dev/schnell/pro, SD, HiDream, Qwen, Sana, etc.)
     public static T2IRegisteredParam<string> ImageSizeParam_Fal;
     public static T2IRegisteredParam<long> SeedParam_Fal => T2IParamTypes.Seed;
-    public static T2IRegisteredParam<double> GuidanceScaleParam_Fal;
-    public static T2IRegisteredParam<int> NumInferenceStepsParam_Fal;
+    public static T2IRegisteredParam<double> GuidanceScaleParam_Fal => T2IParamTypes.CFGScale;
+    public static T2IRegisteredParam<int> NumInferenceStepsParam_Fal => T2IParamTypes.Steps;
     public static T2IRegisteredParam<string> OutputFormatParam_Fal;
     public static T2IRegisteredParam<bool> SafetyCheckerParam_Fal;
 
@@ -125,8 +125,8 @@ public class SwarmUIAPIBackends : Extension
     // Fal.ai Recraft Parameters
     public static T2IRegisteredParam<string> StyleParam_Recraft;
 
-    // Fal.ai Image-to-Image / Edit Parameters
-    public static T2IRegisteredParam<Image> ImagePromptParam_Fal;
+    // Fal.ai Image-to-Image / Edit Parameters — aliased to core InitImage
+    public static T2IRegisteredParam<Image> ImagePromptParam_Fal => T2IParamTypes.InitImage;
 
     // Fal.ai Video Parameters (generic - used by models without specific params)
     public static T2IRegisteredParam<string> DurationParam_FalVideo;
@@ -471,21 +471,8 @@ public class SwarmUIAPIBackends : Extension
             ],
             OrderPriority: -10, Group: T2IParamTypes.GroupResolution, FeatureFlag: "fal_t2i_params"));
 
-        GuidanceScaleParam_Fal = T2IParamTypes.Register<double>(new("Guidance Scale",
-            "Controls how closely the model follows your prompt:\n" +
-            "Lower values (1-3): More creative, less literal\n" +
-            "Medium values (3.5-7): Balanced\n" +
-            "Higher values (7-15): Stricter prompt adherence",
-            "3.5", Min: 1.0, Max: 20.0, Step: 0.5, ViewType: ParamViewType.SLIDER,
-            OrderPriority: -6, Group: T2IParamTypes.GroupCore, FeatureFlag: "fal_t2i_params"));
-
-        NumInferenceStepsParam_Fal = T2IParamTypes.Register<int>(new("Inference Steps",
-            "Number of denoising steps. More steps = higher quality but slower.\n" +
-            "FLUX schnell: 1-4 steps (fast)\n" +
-            "FLUX dev: 20-50 steps (quality)\n" +
-            "Other models: 20-30 steps typical",
-            "28", Min: 1, Max: 100, ViewType: ParamViewType.SLIDER,
-            OrderPriority: -5, Group: T2IParamTypes.GroupCore, FeatureFlag: "fal_t2i_params"));
+        // GuidanceScaleParam_Fal => T2IParamTypes.CFGScale (aliased, no registration needed)
+        // NumInferenceStepsParam_Fal => T2IParamTypes.Steps (aliased, no registration needed)
 
         SafetyCheckerParam_Fal = T2IParamTypes.Register<bool>(new("Safety Checker",
             "Enable or disable the NSFW safety checker.\n" +
@@ -561,13 +548,7 @@ public class SwarmUIAPIBackends : Extension
             ],
             OrderPriority: -8, Group: T2IParamTypes.GroupSampling, FeatureFlag: "fal_recraft_params"));
 
-        // Fal.ai Image Edit Parameters
-        ImagePromptParam_Fal = T2IParamTypes.Register<Image>(new("Input Image",
-            "Input image for editing models.\n" +
-            "Required for image editing models (nano-banana-pro-edit, Kontext, gemini-flash-edit, etc.).\n" +
-            "Optional for dual-mode models (SeDream, OmniGen) that support both generation and editing.",
-            null, OrderPriority: -10,
-            Group: T2IParamTypes.GroupInitImage, FeatureFlag: "fal_i2i_params"));
+        // ImagePromptParam_Fal => T2IParamTypes.InitImage (aliased, no registration needed)
 
         // Fal.ai Video Parameters
         DurationParam_FalVideo = T2IParamTypes.Register<string>(new("Video Duration",
