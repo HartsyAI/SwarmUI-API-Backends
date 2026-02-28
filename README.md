@@ -106,7 +106,13 @@ If you prefer to install manually:
 ## Usage
 --------
 
-### 1. Add a Backend
+### 1. Add Your API Keys
+
+1. Go to the **User** tab
+2. Scroll to the API key section -- you will see entries for each provider
+3. Paste your API key for each provider and click **Save**
+
+### 2. Add a Backend
 
 1. Go to the **Server** tab > **Backends**
 2. Click **Add New Backend**
@@ -119,12 +125,6 @@ If you prefer to install manually:
    - Enable Google
    - Enable Fal.ai
 5. Click **Save** then **Restart Backend**
-
-### 2. Add Your API Keys
-
-1. Go to the **User** tab
-2. Scroll to the API key section -- you will see entries for each provider
-3. Paste your API key for each provider and click **Save**
 
 ### 3. Generate
 
