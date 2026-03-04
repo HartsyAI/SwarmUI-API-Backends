@@ -140,10 +140,19 @@ public class DynamicAPIBackend : APIAbstractBackend
         ["google_api"] = APIBackendsPermissions.PermUseGoogleImagen,
         ["fal_api"] = APIBackendsPermissions.PermUseFal
     };
+    private static bool TryGetImageParam(T2IParamInput input, T2IRegisteredParam<Image> param, out Image image)
+    {
+        image = null;
+        if (input is null || param is null)
+        {
+            return false;
+        }
+        return input.TryGet(param, out image) && image?.RawData is not null;
+    }
 
     private bool CheckIdeogramEdit(T2IParamInput input)
     {
-        return input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Ideogram, out Image inputImg) && inputImg?.RawData != null;
+        return TryGetImageParam(input, SwarmUIAPIBackends.InitImageParam_Ideogram, out _);
     }
 
     private static bool IsIdeogramV3Model(string modelName)
@@ -248,7 +257,7 @@ public class DynamicAPIBackend : APIAbstractBackend
         HttpRequestMessage request = new(HttpMethod.Post, baseUrl);
         string modelName = input.Get(T2IParamTypes.Model).Name;
         string providerId = GetProviderIdFromModel(modelName);
-        if (CheckIdeogramEdit(input))
+        if (providerId == "ideogram_api" && CheckIdeogramEdit(input))
         {
             MultipartFormDataContent formData = new MultipartFormDataContent();
             foreach (JProperty property in requestBody.Properties())
@@ -258,7 +267,7 @@ public class DynamicAPIBackend : APIAbstractBackend
                     formData.Add(new StringContent(property.Value.ToString()), property.Name);
                 }
             }
-            if (input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Ideogram, out Image inputImg) && inputImg?.RawData != null)
+            if (TryGetImageParam(input, SwarmUIAPIBackends.InitImageParam_Ideogram, out Image inputImg))
             {
                 string requestImageType = "image_file";
                 if (IsIdeogramV3Model(modelName))
@@ -269,7 +278,7 @@ public class DynamicAPIBackend : APIAbstractBackend
                 imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
                 formData.Add(imageContent, requestImageType, "input.png");
             }
-            if (input.TryGet(SwarmUIAPIBackends.ImageMaskPromptParam_Ideogram, out Image maskImg) && maskImg?.RawData != null)
+            if (TryGetImageParam(input, SwarmUIAPIBackends.MaskImageParam_Ideogram, out Image maskImg))
             {
                 ByteArrayContent maskContent = new ByteArrayContent(maskImg.RawData);
                 maskContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
