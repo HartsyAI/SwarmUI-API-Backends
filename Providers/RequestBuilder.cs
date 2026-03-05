@@ -571,6 +571,12 @@ public sealed class GrokRequestBuilder : BaseRequestBuilder
 
 public sealed class GoogleRequestBuilder : BaseRequestBuilder
 {
+    /// <summary>Checks if a model is a Gemini 3 series model that supports image_size parameter.</summary>
+    private static bool IsGemini3Model(string modelId)
+    {
+        return modelId is "gemini-3.1-flash-image-preview" or "gemini-3-pro-image-preview";
+    }
+
     public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
     {
         bool isGemini = model.Id.StartsWith("gemini-");
@@ -594,10 +600,23 @@ public sealed class GoogleRequestBuilder : BaseRequestBuilder
             {
                 ["responseModalities"] = new JArray { "TEXT", "IMAGE" }
             };
-            // Aspect ratio via image_config
+            // Build image_config with aspect_ratio and optional image_size
+            JObject imageConfig = new();
+            bool hasImageConfig = false;
             if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Google, out string geminiAspect) && !string.IsNullOrEmpty(geminiAspect))
             {
-                genConfig["image_config"] = new JObject { ["aspect_ratio"] = geminiAspect };
+                imageConfig["aspect_ratio"] = geminiAspect;
+                hasImageConfig = true;
+            }
+            // image_size: only supported by Gemini 3 models 
+            if (IsGemini3Model(model.Id) && input.TryGet(SwarmUIAPIBackends.ImageSizeParam_GoogleGemini3, out string imageSize) && !string.IsNullOrEmpty(imageSize))
+            {
+                imageConfig["image_size"] = imageSize;
+                hasImageConfig = true;
+            }
+            if (hasImageConfig)
+            {
+                genConfig["image_config"] = imageConfig;
             }
             return new JObject
             {
@@ -611,8 +630,8 @@ public sealed class GoogleRequestBuilder : BaseRequestBuilder
             parameters["aspectRatio"] = aspect;
         if (input.TryGet(SwarmUIAPIBackends.PersonGenerationParam_Google, out string person) && !string.IsNullOrEmpty(person))
             parameters["personGeneration"] = person;
-        if (input.TryGet(SwarmUIAPIBackends.ImageSizeParam_Google, out string imageSize) && !string.IsNullOrEmpty(imageSize))
-            parameters["imageSize"] = imageSize;
+        if (input.TryGet(SwarmUIAPIBackends.ImageSizeParam_Google, out string imagenImageSize) && !string.IsNullOrEmpty(imagenImageSize))
+            parameters["imageSize"] = imagenImageSize;
         return new JObject
         {
             ["instances"] = new JArray

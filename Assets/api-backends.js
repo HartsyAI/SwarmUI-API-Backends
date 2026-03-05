@@ -10,7 +10,7 @@ const APIBackendsConfig = {
         ideogram_api: ['ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params', 'ideogram_style'],
         bfl_api: ['flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params', 'flux_2_max_params', 'flux_2_pro_params', 'bfl_prompt_enhance', 'bfl_image_prompt'],
         grok_api: ['grok_2_image_params'],
-        google_api: ['google_imagen_params', 'google_gemini_params'],
+        google_api: ['google_imagen_params', 'google_gemini_params', 'google_gemini3_params'],
         fal_api: ['fal_t2i_params', 'fal_i2i_params', 'fal_video_params', 'fal_utility_params', 'fal_aspect_image', 'fal_resolution_image', 'fal_recraft_params', 'fal_sora_video_params', 'fal_kling_video_params', 'fal_veo_video_params', 'fal_minimax_video_params', 'fal_luma_video_params', 'fal_hunyuan_video_params']
     },
 
@@ -21,6 +21,9 @@ const APIBackendsConfig = {
         ],
         google_api: [
             { pattern: 'imagen-3.0', flag: 'google_imagen_params' },
+            { pattern: 'gemini-3.1-flash-image', flag: 'google_gemini3_params' },
+            { pattern: 'gemini-3-pro-image', flag: 'google_gemini3_params' },
+            { pattern: 'gemini-2.5-flash-image', flag: 'google_gemini_params' },
             { pattern: 'gemini-2.0', flag: 'google_gemini_params' }
         ]
     },
@@ -120,6 +123,7 @@ const APIBackendsConfig = {
         if (curArch === 'fal_api') return this.getFalModelFlags(modelName);
         if (curArch === 'bfl_api') return this.getBflModelFlags(modelName);
         if (curArch === 'ideogram_api') return this.getIdeogramModelFlags(modelName);
+        if (curArch === 'google_api') return this.getGoogleModelFlags(modelName);
         if (curArch === 'openai_api') return this.getOpenAIModelFlags(modelName);
         const patterns = this.modelPatterns[curArch];
         if (!patterns) return this.providers[curArch] || [];
@@ -127,6 +131,20 @@ const APIBackendsConfig = {
             if (modelName.includes(pattern)) return [flag];
         }
         return this.providers[curArch] || [];
+    },
+
+    getGoogleModelFlags(modelName) {
+        let flags = [];
+        if (modelName.includes('gemini-3.1-flash-image') || modelName.includes('gemini-3-pro-image')) {
+            flags.push('google_gemini3_params');
+        }
+        else if (modelName.includes('gemini-2.5-flash-image') || modelName.includes('gemini-2.0')) {
+            flags.push('google_gemini_params');
+        }
+        else if (modelName.includes('imagen-')) {
+            flags.push('google_imagen_params');
+        }
+        return flags;
     },
 
     // OpenAI capability-based flags per model

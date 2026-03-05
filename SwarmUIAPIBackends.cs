@@ -104,6 +104,7 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<string> AspectRatioParam_Google;
     public static T2IRegisteredParam<string> PersonGenerationParam_Google;
     public static T2IRegisteredParam<string> ImageSizeParam_Google;
+    public static T2IRegisteredParam<string> ImageSizeParam_GoogleGemini3;
     public static T2IRegisteredParam<Image> InitImageParam_Google => T2IParamTypes.InitImage;
 
     // Fal.ai Text-to-Image Parameters (standard models: FLUX dev/schnell/pro, SD, HiDream, Qwen, Sana, etc.)
@@ -453,6 +454,20 @@ public class SwarmUIAPIBackends : Extension
             "'2K' - Higher resolution (~2048px)",
             "1K", GetValues: _ => ["1K///1K (Standard)", "2K///2K (Higher Quality)"],
             OrderPriority: -7, Group: GoogleImagenGroup, FeatureFlag: "google_imagen_params"));
+
+        ImageSizeParam_GoogleGemini3 = T2IParamTypes.Register<string>(new("Gemini Image Resolution",
+            "Controls the output resolution for Gemini 3 image models.\n" +
+            "Gemini 3.1 Flash: 512px, 1K (default), 2K, 4K\n" +
+            "Gemini 3 Pro: 1K (default), 2K, 4K\n" +
+            "Higher resolutions produce more detailed images but cost more.\n" +
+            "Must use uppercase 'K' (e.g. 1K, 2K, 4K).",
+            "1K", GetValues: _ => [
+                "512px///512px (0.5K - Flash only)",
+                "1K///1K (Standard, Default)",
+                "2K///2K (High Quality)",
+                "4K///4K (Ultra High Quality)"
+            ],
+            OrderPriority: -6, Group: GoogleImagenGroup, FeatureFlag: "google_gemini3_params"));
 
         // Fal.ai Text-to-Image Parameters
         ImageSizeParam_Fal = T2IParamTypes.Register<string>(new("Image Size",
@@ -829,7 +844,7 @@ public class SwarmUIAPIBackends : Extension
             "flux_ultra_params", "flux_pro_params", "flux_dev_params",
             "flux_kontext_pro_params", "flux_kontext_max_params", "flux_2_max_params", "flux_2_pro_params",
             "bfl_prompt_enhance", "bfl_image_prompt",
-            "grok_2_image_params", "google_imagen_params", "google_gemini_params",
+            "grok_2_image_params", "google_imagen_params", "google_gemini_params", "google_gemini3_params",
             "fal_t2i_params", "fal_i2i_params", "fal_video_params", "fal_utility_params",
             "fal_aspect_image", "fal_resolution_image", "fal_recraft_params",
             "fal_sora_video_params", "fal_kling_video_params", "fal_veo_video_params",
