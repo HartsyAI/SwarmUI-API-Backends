@@ -27,8 +27,8 @@ The APIBackends Extension for SwarmUI enables integration with multiple commerci
 - Generate images using DALL-E 3 or GPT Image 1.5
 - Access Black Forest Labs' Flux models
 - Generate with Ideogram V3
-- Create videos with Sora 2, Veo 3.1, Kling, and more via Fal.ai
-- Use utility models for background removal and upscaling
+- Create videos with Seedance 2.0, Sora 2, Veo 3.1, Kling, and more via Fal.ai
+- Use utility models for background removal, upscaling, and face restoration
 - Seamlessly switch between different API providers
 
 > [!WARNING]
@@ -43,11 +43,11 @@ The APIBackends Extension for SwarmUI enables integration with multiple commerci
   - Ideogram (V1, V2, V2 Turbo, V3)
   - Black Forest Labs (FLUX Pro, Ultra, Dev, Kontext Pro/Max, FLUX 2 Pro/Max)
   - Grok (Grok 2 Image)
-  - Google (Imagen 3.0, Gemini 2.0 Flash)
-  - Fal.ai (120+ models -- image, video, and utility -- via a single API key)
+  - Google (Imagen 3.0, Gemini 2.0 Flash, Gemini 2.5 Flash, Gemini 3.1 Flash, Gemini 3 Pro)
+  - Fal.ai (130+ models -- image, video, and utility -- via a single API key)
 * Provider-specific parameter controls that show/hide automatically per model
-* Video generation support (Sora 2, Veo 3.1, Kling, Hailuo, PixVerse, Wan, and more)
-* Utility models for background removal and image upscaling
+* Video generation support (Seedance 2.0, Sora 2, Veo 3.1, Kling, Grok Video, Hailuo, PixVerse, Wan, and more)
+* Utility models for background removal, image/video upscaling, and face restoration
 * Secure per-user API key management
 * Custom base URL support for enterprise deployments
 * Permission system integration for access control
@@ -56,11 +56,11 @@ The APIBackends Extension for SwarmUI enables integration with multiple commerci
 
 Fal.ai acts as a unified gateway to models from many providers. With a single Fal API key you get access to all of them.
 
-**Image Models** include FLUX (dev, schnell, pro, ultra, kontext, flex), Recraft V3, Ideogram, Stability AI (SD 3.5), Grok, Google, Kling, Qwen, Bria, ByteDance Seedream, Reve, ImagineArt, F-Lite, HiDream, OmniGen, AuraFlow, Lumina, Sana, Playground, Kolors, MiniMax, Step1X, Hunyuan, UNO, and Instant Character.
+**Image Models** include FLUX (dev, schnell, pro, ultra, kontext, flex, lora, general), Recraft V3, Ideogram (V2, V2a, V3), Stability AI (SD 3.5, SDXL Lightning, Stable Cascade), Grok, Google (Nano Banana Pro, Imagen 3, Gemini Flash), Kling (V3, O3), Qwen, Bria (Fibo), ByteDance Seedream, Reve, ImagineArt, F-Lite, HiDream (I1, E1), OmniGen, AuraFlow, Lumina, Sana, Playground, Kolors, MiniMax, Step1X, Hunyuan, UNO, and Instant Character.
 
-**Video Models** include Sora 2, Veo 3.1, Kling (O3, V3), Grok Video, MiniMax Hailuo, PixVerse, Wan, LTX, Vidu, Hunyuan, Mochi, Luma Dream Machine, Pika, Kandinsky, Magi, CogVideoX, SkyReels, and Decart Lucy.
+**Video Models** include ByteDance Seedance (2.0, 2.0 Fast, 1.0 Pro, 1.0 Lite -- T2V, I2V, and Ref2V), Sora 2, Veo (3.1, 3, 2), Kling (O3 Pro/Std, V3 Pro/Std, V2.5 Turbo Pro), Grok Video, MiniMax Hailuo, PixVerse V5, Wan 2.2, LTX, Vidu Q3, Hunyuan, Mochi, Luma Ray 2, Pika V2.2, Kandinsky 5 Pro, Magi, CogVideoX, SkyReels, and Decart Lucy.
 
-**Utility Models** include background removal (rembg, Bria RMBG 2.0) and upscaling (Clarity, Topaz).
+**Utility Models** include background removal (rembg, Bria RMBG 2.0, BEN V2), upscaling (Clarity, Topaz, Creative Upscaler, ESRGAN, Topaz Video), face restoration (CodeFormer), and video background removal (Bria Video BG Removal).
 
 > [!NOTE]
 > Future Features:
@@ -117,7 +117,7 @@ If you prefer to install manually:
 1. Go to the **Server** tab > **Backends**
 2. Click **Add New Backend**
 3. Select **3rd Party Paid API Backends**
-4. Check the providers you want to use:
+4. Toggle the providers you want to use:
    - Enable Black Forest Labs (Flux)
    - Enable Ideogram
    - Enable OpenAI
@@ -142,7 +142,7 @@ Video outputs are saved as `.mp4` files. Image outputs follow your normal image 
 This extension uses two configuration surfaces:
 
 - **Backend settings** (Server-side)
-  - Enable/disable providers via checkboxes
+  - Enable/disable providers via toggle switches
   - Optional: set a custom base URL override
 - **User API keys** (Per-user)
   - Each provider has a dedicated API key entry
@@ -166,12 +166,13 @@ Each API provider requires an API key. Get yours here:
 Parameters are shown/hidden automatically based on which model you select.
 
 * **OpenAI:** Image Size, Quality, Style (DALL-E 3), Background (GPT Image), Output Format, Moderation, Output Compression
-* **Ideogram:** Aspect Ratio, Style Type, Magic Prompt, Negative Prompt, Image Prompt (for editing)
-* **Black Forest Labs:** Width, Height, Guidance, Steps, Interval, Prompt Upsampling, Safety Tolerance, Output Format
-* **Grok:** Number of images, response format
-* **Google:** Number of images (Imagen), response modalities (Gemini)
-* **Fal.ai Image:** Image Size, Guidance Scale, Inference Steps, Seed, Output Format, Safety Checker
-* **Fal.ai Video:** Each video model has its own parameter set (e.g., Sora, Kling, Veo, Luma, MiniMax, Hunyuan) with model-specific Duration, Aspect Ratio, Resolution, Generate Audio, and Negative Prompt options
+* **Ideogram:** Aspect Ratio, Style Type, Magic Prompt, Rendering Speed, Image Remix Weight, Color Theme, Negative Prompt, Image Prompt (for editing)
+* **Black Forest Labs:** Width, Height, Guidance, Steps, Prompt Enhancement, Raw Mode, Image Prompt, Safety Filter Level, Output Format
+* **Grok:** Aspect Ratio, Output Resolution
+* **Google:** Aspect Ratio, Person Generation, Image Size (Imagen), Image Resolution (Gemini 3)
+* **Fal.ai Image:** Image Size, Aspect Ratio, Resolution, Guidance Scale, Inference Steps, Seed, Output Format, Safety Checker, Negative Prompt, Recraft Style
+* **Fal.ai Video:** Each video model family has its own parameter set with model-specific Duration, Aspect Ratio, Resolution, Generate Audio, and Negative Prompt options. Supported families: Seedance 2.0, Seedance 1.0, Sora, Kling, Veo, Luma, MiniMax, Hunyuan, and generic (Wan, Pika, PixVerse, etc.)
+* **Fal.ai Seedance Ref2V:** Reference Image URLs, Reference Video URLs, Reference Audio URLs (for multi-reference video generation)
 
 ## Architecture
 ---------------
@@ -198,7 +199,7 @@ SwarmUI-API-Backends/
     Ideogram.cs                -- Ideogram provider
     Grok.cs                    -- Grok/xAI provider
     Google.cs                  -- Google provider (Imagen, Gemini)
-    Fal.cs                     -- Fal.ai provider (120+ models)
+    Fal.cs                     -- Fal.ai provider (130+ models)
   Assets/
     api-backends.js            -- UI parameter visibility (feature flags)
   SwarmUIAPIBackends.cs        -- Extension entry point, param registration
@@ -219,7 +220,7 @@ API models are registered with names like:
 
 - `API Models/<Provider>/<ModelId>`
 
-This groups all API-backed models under a single top-level folder in the model selector. Fal.ai models include a subfolder for the original provider, e.g. `API Models/Fal/Sora/sora-2-t2v`.
+This groups all API-backed models under a single top-level folder in the model selector. Fal.ai models include a subfolder for the original provider, e.g. `API Models/Fal/Sora/sora-2-t2v` or `API Models/Fal/ByteDance/seedance-2.0-t2v`.
 
 ## API
 ------
@@ -262,12 +263,13 @@ In requests, set the `model` parameter to an API model name, for example:
 - `model: "API Models/Ideogram/V_3"`
 - `model: "API Models/BFL/flux-2-max"`
 - `model: "API Models/Fal/Sora/sora-2-t2v"`
+- `model: "API Models/Fal/ByteDance/seedance-2.0-t2v"`
 
 ## Troubleshooting
 -----------------
 
 **No API models in the model list**
-- Make sure at least one provider checkbox is enabled in the backend settings
+- Make sure at least one provider is enabled in the backend settings
 - Check that you clicked **Save** and restarted the backend
 - Look at the SwarmUI server logs for initialization errors
 
@@ -280,9 +282,14 @@ In requests, set the `model` parameter to an API model name, for example:
 - Check the server logs for the full error response from the provider
 - Some providers have rate limits -- wait and retry
 
+**Content policy violation**
+- Some providers (e.g., ByteDance Seedance) have strict content filters that run server-side
+- The video may be fully generated before being rejected, which can still incur costs
+- Adjust your prompt to avoid content that may trigger safety filters
+
 **Video generation completes but no output appears**
 - Check server logs for errors
-- Ensure you're using a video model (IDs ending in `-t2v` or `-i2v`)
+- Ensure you're using a video model (IDs ending in `-t2v`, `-i2v`, or `-ref2v`)
 
 **Parameters not showing/hiding correctly**
 - Hard-refresh your browser (`Ctrl+Shift+R`)
@@ -293,6 +300,7 @@ For further help, join the [Hartsy Discord Community](https://discord.gg/nWfCupj
 ## Changelog
 ------------
 
+* Version 1.3: ByteDance Seedance video models (2.0, 1.0 -- T2V, I2V, Ref2V), toggle switch UI for backend settings, expanded utility model catalog, content policy troubleshooting
 * Version 1.2: Fal.ai video generation support (120+ models), automatic parameter visibility per model type, video output as .mp4
 * Version 1.1: Modular provider/model factory architecture, unified `API Models/<Provider>/...` model naming
 

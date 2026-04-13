@@ -690,7 +690,7 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
 {
     public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
     {
-        bool isVideo = model.Id.EndsWith("-t2v") || model.Id.EndsWith("-i2v");
+        bool isVideo = model.Id.EndsWith("-t2v") || model.Id.EndsWith("-i2v") || model.Id.EndsWith("-ref2v");
         bool isUtility = model.Id.StartsWith("Utility/");
         if (isVideo)
         {
@@ -855,6 +855,18 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         {
             BuildGrokVideoParams(input, request);
         }
+        else if (modelId.Contains("seedance") && modelId.Contains("2.0"))
+        {
+            BuildSeedance2VideoParams(input, request);
+            if (modelId.Contains("ref2v"))
+            {
+                BuildSeedanceRefParams(input, request);
+            }
+        }
+        else if (modelId.Contains("seedance") && modelId.Contains("1.0"))
+        {
+            BuildSeedance1VideoParams(input, request);
+        }
         else
         {
             // Generic video params for other models (Wan, Pika, PixVerse, Vidu, LTX, Mochi, etc.)
@@ -998,6 +1010,99 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0)
         {
             request["seed"] = seed;
+        }
+    }
+
+    /// <summary>Seedance 2.0: duration (auto/4-15), aspect_ratio (many incl auto), resolution (480p/720p), generate_audio, seed</summary>
+    private static void BuildSeedance2VideoParams(T2IParamInput input, JObject request)
+    {
+        if (input.TryGet(SwarmUIAPIBackends.DurationParam_Seedance2, out string duration))
+        {
+            request["duration"] = duration;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Seedance2, out string aspectRatio))
+        {
+            request["aspect_ratio"] = aspectRatio;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.ResolutionParam_Seedance2, out string resolution))
+        {
+            request["resolution"] = resolution;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.GenerateAudioParam_Seedance2, out bool genAudio))
+        {
+            request["generate_audio"] = genAudio;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0)
+        {
+            request["seed"] = seed;
+        }
+    }
+
+    /// <summary>Seedance 1.0: duration (2-12), aspect_ratio (no auto), resolution (480p/720p/1080p), camera_fixed, seed</summary>
+    private static void BuildSeedance1VideoParams(T2IParamInput input, JObject request)
+    {
+        if (input.TryGet(SwarmUIAPIBackends.DurationParam_Seedance1, out string duration))
+        {
+            request["duration"] = duration;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Seedance1, out string aspectRatio))
+        {
+            request["aspect_ratio"] = aspectRatio;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.ResolutionParam_Seedance1, out string resolution))
+        {
+            request["resolution"] = resolution;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.CameraFixedParam_Seedance1, out bool cameraFixed))
+        {
+            request["camera_fixed"] = cameraFixed;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0)
+        {
+            request["seed"] = seed;
+        }
+    }
+
+    /// <summary>Seedance Ref2V: image_urls, video_urls, audio_urls (comma-separated URL strings converted to JSON arrays)</summary>
+    private static void BuildSeedanceRefParams(T2IParamInput input, JObject request)
+    {
+        // Handle image references: combine InitImage (if present as image_url) with extra URL text
+        JArray imageUrls = new();
+        if (request.ContainsKey("image_url"))
+        {
+            imageUrls.Add(request["image_url"].ToString());
+            request.Remove("image_url"); // ref2v uses image_urls array, not image_url
+        }
+        if (input.TryGet(SwarmUIAPIBackends.RefImageURLsParam_Seedance, out string imageUrlStr) && !string.IsNullOrEmpty(imageUrlStr))
+        {
+            foreach (string url in imageUrlStr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                imageUrls.Add(url);
+            }
+        }
+        if (imageUrls.Count > 0)
+        {
+            request["image_urls"] = imageUrls;
+        }
+        // Handle video references
+        if (input.TryGet(SwarmUIAPIBackends.RefVideoURLsParam_Seedance, out string videoUrlStr) && !string.IsNullOrEmpty(videoUrlStr))
+        {
+            JArray videoUrls = new();
+            foreach (string url in videoUrlStr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                videoUrls.Add(url);
+            }
+            request["video_urls"] = videoUrls;
+        }
+        // Handle audio references
+        if (input.TryGet(SwarmUIAPIBackends.RefAudioURLsParam_Seedance, out string audioUrlStr) && !string.IsNullOrEmpty(audioUrlStr))
+        {
+            JArray audioUrls = new();
+            foreach (string url in audioUrlStr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                audioUrls.Add(url);
+            }
+            request["audio_urls"] = audioUrls;
         }
     }
 

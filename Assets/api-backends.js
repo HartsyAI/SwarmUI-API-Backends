@@ -11,7 +11,7 @@ const APIBackendsConfig = {
         bfl_api: ['flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params', 'flux_2_max_params', 'flux_2_pro_params', 'bfl_prompt_enhance', 'bfl_image_prompt'],
         grok_api: ['grok_2_image_params'],
         google_api: ['google_imagen_params', 'google_gemini_params', 'google_gemini3_params'],
-        fal_api: ['fal_t2i_params', 'fal_i2i_params', 'fal_video_params', 'fal_utility_params', 'fal_aspect_image', 'fal_resolution_image', 'fal_recraft_params', 'fal_sora_video_params', 'fal_kling_video_params', 'fal_veo_video_params', 'fal_minimax_video_params', 'fal_luma_video_params', 'fal_hunyuan_video_params']
+        fal_api: ['fal_t2i_params', 'fal_i2i_params', 'fal_video_params', 'fal_utility_params', 'fal_aspect_image', 'fal_resolution_image', 'fal_recraft_params', 'fal_sora_video_params', 'fal_kling_video_params', 'fal_veo_video_params', 'fal_minimax_video_params', 'fal_luma_video_params', 'fal_hunyuan_video_params', 'fal_seedance2_video_params', 'fal_seedance1_video_params', 'fal_seedance_ref_params']
     },
 
     // Model name patterns to feature flags (order matters)
@@ -52,6 +52,7 @@ const APIBackendsConfig = {
         fal_api: {
             '/Utility/': ['initimage'],
             '-i2v': ['seed', 'initimage'],
+            '-ref2v': ['seed', 'initimage'],
             'flux-pro-ultra': ['seed'],
             'nano-banana-pro': ['seed'],
             '/Google/imagen-3': ['seed'],
@@ -203,7 +204,7 @@ const APIBackendsConfig = {
             return ['fal_utility_params'];
         }
         // Video model detection: check suffix OR known video model patterns
-        let isVideo = modelName.endsWith('-t2v') || modelName.endsWith('-i2v');
+        let isVideo = modelName.endsWith('-t2v') || modelName.endsWith('-i2v') || modelName.endsWith('-ref2v');
         if (!isVideo) {
             // Catch video models that don't follow -t2v/-i2v naming
             if (modelName.includes('/CogVideoX/')) isVideo = true;
@@ -214,6 +215,11 @@ const APIBackendsConfig = {
             if (modelName.includes('/Sora/')) return ['fal_sora_video_params'];
             if (modelName.includes('/Kling/')) return ['fal_kling_video_params'];
             if (modelName.includes('/Google/') && modelName.includes('veo')) return ['fal_veo_video_params'];
+            if (modelName.includes('seedance') && modelName.includes('2.0')) {
+                if (modelName.includes('ref2v')) return ['fal_seedance2_video_params', 'fal_seedance_ref_params'];
+                return ['fal_seedance2_video_params'];
+            }
+            if (modelName.includes('seedance') && modelName.includes('1.0')) return ['fal_seedance1_video_params'];
             if (modelName.includes('/MiniMax/')) return ['fal_minimax_video_params'];
             if (modelName.includes('/Luma/')) return ['fal_luma_video_params'];
             if (modelName.includes('/Hunyuan/')) return ['fal_hunyuan_video_params'];
@@ -404,3 +410,37 @@ setTimeout(() => {
     reviseBackendFeatureSet();
     hideUnsupportableParams();
 }, 500);
+
+// Style backend setting checkboxes as toggle switches
+(function() {
+    const style = document.createElement('style');
+    style.textContent = `
+        #backends_list .auto-checkbox {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 2.5em;
+            height: 1.25em;
+            margin-left: 0.4rem;
+            background-color: var(--toggle-background);
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%234b4b4b'/%3e%3c/svg%3e");
+            background-size: contain;
+            background-position: left center;
+            background-repeat: no-repeat;
+            border-radius: 2em;
+            border: none;
+            cursor: pointer;
+            transition: background-position 0.15s ease-in-out, background-color 0.15s ease-in-out;
+            vertical-align: middle;
+        }
+        #backends_list .auto-checkbox:checked {
+            background-color: var(--emphasis);
+            background-position: right center;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
+        }
+        #backends_list .auto-checkbox:focus {
+            outline: 2px solid var(--emphasis);
+            outline-offset: 2px;
+        }
+    `;
+    document.head.appendChild(style);
+})();

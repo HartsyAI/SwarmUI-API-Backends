@@ -166,6 +166,23 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<string> AspectRatioParam_Hunyuan;
     public static T2IRegisteredParam<string> ResolutionParam_Hunyuan;
 
+    // Seedance 2.0 video params (duration: auto/4-15; aspect: many incl auto; resolution: 480p/720p; audio; seed via SeedParam_Fal)
+    public static T2IRegisteredParam<string> DurationParam_Seedance2;
+    public static T2IRegisteredParam<string> AspectRatioParam_Seedance2;
+    public static T2IRegisteredParam<string> ResolutionParam_Seedance2;
+    public static T2IRegisteredParam<bool> GenerateAudioParam_Seedance2;
+
+    // Seedance 1.0 video params (duration: 2-12; aspect: no auto; resolution: 480p/720p/1080p; camera_fixed)
+    public static T2IRegisteredParam<string> DurationParam_Seedance1;
+    public static T2IRegisteredParam<string> AspectRatioParam_Seedance1;
+    public static T2IRegisteredParam<string> ResolutionParam_Seedance1;
+    public static T2IRegisteredParam<bool> CameraFixedParam_Seedance1;
+
+    // Seedance Ref2V multi-reference params (image_urls, video_urls, audio_urls as comma-separated strings)
+    public static T2IRegisteredParam<string> RefImageURLsParam_Seedance;
+    public static T2IRegisteredParam<string> RefVideoURLsParam_Seedance;
+    public static T2IRegisteredParam<string> RefAudioURLsParam_Seedance;
+
     public override void OnPreInit()
     {
         ScriptFiles.Add("Assets/api-backends.js");
@@ -792,6 +809,127 @@ public class SwarmUIAPIBackends : Extension
             ],
             OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_hunyuan_video_params"));
 
+        // ===== SEEDANCE 2.0-SPECIFIC PARAMETERS =====
+        DurationParam_Seedance2 = T2IParamTypes.Register<string>(new("Seedance Two Video Duration",
+            "Length of the generated video.\n" +
+            "Seedance 2.0 supports auto or 4-15 second videos.",
+            "auto", GetValues: _ => [
+                "auto///Auto (Default)",
+                "4///4 seconds",
+                "5///5 seconds",
+                "6///6 seconds",
+                "7///7 seconds",
+                "8///8 seconds",
+                "9///9 seconds",
+                "10///10 seconds",
+                "11///11 seconds",
+                "12///12 seconds",
+                "13///13 seconds",
+                "14///14 seconds",
+                "15///15 seconds"
+            ],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance2_video_params"));
+
+        AspectRatioParam_Seedance2 = T2IParamTypes.Register<string>(new("Seedance Two Video Aspect Ratio",
+            "Aspect ratio for the generated video.\n" +
+            "Seedance 2.0 supports multiple aspect ratios including auto.",
+            "auto", GetValues: _ => [
+                "auto///Auto (Default)",
+                "21:9///Ultra-wide (21:9)",
+                "16:9///Widescreen (16:9)",
+                "4:3///Standard (4:3)",
+                "1:1///Square (1:1)",
+                "3:4///Portrait (3:4)",
+                "9:16///Tall Portrait (9:16)"
+            ],
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance2_video_params"));
+
+        ResolutionParam_Seedance2 = T2IParamTypes.Register<string>(new("Seedance Two Video Resolution",
+            "Resolution of the generated video.\n" +
+            "Seedance 2.0 supports 480p and 720p.",
+            "720p", GetValues: _ => [
+                "480p///480p (Fast)",
+                "720p///720p (Default)"
+            ],
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance2_video_params"));
+
+        GenerateAudioParam_Seedance2 = T2IParamTypes.Register<bool>(new("Seedance Two Generate Audio",
+            "Generate synchronized audio alongside the video.\n" +
+            "Seedance 2.0 supports native audio generation including lip-synced speech.",
+            "true",
+            OrderPriority: -7, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance2_video_params"));
+
+        // ===== SEEDANCE 1.0-SPECIFIC PARAMETERS =====
+        DurationParam_Seedance1 = T2IParamTypes.Register<string>(new("Seedance One Video Duration",
+            "Length of the generated video in seconds.\n" +
+            "Seedance 1.0 supports 2-12 second videos.",
+            "5", GetValues: _ => [
+                "2///2 seconds",
+                "3///3 seconds",
+                "4///4 seconds",
+                "5///5 seconds (Default)",
+                "6///6 seconds",
+                "7///7 seconds",
+                "8///8 seconds",
+                "9///9 seconds",
+                "10///10 seconds",
+                "11///11 seconds",
+                "12///12 seconds"
+            ],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance1_video_params"));
+
+        AspectRatioParam_Seedance1 = T2IParamTypes.Register<string>(new("Seedance One Video Aspect Ratio",
+            "Aspect ratio for the generated video.\n" +
+            "Seedance 1.0 supports multiple aspect ratios.",
+            "16:9", GetValues: _ => [
+                "21:9///Ultra-wide (21:9)",
+                "16:9///Widescreen (16:9, Default)",
+                "4:3///Standard (4:3)",
+                "1:1///Square (1:1)",
+                "3:4///Portrait (3:4)",
+                "9:16///Tall Portrait (9:16)"
+            ],
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance1_video_params"));
+
+        ResolutionParam_Seedance1 = T2IParamTypes.Register<string>(new("Seedance One Video Resolution",
+            "Resolution of the generated video.\n" +
+            "Seedance 1.0 supports 480p, 720p, and 1080p.",
+            "1080p", GetValues: _ => [
+                "480p///480p (Fast)",
+                "720p///720p (Standard)",
+                "1080p///1080p (HD, Default)"
+            ],
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance1_video_params"));
+
+        CameraFixedParam_Seedance1 = T2IParamTypes.Register<bool>(new("Seedance One Camera Fixed",
+            "Whether to fix the camera position during video generation.\n" +
+            "When enabled, the camera stays stationary.",
+            "false",
+            OrderPriority: -7, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance1_video_params"));
+
+        // ===== SEEDANCE REF2V MULTI-REFERENCE PARAMETERS =====
+        RefImageURLsParam_Seedance = T2IParamTypes.Register<string>(new("Seedance Reference Image URLs",
+            "Comma-separated URLs of reference images (up to 9).\n" +
+            "In your prompt, reference them as @Image1, @Image2, etc.\n" +
+            "Supports JPEG, PNG, WebP (max 30 MB each).",
+            "",
+            OrderPriority: -6, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance_ref_params"));
+
+        RefVideoURLsParam_Seedance = T2IParamTypes.Register<string>(new("Seedance Reference Video URLs",
+            "Comma-separated URLs of reference videos (up to 3).\n" +
+            "In your prompt, reference them as @Video1, @Video2, etc.\n" +
+            "Supports MP4, MOV (2-15s combined, max 50 MB total).",
+            "",
+            OrderPriority: -5, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance_ref_params"));
+
+        RefAudioURLsParam_Seedance = T2IParamTypes.Register<string>(new("Seedance Reference Audio URLs",
+            "Comma-separated URLs of reference audio files (up to 3).\n" +
+            "In your prompt, reference them as @Audio1, @Audio2, etc.\n" +
+            "Supports MP3, WAV (max 15s combined, 15 MB each).\n" +
+            "Requires at least one reference image or video.",
+            "",
+            OrderPriority: -4, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance_ref_params"));
+
         RegisterFeatureFlags();
         Program.Backends.RegisterBackendType<DynamicAPIBackend>("dynamic_api_backend", "3rd Party Paid API Backends", "Generate images using various API services (OpenAI, Ideogram, Black Forest Labs, Grok, Google, Fal.ai)", true);
         // All key types must be added to the accepted list first
@@ -848,7 +986,8 @@ public class SwarmUIAPIBackends : Extension
             "fal_t2i_params", "fal_i2i_params", "fal_video_params", "fal_utility_params",
             "fal_aspect_image", "fal_resolution_image", "fal_recraft_params",
             "fal_sora_video_params", "fal_kling_video_params", "fal_veo_video_params",
-            "fal_luma_video_params", "fal_minimax_video_params", "fal_hunyuan_video_params"
+            "fal_luma_video_params", "fal_minimax_video_params", "fal_hunyuan_video_params",
+            "fal_seedance2_video_params", "fal_seedance1_video_params", "fal_seedance_ref_params"
         ];
 
         // Features incompatible with API backends (local-only features)
