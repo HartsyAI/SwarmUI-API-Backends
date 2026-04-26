@@ -211,9 +211,10 @@ public class SwarmUIAPIBackends : Extension
         BlackForestAdvancedGroup = new("Flux Advanced Settings", Toggles: true, Open: false, OrderPriority: 41, Description: "Additional options for fine-tuning Flux generations and output processing.");
 
         SizeParam_OpenAI = T2IParamTypes.Register<string>(new("Output Resolution", "Controls the dimensions of the generated image.\n" + "DALL-E 2: 256x256, 512x512, or 1024x1024\n" + "DALL-E 3: 1024x1024, 1792x1024, or 1024x1792\n" +
-            "GPT Image 1: auto, 1024x1024, 1536x1024, or 1024x1536", "1024x1024", GetValues: model =>
+            "GPT Image 1: auto, 1024x1024, 1536x1024, or 1024x1536\n" + "GPT Image 2: auto, up to 2K (edges must be multiples of 16, max 3840px)", "1024x1024", GetValues: model =>
             {
                 if (model.ID.Contains("dall-e-2")) return ["256x256", "512x512", "1024x1024"];
+                else if (model.ID.Contains("gpt-image-2")) return ["auto///Auto (Recommended)", "1024x1024///Square (1K)", "1536x1024///Landscape (1.5K)", "1024x1536///Portrait (1.5K)", "2048x2048///Square (2K)", "2048x1152///Wide Landscape (2K)", "1152x2048///Tall Portrait (2K)"];
                 else if (model.ID.Contains("gpt-image-1")) return ["auto///Auto (Recommended)", "1024x1024///Square", "1536x1024///Landscape", "1024x1536///Portrait"];
                 else return ["1024x1024", "1792x1024", "1024x1792"];
             },

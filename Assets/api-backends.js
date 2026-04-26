@@ -6,7 +6,7 @@
 const APIBackendsConfig = {
     // Provider IDs mapped to their model-specific feature flags
     providers: {
-        openai_api: ['dalle2_params', 'dalle3_params', 'gpt-image-1_params', 'gpt-image-1.5_params', 'gpt_image_params', 'openai_image_size', 'openai_sora_params'],
+        openai_api: ['dalle2_params', 'dalle3_params', 'gpt-image-1_params', 'gpt-image-1.5_params', 'gpt-image-2_params', 'gpt_image_params', 'openai_image_size', 'openai_sora_params'],
         ideogram_api: ['ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params', 'ideogram_style'],
         bfl_api: ['flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params', 'flux_2_max_params', 'flux_2_pro_params', 'bfl_prompt_enhance', 'bfl_image_prompt'],
         grok_api: ['grok_2_image_params'],
@@ -154,12 +154,13 @@ const APIBackendsConfig = {
         // Model-specific flag
         if (modelName.includes('sora-2-pro')) flags.push('openai_sora_params');
         else if (modelName.includes('sora-2')) flags.push('openai_sora_params');
+        else if (modelName.includes('gpt-image-2')) flags.push('gpt-image-2_params');
         else if (modelName.includes('gpt-image-1.5')) flags.push('gpt-image-1.5_params');
         else if (modelName.includes('gpt-image-1')) flags.push('gpt-image-1_params');
         else if (modelName.includes('dall-e-3')) flags.push('dalle3_params');
         else if (modelName.includes('dall-e-2')) flags.push('dalle2_params');
         // Shared GPT Image params (quality, background, moderation, output format, compression)
-        if (modelName.includes('gpt-image-1')) flags.push('gpt_image_params');
+        if (modelName.includes('gpt-image-')) flags.push('gpt_image_params');
         // Image size param: all non-Sora image models
         if (!modelName.includes('sora-')) flags.push('openai_image_size');
         return flags;

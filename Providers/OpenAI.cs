@@ -71,6 +71,19 @@ public sealed class OpenAIProvider : IProviderSource
             .WithFeatureFlag("gpt-image-1.5_params")
             .Build(),
 
+        ModelDefinitionBuilder.Create()
+            .WithId("gpt-image-2")
+            .WithTitle("GPT Image 2")
+            .WithDescription("State-of-the-art image generation with exceptional photorealism, precise text rendering, and up to 2K resolution")
+            .WithAuthor("OpenAI")
+            .WithDimensions(1024, 1024)
+            .WithPreviewImage("Images/ModelPreviews/OpenAI/gpt-image-2.png")
+            .WithDate("2026")
+            .WithUsageHint("Best for photorealistic images, accurate text, product photography, and complex visual layouts")
+            .WithTags("gpt-image", "high-quality", "text-accurate", "photorealistic")
+            .WithFeatureFlag("gpt-image-2_params")
+            .Build(),
+
         // Sora Video Models
         ModelDefinitionBuilder.Create()
             .WithId("sora-2-t2v")

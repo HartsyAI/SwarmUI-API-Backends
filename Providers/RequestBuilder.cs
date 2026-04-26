@@ -126,7 +126,7 @@ public sealed class OpenAIRequestBuilder : BaseRequestBuilder
             ["n"] = GetNumImages(input),
             ["size"] = input.TryGet(SwarmUIAPIBackends.SizeParam_OpenAI, out string size) ? size : "1024x1024"
         };
-        if (modelName is "gpt-image-1" or "gpt-image-1.5")
+        if (modelName is "gpt-image-1" or "gpt-image-1.5" or "gpt-image-2")
         {
             if (input.TryGet(SwarmUIAPIBackends.QualityParam_GPTImage1, out string quality)) request["quality"] = quality;
             if (input.TryGet(SwarmUIAPIBackends.BackgroundParam_GPTImage1, out string bg)) request["background"] = bg;
