@@ -70,6 +70,19 @@ public sealed class IdeogramProvider : IProviderSource
             .WithUsageHint("Best for professional-grade images with perfect text")
             .WithTags("text-rendering", "premium", "high-quality")
             .WithFeatureFlag("ideogram_v3_params")
+            .Build(),
+
+        ModelDefinitionBuilder.Create()
+            .WithId("V_4")
+            .WithTitle("Ideogram V4")
+            .WithDescription("Newest generation with a streamlined high-resolution prompt-to-image workflow")
+            .WithAuthor("Ideogram")
+            .WithDimensions(1024, 1024)
+            .WithPreviewImage("Images/ModelPreviews/Ideogram/v4.jpg")
+            .WithDate("2026")
+            .WithUsageHint("Best for high-resolution images; uses fixed resolutions and a rendering-speed/quality control")
+            .WithTags("text-rendering", "premium", "high-quality", "high-resolution")
+            .WithFeatureFlag("ideogram_v4_params")
             .Build()
     ];
 }

@@ -162,6 +162,13 @@ public class DynamicAPIBackend : APIAbstractBackend
         return lower.Contains("/v_3") || lower.Contains("/v3") || lower.Contains("v_3") || lower.Contains("v3");
     }
 
+    private static bool IsIdeogramV4Model(string modelName)
+    {
+        if (string.IsNullOrEmpty(modelName)) return false;
+        string lower = modelName.ToLowerInvariant();
+        return lower.Contains("/v_4") || lower.Contains("/v4") || lower.Contains("v_4") || lower.Contains("v4");
+    }
+
     /// <summary>Determines the provider ID from a model name.</summary>
     private string GetProviderIdFromModel(string modelName)
     {
@@ -213,6 +220,10 @@ public class DynamicAPIBackend : APIAbstractBackend
         }
         else if (providerId is "ideogram_api")
         {
+            if (IsIdeogramV4Model(modelName))
+            {
+                return "https://api.ideogram.ai/v1/ideogram-v4/generate";
+            }
             bool hasInputImage = CheckIdeogramEdit(input);
             bool isV3 = IsIdeogramV3Model(modelName);
             string baseUrlForIdeogram = isV3 ? hasInputImage ? "https://api.ideogram.ai/v1/ideogram-v3/edit" : "https://api.ideogram.ai/v1/ideogram-v3/generate" : hasInputImage ? "https://api.ideogram.ai/edit" : baseUrl;
@@ -257,7 +268,7 @@ public class DynamicAPIBackend : APIAbstractBackend
         HttpRequestMessage request = new(HttpMethod.Post, baseUrl);
         string modelName = input.Get(T2IParamTypes.Model).Name;
         string providerId = GetProviderIdFromModel(modelName);
-        if (providerId == "ideogram_api" && CheckIdeogramEdit(input))
+        if (providerId == "ideogram_api" && (CheckIdeogramEdit(input) || IsIdeogramV4Model(modelName)))
         {
             MultipartFormDataContent formData = new MultipartFormDataContent();
             foreach (JProperty property in requestBody.Properties())

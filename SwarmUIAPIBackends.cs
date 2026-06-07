@@ -69,6 +69,8 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<string> MagicPromptParam_Ideogram;
     public static T2IRegisteredParam<string> RenderingSpeedParam_Ideogram;
 
+    public static T2IRegisteredParam<string> RenderingSpeedParam_IdeogramV4;
+
     public static T2IRegisteredParam<string> ColorPaletteParam_Ideogram;
     public static T2IRegisteredParam<Image> ImagePromptParam_Ideogram;
     public static T2IRegisteredParam<Image> ImageMaskPromptParam_Ideogram;
@@ -344,6 +346,15 @@ public class SwarmUIAPIBackends : Extension
             "'Turbo' - Faster generation with slightly reduced quality",
             "DEFAULT", GetValues: _ => ["DEFAULT///Default (Standard Quality)", "TURBO///Turbo (Faster)"],
             OrderPriority: -6, Group: IdeogramAdvancedGroup, FeatureFlag: "ideogram_v3_params"));
+
+        // Flash is not yet supported by the API (check docs) 
+        RenderingSpeedParam_IdeogramV4 = T2IParamTypes.Register<string>(new("Ideogram V4 Rendering Speed",
+            "Controls the speed/quality tradeoff for Ideogram V4 generation:\n" +
+            "'Turbo' - Fastest generation\n" +
+            "'Default' - Standard balance of speed and quality\n" +
+            "'Quality' - Highest quality, slower generation",
+            "DEFAULT", GetValues: _ => ["TURBO///Turbo (Faster)", "DEFAULT///Default (Balanced)", "QUALITY///Quality (Best)"],
+            OrderPriority: -9, Group: IdeogramGeneralGroup, FeatureFlag: "ideogram_v4_params"));
 
         ImageWeightParam_Ideogram = T2IParamTypes.Register<double>(new("Image Remix Weight",
             "Controls how strongly the input image influences the remixed generation (V3 only).\n" +
@@ -979,7 +990,7 @@ public class SwarmUIAPIBackends : Extension
         // Model-specific feature flags
         string[] modelFlags = [
             "dalle2_params", "dalle3_params", "gpt-image-1_params", "gpt-image-1.5_params", "gpt_image_params", "openai_image_size",
-            "ideogram_v1_params", "ideogram_v2_params", "ideogram_v3_params", "ideogram_style",
+            "ideogram_v1_params", "ideogram_v2_params", "ideogram_v3_params", "ideogram_v4_params", "ideogram_style",
             "flux_ultra_params", "flux_pro_params", "flux_dev_params",
             "flux_kontext_pro_params", "flux_kontext_max_params", "flux_2_max_params", "flux_2_pro_params",
             "bfl_prompt_enhance", "bfl_image_prompt",

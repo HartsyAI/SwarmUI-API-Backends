@@ -304,8 +304,26 @@ public sealed class IdeogramRequestBuilder : BaseRequestBuilder
         return id.Contains("v_3") || id.Contains("v3");
     }
 
+    private static bool IsV4Model(ModelDefinition model)
+    {
+        string id = model.Id?.ToLowerInvariant() ?? "";
+        return id.Contains("v_4") || id.Contains("v4");
+    }
+
     public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
     {
+        if (IsV4Model(model))
+        {
+            JObject v4 = new()
+            {
+                ["text_prompt"] = input.Get(T2IParamTypes.Prompt)
+            };
+            if (input.TryGet(SwarmUIAPIBackends.RenderingSpeedParam_IdeogramV4, out string v4speed) && !string.IsNullOrEmpty(v4speed))
+            {
+                v4["rendering_speed"] = v4speed;
+            }
+            return v4;
+        }
         bool isV3 = IsV3Model(model);
         bool hasInitImage = input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null;
         bool hasMask = input.TryGet(T2IParamTypes.MaskImage, out Image maskImg) && maskImg?.RawData is not null;
@@ -358,6 +376,10 @@ public sealed class IdeogramRequestBuilder : BaseRequestBuilder
     {
         bool hasInitImage = input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null;
         bool hasMask = input.TryGet(T2IParamTypes.MaskImage, out Image maskImg) && maskImg?.RawData is not null;
+        if (IsV4Model(model))
+        {
+            return "https://api.ideogram.ai/v1/ideogram-v4/generate";
+        }
         if (IsV3Model(model))
         {
             if (hasInitImage && hasMask) return "https://api.ideogram.ai/v1/ideogram-v3/edit";

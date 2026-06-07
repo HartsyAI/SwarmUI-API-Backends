@@ -7,7 +7,7 @@ const APIBackendsConfig = {
     // Provider IDs mapped to their model-specific feature flags
     providers: {
         openai_api: ['dalle2_params', 'dalle3_params', 'gpt-image-1_params', 'gpt-image-1.5_params', 'gpt-image-2_params', 'gpt_image_params', 'openai_image_size', 'openai_sora_params'],
-        ideogram_api: ['ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params', 'ideogram_style'],
+        ideogram_api: ['ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params', 'ideogram_v4_params', 'ideogram_style'],
         bfl_api: ['flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params', 'flux_2_max_params', 'flux_2_pro_params', 'bfl_prompt_enhance', 'bfl_image_prompt'],
         grok_api: ['grok_2_image_params'],
         google_api: ['google_imagen_params', 'google_gemini_params', 'google_gemini3_params'],
@@ -169,6 +169,7 @@ const APIBackendsConfig = {
     // Ideogram capability-based flags per model
     getIdeogramModelFlags(modelName) {
         let flags = [];
+        if (modelName.includes('V_4')) { flags.push('ideogram_v4_params'); return flags; }
         // Model-specific flag
         if (modelName.includes('V_3')) flags.push('ideogram_v3_params');
         else if (modelName.includes('V_2_TURBO')) flags.push('ideogram_v2_params');
@@ -303,6 +304,9 @@ const APIBackendsConfig = {
             if (['steps', 'cfgscale'].includes(paramId) && flags.includes('fal_t2i_params')) return true;
             // Edit/I2I models use core Init Image
             if (paramId === 'initimage' && flags.includes('fal_i2i_params')) return true;
+        }
+        if (curArch === 'ideogram_api' && modelName.includes('V_4')) {
+            return false;
         }
         const providerConfig = this.coreParamsToShow[curArch];
         if (!providerConfig) return false;
