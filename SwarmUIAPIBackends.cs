@@ -196,7 +196,10 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<string> DurationParam_Wan26;
     public static T2IRegisteredParam<string> DurationParam_Wan27, AspectRatioParam_Wan27, DurationParam_Wan27Ref;
     public static T2IRegisteredParam<string> ResolutionParam_Wan2x;
-    public static T2IRegisteredParam<string> AudioUrlParam_Wan, EndImageUrlParam_Wan, RefImageUrlsParam_Wan, RefVideoUrlsParam_Wan;
+    public static T2IRegisteredParam<string> AudioUrlParam_Wan, RefImageUrlsParam_Wan, RefVideoUrlsParam_Wan;
+    /// <summary>Shared by any i2v model that accepts a final frame (Wan 2.7, Seedance 2.5).</summary>
+    public static T2IRegisteredParam<string> EndImageUrlParam;
+    public static T2IRegisteredParam<string> DurationParam_Seedance25;
     public static T2IRegisteredParam<bool> PromptExpansionParam_Wan, MultiShotsParam_Wan;
     public static T2IRegisteredParam<string> DurationParam_KlingTurbo;
 
@@ -933,7 +936,7 @@ public class SwarmUIAPIBackends : Extension
                 "14///14 seconds",
                 "15///15 seconds"
             ],
-            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance2_video_params"));
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance2_duration"));
 
         AspectRatioParam_Seedance2 = T2IParamTypes.Register<string>(new("Seedance Two Video Aspect Ratio",
             "Aspect ratio for the generated video.\n" +
@@ -1058,10 +1061,10 @@ public class SwarmUIAPIBackends : Extension
             "3-30 seconds, up to 15 MB. Leave empty for a silent generation.",
             "", OrderPriority: -6, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_wan_audio"));
 
-        EndImageUrlParam_Wan = T2IParamTypes.Register<string>(new("Last Frame Image URL",
+        EndImageUrlParam = T2IParamTypes.Register<string>(new("Last Frame Image URL",
             "Publicly accessible image URL to use as the final frame.\n" +
             "The model generates the motion between your Init Image and this one.",
-            "", OrderPriority: -5, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_wan27_i2v_params"));
+            "", OrderPriority: -5, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_end_image_url"));
 
         RefImageUrlsParam_Wan = T2IParamTypes.Register<string>(new("Wan Reference Image URLs",
             "Comma-separated image URLs describing character or object appearance.\n" +
@@ -1082,6 +1085,11 @@ public class SwarmUIAPIBackends : Extension
             "Let the model split the video into multiple camera shots.\n" +
             "Only takes effect when Prompt Expansion is enabled.", "false",
             OrderPriority: -3, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_wan_multishot"));
+
+        DurationParam_Seedance25 = T2IParamTypes.Register<string>(new("Seedance TwoFive Video Duration",
+            "Length of the generated video. Seedance 2.5 runs up to 30 seconds in a single shot.", "auto",
+            GetValues: _ => ["auto///Auto (Default)", .. Enumerable.Range(4, 27).Select(i => $"{i}///{i} seconds")],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance25_params"));
 
         DurationParam_KlingTurbo = T2IParamTypes.Register<string>(new("Kling Turbo Video Duration",
             "Length of the generated video, 3 to 15 seconds.\n" +
@@ -1196,7 +1204,7 @@ public class SwarmUIAPIBackends : Extension
             "fal_vidu_params", "fal_pika_params", "fal_kandinsky_params", "fal_cogvideox_params",
             "fal_wan25_params", "fal_wan26_params", "fal_wan27_params", "fal_wan27ref_params",
             "fal_wan27_aspect", "fal_wan2x_resolution", "fal_wan_audio", "fal_wan_expansion",
-            "fal_wan_multishot", "fal_wan27_i2v_params", "fal_kling_turbo_params"
+            "fal_wan_multishot", "fal_end_image_url", "fal_kling_turbo_params", "fal_seedance25_params", "fal_seedance2_duration"
         ];
 
         // Features incompatible with API backends (local-only features)

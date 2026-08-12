@@ -749,6 +749,8 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         ["video.wan27_i2v"] = (i, r, m) => BuildWan27VideoParams(i, r, aspect: false, endImage: true),
         ["video.wan27_ref"] = (i, r, m) => BuildWan27RefVideoParams(i, r),
         ["video.kling_turbo"] = (i, r, m) => BuildKlingTurboVideoParams(i, r),
+        ["video.seedance25"] = (i, r, m) => BuildSeedance25VideoParams(i, r, m, endImage: false),
+        ["video.seedance25_i2v"] = (i, r, m) => BuildSeedance25VideoParams(i, r, m, endImage: true),
         ["utility.image"] = (i, r, m) => BuildUtilityImageParams(i, r),
         ["utility.video"] = (i, r, m) => BuildUtilityVideoParams(i, r)
     };
@@ -1014,7 +1016,7 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         PutInt(input, request, "duration", SwarmUIAPIBackends.DurationParam_Wan27);
         if (aspect) Put(input, request, "aspect_ratio", SwarmUIAPIBackends.AspectRatioParam_Wan27);
         Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_Wan2x);
-        if (endImage) Put(input, request, "end_image_url", SwarmUIAPIBackends.EndImageUrlParam_Wan);
+        if (endImage) Put(input, request, "end_image_url", SwarmUIAPIBackends.EndImageUrlParam);
         AddWanShared(input, request);
         AddSeedAndNegative(input, request, negative: true);
     }
@@ -1037,6 +1039,21 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         if (videos is not null) request["reference_video_urls"] = videos;
         if (input.TryGet(SwarmUIAPIBackends.MultiShotsParam_Wan, out bool multi)) request["multi_shots"] = multi;
         AddSeedAndNegative(input, request, negative: true);
+    }
+
+    /// <summary>Seedance 2.5: duration (auto or 4-30, as a string), aspect_ratio, resolution (480p/720p),
+    /// generate_audio. Takes no seed input - seed is only returned in the response.</summary>
+    private static void BuildSeedance25VideoParams(T2IParamInput input, JObject request, ModelDefinition model, bool endImage)
+    {
+        Put(input, request, "duration", SwarmUIAPIBackends.DurationParam_Seedance25);
+        Put(input, request, "aspect_ratio", SwarmUIAPIBackends.AspectRatioParam_Seedance2);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_Seedance2);
+        if (input.TryGet(SwarmUIAPIBackends.GenerateAudioParam_Seedance2, out bool audio)) request["generate_audio"] = audio;
+        if (endImage) Put(input, request, "end_image_url", SwarmUIAPIBackends.EndImageUrlParam);
+        if (model.ExtraFlags.Contains("fal_seedance_ref_params"))
+        {
+            BuildSeedanceRefParams(input, request);
+        }
     }
 
     /// <summary>Kling V3 Turbo Pro: prompt, image_url and duration only. No aspect, resolution, audio, negative or seed.</summary>

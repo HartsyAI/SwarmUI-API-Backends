@@ -25,7 +25,7 @@ public static class ModelCapabilities
         ["video.minimax"] = ["fal_minimax_video_params"],
         ["video.hunyuan"] = ["fal_hunyuan_video_params"],
         ["video.seedance1"] = ["fal_seedance1_video_params"],
-        ["video.seedance2"] = ["fal_seedance2_video_params"],
+        ["video.seedance2"] = ["fal_seedance2_video_params", "fal_seedance2_duration"],
         // Per-family video enums, verified against fal's published schemas 2026-08-12.
         ["video.wan22"] = ["fal_wan22_params", "fal_video_negative"],
         ["video.pixverse"] = ["fal_pixverse_params", "fal_video_negative"],
@@ -39,10 +39,13 @@ public static class ModelCapabilities
         ["video.wan26"] = ["fal_wan26_params", "fal_wan2x_resolution", "fal_wan_audio", "fal_wan_expansion", "fal_wan_multishot", "fal_video_negative"],
         ["video.wan27"] = ["fal_wan27_params", "fal_wan27_aspect", "fal_wan2x_resolution", "fal_wan_audio", "fal_wan_expansion", "fal_video_negative"],
         // Image-to-video takes its aspect ratio from the input image, so no aspect param.
-        ["video.wan27_i2v"] = ["fal_wan27_params", "fal_wan2x_resolution", "fal_wan_audio", "fal_wan_expansion", "fal_wan27_i2v_params", "fal_video_negative"],
+        ["video.wan27_i2v"] = ["fal_wan27_params", "fal_wan2x_resolution", "fal_wan_audio", "fal_wan_expansion", "fal_end_image_url", "fal_video_negative"],
         ["video.wan27_ref"] = ["fal_wan27ref_params", "fal_wan27_aspect", "fal_wan2x_resolution", "fal_wan_multishot", "fal_video_negative"],
         // Kling V3 Turbo takes prompt, image and duration only.
         ["video.kling_turbo"] = ["fal_kling_turbo_params"],
+        // Seedance 2.5 runs to 30s and takes no seed input; 2.0 (incl. Mini) stays capped at 15s.
+        ["video.seedance25"] = ["fal_seedance25_params", "fal_seedance2_video_params"],
+        ["video.seedance25_i2v"] = ["fal_seedance25_params", "fal_seedance2_video_params", "fal_end_image_url"],
         ["video.grok"] = ["fal_video_params", "fal_video_audio", "fal_video_negative"],
 
         // Non-Fal providers keep their own per-model flags on the ModelDefinition.
