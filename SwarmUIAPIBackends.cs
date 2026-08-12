@@ -19,6 +19,7 @@ public static class APIBackendsPermissions
     public static readonly PermInfo PermUseGrok = Permissions.Register(new("use_grok", "Use Grok API", "Allows using Grok's API for image generation.", PermissionDefault.POWERUSERS, APIBackendsPermGroup));
     public static readonly PermInfo PermUseGoogleImagen = Permissions.Register(new("use_google_api", "Use Google API", "Allows using Google's image generation models (Imagen, Gemini) for image generation.", PermissionDefault.POWERUSERS, APIBackendsPermGroup));
     public static readonly PermInfo PermUseFal = Permissions.Register(new("use_fal_api", "Use Fal.ai API", "Allows using Fal.ai's 600+ models for image and video generation.", PermissionDefault.POWERUSERS, APIBackendsPermGroup));
+    public static readonly PermInfo PermViewCapabilities = Permissions.Register(new("view_api_model_capabilities", "View API Model Capabilities", "Allows reading the API model capability map that drives parameter visibility.", PermissionDefault.GUEST, APIBackendsPermGroup));
 }
 
 /// <summary>Extension that adds support for various API-based image generation services.</summary>
@@ -179,6 +180,10 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<string> AspectRatioParam_Seedance1;
     public static T2IRegisteredParam<string> ResolutionParam_Seedance1;
     public static T2IRegisteredParam<bool> CameraFixedParam_Seedance1;
+
+    // Fal utility params (upscalers, background removal, face restoration)
+    public static T2IRegisteredParam<double> UpscaleFactorParam_FalUtility;
+    public static T2IRegisteredParam<string> VideoUrlParam_FalUtility;
 
     // Seedance Ref2V multi-reference params (image_urls, video_urls, audio_urls as comma-separated strings)
     public static T2IRegisteredParam<string> RefImageURLsParam_Seedance;
@@ -919,6 +924,19 @@ public class SwarmUIAPIBackends : Extension
             "false",
             OrderPriority: -7, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance1_video_params"));
 
+        // ===== FAL UTILITY PARAMETERS =====
+        UpscaleFactorParam_FalUtility = T2IParamTypes.Register<double>(new("Upscale Factor",
+            "How many times larger to make the image.\n" +
+            "Only applies to upscaler models; ignored by background removal and face restoration.",
+            "2", Min: 1.0, Max: 4.0, Step: 0.5, ViewType: ParamViewType.SLIDER,
+            OrderPriority: -10, Group: T2IParamTypes.GroupSampling, FeatureFlag: "fal_utility_params"));
+
+        VideoUrlParam_FalUtility = T2IParamTypes.Register<string>(new("Input Video URL",
+            "Publicly accessible URL of the video to process.\n" +
+            "Required by the video utility models (video upscale, video background removal),\n" +
+            "which take a video rather than the Init Image used by the image utilities.",
+            "", OrderPriority: -9, Group: T2IParamTypes.GroupSampling, FeatureFlag: "fal_utility_video_params"));
+
         // ===== SEEDANCE REF2V MULTI-REFERENCE PARAMETERS =====
         RefImageURLsParam_Seedance = T2IParamTypes.Register<string>(new("Seedance Reference Image URLs",
             "Comma-separated URLs of reference images (up to 9).\n" +
@@ -951,6 +969,13 @@ public class SwarmUIAPIBackends : Extension
             BasicAPIFeatures.AcceptedAPIKeyTypes.Add(keyType);
         }
         _ = APIProviderRegistry.Instance;
+        WebAPI.APIBackendsAPI.Register();
+        // A model declaring a family nothing knows about would silently lose all its params, so fail loudly at startup.
+        List<string> unknown = ModelCapabilities.UnknownFamilies(APIProviderRegistry.Instance.ModelsByFullName.Values);
+        if (unknown.Count > 0)
+        {
+            Logs.Error($"[APIBackends] Models declare unknown param families: {string.Join(", ", unknown)}. Their parameters will not appear.");
+        }
         RegisterApiKeyIfNeeded("openai_api", "openai", "OpenAI (ChatGPT)", "https://platform.openai.com/api-keys", new HtmlString("To use OpenAI models in SwarmUI (via Hartsy extensions), you must set your OpenAI API key."));
         RegisterApiKeyIfNeeded("bfl_api", "black_forest", "Black Forest Labs (FLUX)", "https://dashboard.bfl.ai/", new HtmlString("To use Black Forest in SwarmUI (via Hartsy extensions), you must set your Black Forest API key."));
         RegisterApiKeyIfNeeded("ideogram_api", "ideogram", "Ideogram", "https://developer.ideogram.ai/ideogram-api/api-setup", new HtmlString("To use Ideogram in SwarmUI (via Hartsy extensions), you must set your Ideogram API key."));
@@ -999,7 +1024,8 @@ public class SwarmUIAPIBackends : Extension
             "fal_aspect_image", "fal_resolution_image", "fal_recraft_params",
             "fal_sora_video_params", "fal_kling_video_params", "fal_veo_video_params",
             "fal_luma_video_params", "fal_minimax_video_params", "fal_hunyuan_video_params",
-            "fal_seedance2_video_params", "fal_seedance1_video_params", "fal_seedance_ref_params"
+            "fal_seedance2_video_params", "fal_seedance1_video_params", "fal_seedance_ref_params",
+            "fal_utility_video_params"
         ];
 
         // Features incompatible with API backends (local-only features)
