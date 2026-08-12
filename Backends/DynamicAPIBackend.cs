@@ -536,7 +536,7 @@ public class DynamicAPIBackend : APIAbstractBackend
         });
         Image[] results = await Generate(user_input);
         string modelName = user_input.Get(T2IParamTypes.Model)?.Name ?? "";
-        bool isVideoModel = modelName.EndsWith("-t2v") || modelName.EndsWith("-i2v");
+        bool isVideoModel = APIProviderRegistry.TryGetModel(modelName, out ModelDefinition modelDef) && modelDef.Modality == ModelModality.Video;
         foreach (Image img in results)
         {
             if (isVideoModel && img.Type.MetaType == MediaMetaType.Video)

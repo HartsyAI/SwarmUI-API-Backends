@@ -710,67 +710,75 @@ public sealed class GoogleRequestBuilder : BaseRequestBuilder
 
 public sealed class FalRequestBuilder : BaseRequestBuilder
 {
+    /// <summary>Fills in the params for one model family. Families are declared on the model, never inferred from its name.</summary>
+    private delegate void FamilyBuilder(T2IParamInput input, JObject request, ModelDefinition model);
+
+    private static readonly Dictionary<string, FamilyBuilder> Families = new()
+    {
+        ["image.standard"] = (i, r, m) => BuildStandardImageParams(i, r),
+        ["image.aspect"] = (i, r, m) => BuildAspectRatioImageParams(i, r, m.Id),
+        ["image.recraft"] = (i, r, m) => BuildRecraftImageParams(i, r),
+        ["image.bria"] = (i, r, m) => BuildBriaImageParams(i, r),
+        ["video.sora"] = (i, r, m) => BuildSoraVideoParams(i, r),
+        ["video.kling"] = (i, r, m) => BuildKlingVideoParams(i, r),
+        ["video.veo"] = (i, r, m) => BuildVeoVideoParams(i, r),
+        ["video.luma"] = (i, r, m) => BuildLumaVideoParams(i, r),
+        ["video.minimax"] = (i, r, m) => BuildMiniMaxVideoParams(i, r),
+        ["video.hunyuan"] = (i, r, m) => BuildHunyuanVideoParams(i, r),
+        ["video.grok"] = (i, r, m) => BuildGrokVideoParams(i, r),
+        ["video.seedance1"] = (i, r, m) => BuildSeedance1VideoParams(i, r),
+        ["video.seedance2"] = (i, r, m) =>
+        {
+            BuildSeedance2VideoParams(i, r);
+            if (m.ExtraFlags.Contains("fal_seedance_ref_params"))
+            {
+                BuildSeedanceRefParams(i, r);
+            }
+        },
+        ["video.generic"] = (i, r, m) => BuildGenericVideoParams(i, r),
+        ["utility.image"] = (i, r, m) => BuildUtilityImageParams(i, r),
+        ["utility.video"] = (i, r, m) => BuildUtilityVideoParams(i, r)
+    };
+
     public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
     {
-        bool isVideo = model.Id.EndsWith("-t2v") || model.Id.EndsWith("-i2v") || model.Id.EndsWith("-ref2v");
-        bool isUtility = model.Id.StartsWith("Utility/");
-        if (isVideo)
+        if (!Families.TryGetValue(model.Family, out FamilyBuilder buildFamily))
         {
-            return BuildVideoRequest(input, model);
+            throw new Exception($"Fal model '{model.Id}' declares unknown param family '{model.Family}'");
         }
-        if (isUtility)
+        JObject request = [];
+        if (model.Modality != ModelModality.Utility)
         {
-            return BuildUtilityRequest(input, model);
+            request["prompt"] = input.Get(T2IParamTypes.Prompt);
         }
-        return BuildImageRequest(input, model);
-    }
-
-    private static JObject BuildImageRequest(T2IParamInput input, ModelDefinition model)
-    {
-        string modelId = model.Id;
-        JObject request = new()
+        AttachInputMedia(input, request, model);
+        buildFamily(input, request, model);
+        // Videos are polled rather than returned inline, so sync_mode only applies to image/utility results.
+        if (model.Modality != ModelModality.Video)
         {
-            ["prompt"] = input.Get(T2IParamTypes.Prompt)
-        };
-        // Input image for edit/i2i models (custom Fal param)
-        bool hasInputImage = input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Fal, out Image inputImg) && inputImg?.RawData is not null;
-        if (hasInputImage)
-        {
-            string base64Image = Convert.ToBase64String(inputImg.RawData);
-            string dataUrl = $"data:image/png;base64,{base64Image}";
-            request["image_url"] = dataUrl;
-            request["image_urls"] = new JArray(dataUrl);
+            request["sync_mode"] = true;
         }
-        // Determine model family for param handling
-        if (modelId.StartsWith("Recraft/"))
-        {
-            BuildRecraftImageParams(input, request);
-        }
-        else if (modelId.StartsWith("Bria/") && !modelId.EndsWith("-edit"))
-        {
-            BuildBriaImageParams(input, request);
-        }
-        else if (IsAspectRatioImageModel(modelId))
-        {
-            BuildAspectRatioImageParams(input, request, modelId);
-        }
-        else
-        {
-            BuildStandardImageParams(input, request);
-        }
-        request["sync_mode"] = true;
         return request;
     }
 
-    /// <summary>Check if a Fal image model uses aspect_ratio instead of image_size.</summary>
-    private static bool IsAspectRatioImageModel(string modelId) =>
-        modelId is "FLUX/flux-pro-ultra"
-        || modelId.StartsWith("Kling/kling-image")
-        || modelId.StartsWith("Google/nano-banana-pro")
-        || modelId.StartsWith("Google/imagen-3")
-        || modelId.StartsWith("Grok/grok-imagine-image") && !modelId.Contains("-video")
-        || modelId is "MiniMax/minimax-image-01"
-        || modelId.StartsWith("ImagineArt/");
+    /// <summary>Attaches the user's init/reference image, in whichever shape the family expects.</summary>
+    private static void AttachInputMedia(T2IParamInput input, JObject request, ModelDefinition model)
+    {
+        if (!model.SupportsInitImage || model.Family == "utility.video")
+        {
+            return;
+        }
+        if (!input.TryGet(T2IParamTypes.InitImage, out Image img) || img?.RawData is null)
+        {
+            return;
+        }
+        string dataUrl = $"data:image/png;base64,{Convert.ToBase64String(img.RawData)}";
+        request["image_url"] = dataUrl;
+        if (model.Modality == ModelModality.Image)
+        {
+            request["image_urls"] = new JArray(dataUrl);
+        }
+    }
 
     /// <summary>Standard Fal image params: image_size, guidance, steps, seed, safety_checker, output_format, negative_prompt.</summary>
     private static void BuildStandardImageParams(T2IParamInput input, JObject request)
@@ -832,69 +840,6 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         if (input.TryGet(SwarmUIAPIBackends.NumInferenceStepsParam_Fal, out int steps)) request["steps_num"] = steps;
         if (input.TryGet(SwarmUIAPIBackends.NegativePromptParam_FalImage, out string negPrompt) && !string.IsNullOrEmpty(negPrompt))
             request["negative_prompt"] = negPrompt;
-    }
-
-    private static JObject BuildVideoRequest(T2IParamInput input, ModelDefinition model)
-    {
-        JObject request = new()
-        {
-            ["prompt"] = input.Get(T2IParamTypes.Prompt)
-        };
-        // I2V models: send input image via core Swarm InitImage
-        bool isI2V = model.Id.EndsWith("-i2v");
-        if (isI2V && input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null)
-        {
-            string base64Image = Convert.ToBase64String(initImg.RawData);
-            request["image_url"] = $"data:image/png;base64,{base64Image}";
-        }
-        string modelId = model.Id;
-        // Determine model family for parameter handling
-        if (modelId.StartsWith("Sora/"))
-        {
-            BuildSoraVideoParams(input, request);
-        }
-        else if (modelId.StartsWith("Kling/"))
-        {
-            BuildKlingVideoParams(input, request);
-        }
-        else if (modelId.StartsWith("Google/") && modelId.Contains("veo"))
-        {
-            BuildVeoVideoParams(input, request);
-        }
-        else if (modelId.StartsWith("Luma/"))
-        {
-            BuildLumaVideoParams(input, request);
-        }
-        else if (modelId.StartsWith("MiniMax/"))
-        {
-            BuildMiniMaxVideoParams(input, request);
-        }
-        else if (modelId.StartsWith("Hunyuan/") && modelId.Contains("video"))
-        {
-            BuildHunyuanVideoParams(input, request);
-        }
-        else if (modelId.StartsWith("Grok/") && modelId.Contains("video"))
-        {
-            BuildGrokVideoParams(input, request);
-        }
-        else if (modelId.Contains("seedance") && modelId.Contains("2.0"))
-        {
-            BuildSeedance2VideoParams(input, request);
-            if (modelId.Contains("ref2v"))
-            {
-                BuildSeedanceRefParams(input, request);
-            }
-        }
-        else if (modelId.Contains("seedance") && modelId.Contains("1.0"))
-        {
-            BuildSeedance1VideoParams(input, request);
-        }
-        else
-        {
-            // Generic video params for other models (Wan, Pika, PixVerse, Vidu, LTX, Mochi, etc.)
-            BuildGenericVideoParams(input, request);
-        }
-        return request;
     }
 
     /// <summary>Sora 2: duration (int: 4,8,12), aspect_ratio (16:9,9:16), resolution (720p,1080p). NO: generate_audio, negative_prompt, seed</summary>
@@ -1128,7 +1073,29 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         }
     }
 
-    /// <summary>Generic video params for models without specific handling (Wan, Pika, PixVerse, Vidu, LTX, Mochi, CogVideoX, etc.)</summary>
+    /// <summary>Image utilities (upscalers, background removal, face restoration). Input image comes from AttachInputMedia.</summary>
+    private static void BuildUtilityImageParams(T2IParamInput input, JObject request)
+    {
+        if (input.TryGet(SwarmUIAPIBackends.UpscaleFactorParam_FalUtility, out double scale))
+        {
+            request["upscale_factor"] = scale;
+        }
+    }
+
+    /// <summary>Video utilities (video upscale, video background removal). These take video_url, not image_url.</summary>
+    private static void BuildUtilityVideoParams(T2IParamInput input, JObject request)
+    {
+        if (input.TryGet(SwarmUIAPIBackends.VideoUrlParam_FalUtility, out string videoUrl) && !string.IsNullOrEmpty(videoUrl))
+        {
+            request["video_url"] = videoUrl;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.UpscaleFactorParam_FalUtility, out double scale))
+        {
+            request["upscale_factor"] = scale;
+        }
+    }
+
+    /// <summary>Generic video params for models without specific handling (Wan, Pika, PixVerse, Vidu, LTX, etc.)</summary>
     private static void BuildGenericVideoParams(T2IParamInput input, JObject request)
     {
         if (input.TryGet(SwarmUIAPIBackends.DurationParam_FalVideo, out string duration))
@@ -1163,19 +1130,6 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         {
             request["seed"] = seed;
         }
-    }
-
-    private static JObject BuildUtilityRequest(T2IParamInput input, ModelDefinition model)
-    {
-        JObject request = new();
-        // Utility models (upscalers, bg removers, face restoration) need input image
-        if (input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null)
-        {
-            string base64Image = Convert.ToBase64String(initImg.RawData);
-            request["image_url"] = $"data:image/png;base64,{base64Image}";
-        }
-        request["sync_mode"] = true;
-        return request;
     }
 
     public override string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input)

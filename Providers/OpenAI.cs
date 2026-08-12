@@ -30,6 +30,7 @@ public sealed class OpenAIProvider : IProviderSource
             .WithUsageHint("Good for general image generation via API")
             .WithTags("dall-e", "generative")
             .WithFeatureFlag("dalle2_params")
+            .WithFamily("image.openai")
             .Build(),
 
         ModelDefinitionBuilder.Create()
@@ -43,6 +44,7 @@ public sealed class OpenAIProvider : IProviderSource
             .WithUsageHint("Excellent for high-quality image generation with accurate text representation")
             .WithTags("dall-e", "high-quality", "text-accurate")
             .WithFeatureFlag("dalle3_params")
+            .WithFamily("image.openai")
             .Build(),
 
         ModelDefinitionBuilder.Create()
@@ -56,6 +58,7 @@ public sealed class OpenAIProvider : IProviderSource
             .WithUsageHint("Best for context-aware image generation and edits")
             .WithTags("gpt-image", "high-quality", "text-accurate")
             .WithFeatureFlag("gpt-image-1_params")
+            .WithFamily("image.openai")
             .Build(),
 
         ModelDefinitionBuilder.Create()
@@ -69,6 +72,7 @@ public sealed class OpenAIProvider : IProviderSource
             .WithUsageHint("Best for context-aware image generation requiring strong instruction following")
             .WithTags("gpt-image", "high-quality", "text-accurate")
             .WithFeatureFlag("gpt-image-1.5_params")
+            .WithFamily("image.openai")
             .Build(),
 
         ModelDefinitionBuilder.Create()
@@ -82,6 +86,7 @@ public sealed class OpenAIProvider : IProviderSource
             .WithUsageHint("Best for photorealistic images, accurate text, product photography, and complex visual layouts")
             .WithTags("gpt-image", "high-quality", "text-accurate", "photorealistic")
             .WithFeatureFlag("gpt-image-2_params")
+            .WithFamily("image.openai")
             .Build(),
 
         // Sora Video Models
@@ -96,6 +101,7 @@ public sealed class OpenAIProvider : IProviderSource
             .WithUsageHint("High-quality text-to-video generation directly from OpenAI")
             .WithTags("sora", "video", "text-to-video")
             .WithFeatureFlag("openai_sora_params")
+            .WithFamily("video.openai_sora")
             .Build(),
 
         ModelDefinitionBuilder.Create()
@@ -109,6 +115,7 @@ public sealed class OpenAIProvider : IProviderSource
             .WithUsageHint("Premium text-to-video quality directly from OpenAI")
             .WithTags("sora", "video", "text-to-video", "pro")
             .WithFeatureFlag("openai_sora_params")
+            .WithFamily("video.openai_sora")
             .Build()
     ];
 }

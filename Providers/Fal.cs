@@ -75,6 +75,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("High-quality text-to-image with 28 inference steps")
             .WithTags("flux", "text-to-image", "high-quality")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("FLUX/flux-schnell")
@@ -88,6 +89,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Ultra-fast generation, great for rapid iteration")
             .WithTags("flux", "text-to-image", "fast")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("FLUX/flux-pro-ultra")
@@ -101,6 +103,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Best for high-resolution professional images")
             .WithTags("flux", "text-to-image", "2k", "realism", "professional")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.aspect")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("FLUX/flux-kontext-pro")
@@ -114,6 +117,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Best for image editing with text and reference images")
             .WithTags("flux", "image-to-image", "editing", "kontext")
             .WithFeatureFlag("fal_i2i_params")
+            .WithFamily("image.standard")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("FLUX/flux-kontext-max")
@@ -127,6 +132,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Premium image editing with maximum quality")
             .WithTags("flux", "image-to-image", "editing", "kontext", "premium")
             .WithFeatureFlag("fal_i2i_params")
+            .WithFamily("image.standard")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("FLUX/flux-2-flex")
@@ -140,6 +147,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Fine-tuned control with excellent text rendering")
             .WithTags("flux", "text-to-image", "typography", "flux2")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("FLUX/flux-pro")
@@ -153,6 +161,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("High-quality professional image generation")
             .WithTags("flux", "text-to-image", "professional")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("FLUX/flux-pro-v1.1")
@@ -166,6 +175,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Best balance of speed and quality")
             .WithTags("flux", "text-to-image", "professional", "v1.1")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("FLUX/flux-kontext-dev-lora")
@@ -179,6 +189,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Image editing with LoRA personalization")
             .WithTags("flux", "image-to-image", "editing", "kontext", "lora")
             .WithFeatureFlag("fal_i2i_params")
+            .WithFamily("image.standard")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("FLUX/flux-2-pro-edit")
@@ -192,6 +204,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Premium image editing with photorealism")
             .WithTags("flux", "image-to-image", "editing", "flux2", "professional")
             .WithFeatureFlag("fal_i2i_params")
+            .WithFamily("image.standard")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("FLUX/flux-2-max-edit")
@@ -205,6 +219,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Maximum quality image editing")
             .WithTags("flux", "image-to-image", "editing", "flux2", "premium")
             .WithFeatureFlag("fal_i2i_params")
+            .WithFamily("image.standard")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("FLUX/flux-2-dev-edit")
@@ -218,6 +234,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Precise image editing with color control")
             .WithTags("flux", "image-to-image", "editing", "flux2")
             .WithFeatureFlag("fal_i2i_params")
+            .WithFamily("image.standard")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("FLUX/flux-2-flex-edit")
@@ -231,6 +249,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Multi-reference editing with typography support")
             .WithTags("flux", "image-to-image", "editing", "flux2", "typography")
             .WithFeatureFlag("fal_i2i_params")
+            .WithFamily("image.standard")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("FLUX/flux-general")
@@ -244,6 +264,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Controlled image generation with ControlNet")
             .WithTags("flux", "text-to-image", "controlnet")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("FLUX/flux-lora")
@@ -257,6 +278,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Personalized generation with custom LoRA adapters")
             .WithTags("flux", "text-to-image", "lora", "personalization")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build()
     ];
 
@@ -278,6 +300,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Best for vector art, typography, and brand-consistent images")
             .WithTags("recraft", "text-to-image", "vector", "typography", "style")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.recraft")
             .Build()
     ];
 
@@ -299,6 +322,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Fast generation with superior text rendering")
             .WithTags("ideogram", "text-to-image", "text-rendering", "fast")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Ideogram/ideogram-v3")
@@ -312,6 +336,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Highest quality text rendering and image generation")
             .WithTags("ideogram", "text-to-image", "text-rendering", "v3")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Ideogram/ideogram-v3-edit")
@@ -325,6 +350,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Precise image editing with text rendering")
             .WithTags("ideogram", "image-to-image", "image-editing", "v3")
             .WithFeatureFlag("fal_i2i_params")
+            .WithFamily("image.standard")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Ideogram/ideogram-v2a")
@@ -338,6 +365,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("High-quality image generation with text rendering")
             .WithTags("ideogram", "text-to-image", "text-rendering", "v2a")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Ideogram/ideogram-v2a-turbo")
@@ -351,6 +379,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Fast generation with good text rendering")
             .WithTags("ideogram", "text-to-image", "text-rendering", "v2a", "fast")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build()
     ];
 
@@ -372,6 +401,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("High-quality general purpose image generation")
             .WithTags("stable-diffusion", "text-to-image", "sd35")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("StabilityAI/sd-v35-medium")
@@ -385,6 +415,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Good balance of quality and speed")
             .WithTags("stable-diffusion", "text-to-image", "sd35")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("StabilityAI/sdxl-lightning")
@@ -398,6 +429,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Fastest SDXL generation")
             .WithTags("stable-diffusion", "text-to-image", "sdxl", "fast")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("StabilityAI/sd-v3-medium")
@@ -411,6 +443,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Good text rendering with balanced quality")
             .WithTags("stable-diffusion", "text-to-image", "sd3")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("StabilityAI/stable-cascade")
@@ -424,6 +457,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Efficient high-quality image generation")
             .WithTags("stable-diffusion", "text-to-image", "cascade")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build()
     ];
 
@@ -445,6 +479,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("High aesthetic quality image generation")
             .WithTags("grok", "xai", "text-to-image", "aesthetic")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.aspect")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Grok/grok-imagine-video-t2v")
@@ -458,6 +493,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Text-to-video with audio generation")
             .WithTags("grok", "xai", "text-to-video", "video", "audio")
             .WithFeatureFlag("fal_video_params")
+            .WithFamily("video.grok")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Grok/grok-imagine-video-i2v")
@@ -471,6 +507,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Image-to-video with audio generation")
             .WithTags("grok", "xai", "image-to-video", "video", "audio")
             .WithFeatureFlag("fal_video_params")
+            .WithFamily("video.grok")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Grok/grok-imagine-image-edit")
@@ -484,6 +522,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Precise image editing with text guidance")
             .WithTags("grok", "xai", "image-to-image", "image-editing")
             .WithFeatureFlag("fal_i2i_params")
+            .WithFamily("image.aspect")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Grok/grok-imagine-video-edit")
@@ -497,6 +537,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Video editing with text guidance")
             .WithTags("grok", "xai", "video-to-video", "video", "editing")
             .WithFeatureFlag("fal_video_params")
+            .WithFamily("video.grok")
+            .WithInitImage()
             .Build()
     ];
 
@@ -518,6 +560,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("High-quality image generation from Google")
             .WithTags("google", "text-to-image", "high-quality")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.aspect_res")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Google/veo-3.1-t2v")
@@ -531,6 +574,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Highest quality text-to-video with audio")
             .WithTags("google", "veo", "text-to-video", "video", "audio")
             .WithFeatureFlag("fal_veo_video_params")
+            .WithFamily("video.veo")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Google/veo-3.1-fast-t2v")
@@ -544,6 +588,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Fast text-to-video with audio")
             .WithTags("google", "veo", "text-to-video", "video", "fast")
             .WithFeatureFlag("fal_veo_video_params")
+            .WithFamily("video.veo")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Google/veo-3.1-i2v")
@@ -557,6 +602,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Image-to-video with audio")
             .WithTags("google", "veo", "image-to-video", "video", "audio")
             .WithFeatureFlag("fal_veo_video_params")
+            .WithFamily("video.veo")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Google/veo-3.1-fast-i2v")
@@ -570,6 +617,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Fast image-to-video generation")
             .WithTags("google", "veo", "image-to-video", "video", "fast")
             .WithFeatureFlag("fal_veo_video_params")
+            .WithFamily("video.veo")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Google/nano-banana-pro-edit")
@@ -583,6 +632,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("High-quality image editing from Google")
             .WithTags("google", "image-to-image", "image-editing", "realism", "typography")
             .WithFeatureFlag("fal_i2i_params")
+            .WithFamily("image.aspect_res")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Google/imagen-3")
@@ -596,6 +647,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Premium image generation from Google")
             .WithTags("google", "text-to-image", "imagen")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.aspect")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Google/imagen-3-fast")
@@ -609,6 +661,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Quick image generation from Google")
             .WithTags("google", "text-to-image", "imagen", "fast")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.aspect")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Google/gemini-flash-edit")
@@ -622,6 +675,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("AI-powered image editing with Gemini")
             .WithTags("google", "image-to-image", "image-editing", "gemini")
             .WithFeatureFlag("fal_i2i_params")
+            .WithFamily("image.standard")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Google/veo-3-t2v")
@@ -635,6 +690,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Highest quality text-to-video with audio from Google")
             .WithTags("google", "veo", "text-to-video", "video", "audio")
             .WithFeatureFlag("fal_veo_video_params")
+            .WithFamily("video.veo")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Google/veo-2-t2v")
@@ -648,6 +704,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("High-quality text-to-video from Google")
             .WithTags("google", "veo", "text-to-video", "video")
             .WithFeatureFlag("fal_veo_video_params")
+            .WithFamily("video.veo")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Google/veo-2-i2v")
@@ -661,6 +718,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Realistic motion from images")
             .WithTags("google", "veo", "image-to-video", "video")
             .WithFeatureFlag("fal_veo_video_params")
+            .WithFamily("video.veo")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Google/veo-3.1-ref-t2v")
@@ -674,6 +733,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Reference-guided video generation")
             .WithTags("google", "veo", "image-to-video", "video", "reference")
             .WithFeatureFlag("fal_veo_video_params")
+            .WithFamily("video.veo")
             .Build()
     ];
 
@@ -695,6 +755,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("High-quality image generation")
             .WithTags("kling", "text-to-image")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.aspect_res")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Kling/kling-image-o3")
@@ -708,6 +769,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Latest Kling image generation")
             .WithTags("kling", "text-to-image", "omni")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.aspect_res")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Kling/kling-image-v3-i2i")
@@ -721,6 +783,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Image-to-image editing")
             .WithTags("kling", "image-to-image", "image-editing")
             .WithFeatureFlag("fal_i2i_params")
+            .WithFamily("image.aspect_res")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Kling/kling-image-o3-i2i")
@@ -734,6 +798,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("High-consistency image editing")
             .WithTags("kling", "image-to-image", "omni", "image-editing")
             .WithFeatureFlag("fal_i2i_params")
+            .WithFamily("image.aspect_res")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Kling/kling-o3-pro-t2v")
@@ -747,6 +813,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Professional text-to-video generation")
             .WithTags("kling", "text-to-video", "video", "o3", "pro")
             .WithFeatureFlag("fal_kling_video_params")
+            .WithFamily("video.kling")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Kling/kling-o3-pro-i2v")
@@ -760,6 +827,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Professional image-to-video generation")
             .WithTags("kling", "image-to-video", "video", "o3", "pro")
             .WithFeatureFlag("fal_kling_video_params")
+            .WithFamily("video.kling")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Kling/kling-o3-std-t2v")
@@ -773,6 +842,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Cost-effective text-to-video")
             .WithTags("kling", "text-to-video", "video", "o3", "standard")
             .WithFeatureFlag("fal_kling_video_params")
+            .WithFamily("video.kling")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Kling/kling-o3-std-i2v")
@@ -786,6 +856,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Cost-effective image-to-video")
             .WithTags("kling", "image-to-video", "video", "o3", "standard")
             .WithFeatureFlag("fal_kling_video_params")
+            .WithFamily("video.kling")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Kling/kling-v3-pro-t2v")
@@ -799,6 +871,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Cinematic text-to-video generation")
             .WithTags("kling", "text-to-video", "video", "v3", "pro")
             .WithFeatureFlag("fal_kling_video_params")
+            .WithFamily("video.kling")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Kling/kling-v3-pro-i2v")
@@ -812,6 +885,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Cinematic image-to-video generation")
             .WithTags("kling", "image-to-video", "video", "v3", "pro")
             .WithFeatureFlag("fal_kling_video_params")
+            .WithFamily("video.kling")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Kling/kling-v3-std-t2v")
@@ -825,6 +900,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Cost-effective cinematic text-to-video")
             .WithTags("kling", "text-to-video", "video", "v3", "standard")
             .WithFeatureFlag("fal_kling_video_params")
+            .WithFamily("video.kling")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Kling/kling-v3-std-i2v")
@@ -838,6 +914,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Cost-effective cinematic image-to-video")
             .WithTags("kling", "image-to-video", "video", "v3", "standard")
             .WithFeatureFlag("fal_kling_video_params")
+            .WithFamily("video.kling")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Kling/kling-v2.5-turbo-pro-t2v")
@@ -851,6 +929,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Fast professional text-to-video")
             .WithTags("kling", "text-to-video", "video", "v2.5", "turbo", "pro")
             .WithFeatureFlag("fal_kling_video_params")
+            .WithFamily("video.kling")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Kling/kling-v2.5-turbo-pro-i2v")
@@ -864,6 +943,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Fast professional image-to-video")
             .WithTags("kling", "image-to-video", "video", "v2.5", "turbo", "pro")
             .WithFeatureFlag("fal_kling_video_params")
+            .WithFamily("video.kling")
+            .WithInitImage()
             .Build()
     ];
 
@@ -885,6 +966,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Strong text rendering and image editing")
             .WithTags("qwen", "text-to-image", "text-rendering")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build()
     ];
 
@@ -906,6 +988,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Commercially safe image generation")
             .WithTags("bria", "text-to-image", "enterprise", "licensed")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.bria")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Bria/bria-fibo-edit")
@@ -919,6 +1002,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Commercially safe precise image editing")
             .WithTags("bria", "image-to-image", "enterprise", "licensed", "image-editing")
             .WithFeatureFlag("fal_i2i_params")
+            .WithFamily("image.standard")
+            .WithInitImage()
             .Build()
     ];
 
@@ -940,6 +1025,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Unified generation and editing")
             .WithTags("bytedance", "seedream", "text-to-image", "image-editing")
             .WithFeatureFlag("fal_i2i_params")
+            .WithFamily("image.standard")
+            .WithInitImage()
             .Build()
     ];
 
@@ -958,6 +1045,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Top-tier text-to-video with synchronized audio")
             .WithTags("seedance", "bytedance", "text-to-video", "video", "audio")
             .WithFeatureFlag("fal_seedance2_video_params")
+            .WithFamily("video.seedance2")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("ByteDance/seedance-2.0-fast-t2v")
@@ -971,6 +1059,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Fast text-to-video with audio at lower cost")
             .WithTags("seedance", "bytedance", "text-to-video", "video", "audio", "fast")
             .WithFeatureFlag("fal_seedance2_video_params")
+            .WithFamily("video.seedance2")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("ByteDance/seedance-2.0-i2v")
@@ -984,6 +1073,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Image-to-video with native audio")
             .WithTags("seedance", "bytedance", "image-to-video", "video", "audio")
             .WithFeatureFlag("fal_seedance2_video_params")
+            .WithFamily("video.seedance2")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("ByteDance/seedance-2.0-fast-i2v")
@@ -997,6 +1088,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Fast image-to-video with audio at lower cost")
             .WithTags("seedance", "bytedance", "image-to-video", "video", "audio", "fast")
             .WithFeatureFlag("fal_seedance2_video_params")
+            .WithFamily("video.seedance2")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("ByteDance/seedance-2.0-ref2v")
@@ -1010,6 +1103,9 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Multi-reference video generation with audio")
             .WithTags("seedance", "bytedance", "reference-to-video", "video", "audio", "multi-reference")
             .WithFeatureFlag("fal_seedance2_video_params")
+            .WithFamily("video.seedance2")
+            .WithInitImage()
+            .WithExtraFlags("fal_seedance_ref_params")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("ByteDance/seedance-2.0-fast-ref2v")
@@ -1023,6 +1119,9 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Fast multi-reference video generation at lower cost")
             .WithTags("seedance", "bytedance", "reference-to-video", "video", "audio", "multi-reference", "fast")
             .WithFeatureFlag("fal_seedance2_video_params")
+            .WithFamily("video.seedance2")
+            .WithInitImage()
+            .WithExtraFlags("fal_seedance_ref_params")
             .Build(),
         // === Seedance 1.0 ===
         ModelDefinitionBuilder.Create()
@@ -1037,6 +1136,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("High-quality 1080p text-to-video")
             .WithTags("seedance", "bytedance", "text-to-video", "video", "pro")
             .WithFeatureFlag("fal_seedance1_video_params")
+            .WithFamily("video.seedance1")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("ByteDance/seedance-1.0-lite-t2v")
@@ -1050,6 +1150,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Budget-friendly text-to-video")
             .WithTags("seedance", "bytedance", "text-to-video", "video", "lite")
             .WithFeatureFlag("fal_seedance1_video_params")
+            .WithFamily("video.seedance1")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("ByteDance/seedance-1.0-pro-i2v")
@@ -1063,6 +1164,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("High-quality 1080p image-to-video")
             .WithTags("seedance", "bytedance", "image-to-video", "video", "pro")
             .WithFeatureFlag("fal_seedance1_video_params")
+            .WithFamily("video.seedance1")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("ByteDance/seedance-1.0-lite-i2v")
@@ -1076,6 +1179,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Budget-friendly image-to-video")
             .WithTags("seedance", "bytedance", "image-to-video", "video", "lite")
             .WithFeatureFlag("fal_seedance1_video_params")
+            .WithFamily("video.seedance1")
+            .WithInitImage()
             .Build()
     ];
 
@@ -1097,6 +1202,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Precise image editing")
             .WithTags("reve", "image-editing")
             .WithFeatureFlag("fal_i2i_params")
+            .WithFamily("image.standard")
+            .WithInitImage()
             .Build()
     ];
 
@@ -1118,6 +1225,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("High-quality artistic image generation")
             .WithTags("imagineart", "text-to-image")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.aspect")
             .Build()
     ];
 
@@ -1139,6 +1247,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Commercial-safe image generation")
             .WithTags("f-lite", "text-to-image", "commercial-safe")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("FLite/f-lite-texture")
@@ -1152,6 +1261,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Texture and pattern generation")
             .WithTags("f-lite", "text-to-image", "texture", "commercial-safe")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build()
     ];
 
@@ -1173,6 +1283,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Maximum quality open-source generation")
             .WithTags("hidream", "text-to-image", "open-source", "17b")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("HiDream/hidream-i1-dev")
@@ -1186,6 +1297,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("High-quality developer-focused generation")
             .WithTags("hidream", "text-to-image", "open-source")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("HiDream/hidream-i1-fast")
@@ -1199,6 +1311,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Fast high-quality generation")
             .WithTags("hidream", "text-to-image", "open-source", "fast")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("HiDream/hidream-e1-full")
@@ -1212,6 +1325,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Image editing with HiDream")
             .WithTags("hidream", "image-to-image", "image-editing")
             .WithFeatureFlag("fal_i2i_params")
+            .WithFamily("image.standard")
+            .WithInitImage()
             .Build()
     ];
 
@@ -1233,6 +1348,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Multi-task image generation and editing")
             .WithTags("omnigen", "text-to-image", "image-editing", "multi-modal")
             .WithFeatureFlag("fal_i2i_params")
+            .WithFamily("image.standard")
+            .WithInitImage()
             .Build()
     ];
 
@@ -1254,6 +1371,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Flow-based generation with excellent prompt following")
             .WithTags("auraflow", "text-to-image", "open-source", "flow")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build()
     ];
 
@@ -1275,6 +1393,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("High-quality image generation")
             .WithTags("lumina", "text-to-image")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build()
     ];
 
@@ -1296,6 +1415,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Fastest possible image generation")
             .WithTags("sana", "text-to-image", "fast")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Sana/sana-v1.5-4.8b")
@@ -1309,6 +1429,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("High-quality fast generation")
             .WithTags("sana", "text-to-image")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build()
     ];
 
@@ -1330,6 +1451,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Aesthetic-focused image generation")
             .WithTags("playground", "text-to-image", "aesthetic")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build()
     ];
 
@@ -1351,6 +1473,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Bilingual English/Chinese image generation")
             .WithTags("kolors", "text-to-image", "bilingual")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build()
     ];
 
@@ -1372,6 +1495,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Text-to-image from MiniMax")
             .WithTags("minimax", "text-to-image")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.aspect")
             .Build()
     ];
 
@@ -1393,6 +1517,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Precise image editing")
             .WithTags("step1x", "image-to-image", "image-editing")
             .WithFeatureFlag("fal_i2i_params")
+            .WithFamily("image.standard")
+            .WithInitImage()
             .Build()
     ];
 
@@ -1414,6 +1540,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Large-scale open-source image generation")
             .WithTags("hunyuan", "text-to-image", "tencent", "open-source")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
             .Build()
     ];
 
@@ -1435,6 +1562,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Style transfer and generation")
             .WithTags("uno", "text-to-image", "style-transfer")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
+            .WithInitImage()
             .Build()
     ];
 
@@ -1456,6 +1585,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Character-consistent image generation")
             .WithTags("instant-character", "text-to-image", "character")
             .WithFeatureFlag("fal_t2i_params")
+            .WithFamily("image.standard")
+            .WithInitImage()
             .Build()
     ];
 
@@ -1477,6 +1608,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Highest quality text-to-video from OpenAI")
             .WithTags("sora", "openai", "text-to-video", "video", "audio")
             .WithFeatureFlag("fal_sora_video_params")
+            .WithFamily("video.sora")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Sora/sora-2-pro-t2v")
@@ -1490,6 +1622,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Premium text-to-video quality")
             .WithTags("sora", "openai", "text-to-video", "video", "pro")
             .WithFeatureFlag("fal_sora_video_params")
+            .WithFamily("video.sora")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Sora/sora-2-i2v")
@@ -1503,6 +1636,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Image-to-video with audio from OpenAI")
             .WithTags("sora", "openai", "image-to-video", "video", "audio")
             .WithFeatureFlag("fal_sora_video_params")
+            .WithFamily("video.sora")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Sora/sora-2-pro-i2v")
@@ -1516,6 +1651,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Premium image-to-video quality")
             .WithTags("sora", "openai", "image-to-video", "video", "pro")
             .WithFeatureFlag("fal_sora_video_params")
+            .WithFamily("video.sora")
+            .WithInitImage()
             .Build()
     ];
 
@@ -1537,6 +1674,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Text-to-video generation")
             .WithTags("minimax", "hailuo", "text-to-video", "video")
             .WithFeatureFlag("fal_minimax_video_params")
+            .WithFamily("video.minimax")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("MiniMax/hailuo-02-i2v")
@@ -1550,6 +1688,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Image-to-video generation")
             .WithTags("minimax", "hailuo", "image-to-video", "video")
             .WithFeatureFlag("fal_minimax_video_params")
+            .WithFamily("video.minimax")
+            .WithInitImage()
             .Build()
     ];
 
@@ -1571,6 +1711,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Text-to-video generation")
             .WithTags("pixverse", "text-to-video", "video")
             .WithFeatureFlag("fal_video_params")
+            .WithFamily("video.generic")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("PixVerse/pixverse-v5-i2v")
@@ -1584,6 +1725,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Image-to-video generation")
             .WithTags("pixverse", "image-to-video", "video")
             .WithFeatureFlag("fal_video_params")
+            .WithFamily("video.generic")
+            .WithInitImage()
             .Build()
     ];
 
@@ -1605,6 +1748,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Text-to-video with LoRA support")
             .WithTags("wan", "text-to-video", "video")
             .WithFeatureFlag("fal_video_params")
+            .WithFamily("video.generic")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Wan/wan-2.2-i2v")
@@ -1618,6 +1762,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Image-to-video with LoRA support")
             .WithTags("wan", "image-to-video", "video")
             .WithFeatureFlag("fal_video_params")
+            .WithFamily("video.generic")
+            .WithInitImage()
             .Build()
     ];
 
@@ -1639,6 +1785,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Image-to-video with audio")
             .WithTags("ltx", "image-to-video", "video", "audio")
             .WithFeatureFlag("fal_video_params")
+            .WithFamily("video.generic")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("LTX/ltx-13b-distilled-i2v")
@@ -1652,6 +1800,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Fast image-to-video with LoRA support")
             .WithTags("ltx", "image-to-video", "video", "lora")
             .WithFeatureFlag("fal_video_params")
+            .WithFamily("video.generic")
+            .WithInitImage()
             .Build()
     ];
 
@@ -1673,6 +1823,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Text-to-video generation")
             .WithTags("vidu", "text-to-video", "video")
             .WithFeatureFlag("fal_video_params")
+            .WithFamily("video.generic")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Vidu/vidu-q3-i2v")
@@ -1686,6 +1837,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Image-to-video generation")
             .WithTags("vidu", "image-to-video", "video")
             .WithFeatureFlag("fal_video_params")
+            .WithFamily("video.generic")
+            .WithInitImage()
             .Build()
     ];
 
@@ -1707,6 +1860,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Open-source text-to-video generation")
             .WithTags("hunyuan", "tencent", "text-to-video", "video", "open-source")
             .WithFeatureFlag("fal_hunyuan_video_params")
+            .WithFamily("video.hunyuan")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Hunyuan/hunyuan-video-i2v")
@@ -1720,6 +1874,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Open-source image-to-video generation")
             .WithTags("hunyuan", "tencent", "image-to-video", "video", "open-source")
             .WithFeatureFlag("fal_hunyuan_video_params")
+            .WithFamily("video.hunyuan")
+            .WithInitImage()
             .Build()
     ];
 
@@ -1741,6 +1897,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("High-fidelity motion video generation")
             .WithTags("mochi", "text-to-video", "video", "open-source")
             .WithFeatureFlag("fal_video_params")
+            .WithFamily("video.generic")
             .Build()
     ];
 
@@ -1762,6 +1919,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Premium text-to-video generation")
             .WithTags("luma", "ray2", "text-to-video", "video")
             .WithFeatureFlag("fal_luma_video_params")
+            .WithFamily("video.luma")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Luma/ray-2-i2v")
@@ -1775,6 +1933,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Premium image-to-video generation")
             .WithTags("luma", "ray2", "image-to-video", "video")
             .WithFeatureFlag("fal_luma_video_params")
+            .WithFamily("video.luma")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Luma/ray-2-flash-t2v")
@@ -1788,6 +1948,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Fast text-to-video generation")
             .WithTags("luma", "ray2", "text-to-video", "video", "fast")
             .WithFeatureFlag("fal_luma_video_params")
+            .WithFamily("video.luma")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Luma/ray-2-flash-i2v")
@@ -1801,6 +1962,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Fast image-to-video generation")
             .WithTags("luma", "ray2", "image-to-video", "video", "fast")
             .WithFeatureFlag("fal_luma_video_params")
+            .WithFamily("video.luma")
+            .WithInitImage()
             .Build()
     ];
 
@@ -1822,6 +1985,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Creative text-to-video generation")
             .WithTags("pika", "text-to-video", "video")
             .WithFeatureFlag("fal_video_params")
+            .WithFamily("video.generic")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Pika/pika-v2.2-i2v")
@@ -1835,6 +1999,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Creative image-to-video generation")
             .WithTags("pika", "image-to-video", "video")
             .WithFeatureFlag("fal_video_params")
+            .WithFamily("video.generic")
+            .WithInitImage()
             .Build()
     ];
 
@@ -1856,6 +2022,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Fast image-to-video generation")
             .WithTags("kandinsky", "image-to-video", "video", "fast")
             .WithFeatureFlag("fal_video_params")
+            .WithFamily("video.generic")
+            .WithInitImage()
             .Build()
     ];
 
@@ -1877,6 +2045,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("High-quality image-to-video")
             .WithTags("magi", "image-to-video", "video")
             .WithFeatureFlag("fal_video_params")
+            .WithFamily("video.generic")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Magi/magi-distilled-i2v")
@@ -1890,6 +2060,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Fast image-to-video generation")
             .WithTags("magi", "image-to-video", "video", "fast")
             .WithFeatureFlag("fal_video_params")
+            .WithFamily("video.generic")
+            .WithInitImage()
             .Build()
     ];
 
@@ -1911,6 +2083,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Open-source text-to-video generation")
             .WithTags("cogvideox", "text-to-video", "video", "open-source")
             .WithFeatureFlag("fal_video_params")
+            .WithFamily("video.generic")
             .Build()
     ];
 
@@ -1932,6 +2105,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Image-to-video generation")
             .WithTags("skyreels", "image-to-video", "video")
             .WithFeatureFlag("fal_video_params")
+            .WithFamily("video.generic")
+            .WithInitImage()
             .Build()
     ];
 
@@ -1953,6 +2128,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Ultra-fast image-to-video")
             .WithTags("decart", "lucy", "image-to-video", "video", "fast")
             .WithFeatureFlag("fal_video_params")
+            .WithFamily("video.generic")
+            .WithInitImage()
             .Build()
     ];
 
@@ -1974,6 +2151,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Quick background removal for any image")
             .WithTags("utility", "background-removal")
             .WithFeatureFlag("fal_utility_params")
+            .WithFamily("utility.image")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Utility/clarity-upscaler")
@@ -1987,6 +2166,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Upscale images up to 4x with enhanced details")
             .WithTags("utility", "upscaler", "enhancement")
             .WithFeatureFlag("fal_utility_params")
+            .WithFamily("utility.image")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Utility/topaz-upscale")
@@ -2000,6 +2181,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Professional image upscaling")
             .WithTags("utility", "upscaler", "topaz")
             .WithFeatureFlag("fal_utility_params")
+            .WithFamily("utility.image")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Utility/bria-rmbg")
@@ -2013,6 +2196,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("High-quality background removal")
             .WithTags("utility", "background-removal", "bria")
             .WithFeatureFlag("fal_utility_params")
+            .WithFamily("utility.image")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Utility/creative-upscaler")
@@ -2026,6 +2211,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Creative upscaling with artistic enhancement")
             .WithTags("utility", "upscaler", "creative")
             .WithFeatureFlag("fal_utility_params")
+            .WithFamily("utility.image")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Utility/esrgan")
@@ -2039,6 +2226,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Fast image upscaling")
             .WithTags("utility", "upscaler", "esrgan")
             .WithFeatureFlag("fal_utility_params")
+            .WithFamily("utility.image")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Utility/ben-v2-bg-remove")
@@ -2052,6 +2241,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Fast background removal")
             .WithTags("utility", "background-removal")
             .WithFeatureFlag("fal_utility_params")
+            .WithFamily("utility.image")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Utility/codeformer")
@@ -2065,6 +2256,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Face restoration and enhancement")
             .WithTags("utility", "face-restoration", "enhancement")
             .WithFeatureFlag("fal_utility_params")
+            .WithFamily("utility.image")
+            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Utility/topaz-video-upscale")
@@ -2078,7 +2271,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Upscale videos with high-quality enhancement")
             .WithTags("utility", "upscaler", "topaz", "video")
             .WithFeatureFlag("fal_utility_params")
-            .Build(),
+            .WithFamily("utility.video")
+                        .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Utility/bria-video-bg-removal")
             .WithEndpointOverride("bria/video/background-removal")
@@ -2091,7 +2285,8 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Video background removal without green screen")
             .WithTags("utility", "background-removal", "bria", "video")
             .WithFeatureFlag("fal_utility_params")
-            .Build()
+            .WithFamily("utility.video")
+                        .Build()
     ];
 
     #endregion

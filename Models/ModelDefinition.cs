@@ -3,6 +3,14 @@ using System.Collections.Generic;
 
 namespace Hartsy.Extensions.APIBackends.Models;
 
+/// <summary>What kind of output a model produces. Declared per model, never inferred from its name.</summary>
+public enum ModelModality
+{
+    Image,
+    Video,
+    Utility
+}
+
 /// <summary>Type-safe definition for an API model. Used by ModelFactory to create T2IModel instances.</summary>
 public sealed class ModelDefinition
 {
@@ -44,6 +52,24 @@ public sealed class ModelDefinition
 
     /// <summary>Optional model-specific endpoint path override.</summary>
     public string EndpointOverride { get; init; } = "";
+
+    /// <summary>Which parameter family this model belongs to, as "modality.variant" (e.g. "video.veo", "image.aspect").
+    /// Drives request building, UI param visibility and output handling. Declared, never inferred from the model name.</summary>
+    public string Family { get; init; } = "image.standard";
+
+    /// <summary>Whether this model accepts an input/reference image via the core InitImage param.</summary>
+    public bool SupportsInitImage { get; init; }
+
+    /// <summary>Extra feature flags beyond the family's own, for models with additional param groups.</summary>
+    public string[] ExtraFlags { get; init; } = [];
+
+    /// <summary>Output modality, derived from the <see cref="Family"/> prefix.</summary>
+    public ModelModality Modality => Family switch
+    {
+        string f when f.StartsWith("video.") => ModelModality.Video,
+        string f when f.StartsWith("utility.") => ModelModality.Utility,
+        _ => ModelModality.Image
+    };
 
     /// <summary>Creates the full model name with provider prefix.</summary>
     public string GetFullName(string providerPrefix) => $"API Models/{providerPrefix}/{Id}";
@@ -96,6 +122,9 @@ public sealed class ModelDefinitionBuilder
     private readonly List<string> _tags = [];
     private string _featureFlag = "";
     private string _endpointOverride = "";
+    private string _family = "image.standard";
+    private bool _supportsInitImage;
+    private readonly List<string> _extraFlags = [];
 
     public ModelDefinitionBuilder WithId(string id) { _id = id; return this; }
     public ModelDefinitionBuilder WithTitle(string title) { _title = title; return this; }
@@ -109,12 +138,16 @@ public sealed class ModelDefinitionBuilder
     public ModelDefinitionBuilder WithTags(params string[] tags) { _tags.AddRange(tags); return this; }
     public ModelDefinitionBuilder WithFeatureFlag(string flag) { _featureFlag = flag; return this; }
     public ModelDefinitionBuilder WithEndpointOverride(string endpoint) { _endpointOverride = endpoint; return this; }
+    public ModelDefinitionBuilder WithFamily(string family) { _family = family; return this; }
+    public ModelDefinitionBuilder WithInitImage() { _supportsInitImage = true; return this; }
+    public ModelDefinitionBuilder WithExtraFlags(params string[] flags) { _extraFlags.AddRange(flags); return this; }
 
     public ModelDefinition Build()
     {
         if (string.IsNullOrEmpty(_id)) throw new InvalidOperationException("Model ID is required");
         if (string.IsNullOrEmpty(_title)) throw new InvalidOperationException("Model title is required");
         if (string.IsNullOrEmpty(_description)) throw new InvalidOperationException("Model description is required");
+        if (string.IsNullOrEmpty(_family)) throw new InvalidOperationException($"Model '{_id}' must declare a Family");
 
         return new ModelDefinition
         {
@@ -130,7 +163,10 @@ public sealed class ModelDefinitionBuilder
             UsageHint = _usageHint,
             Tags = [.. _tags],
             FeatureFlag = _featureFlag,
-            EndpointOverride = _endpointOverride
+            EndpointOverride = _endpointOverride,
+            Family = _family,
+            SupportsInitImage = _supportsInitImage,
+            ExtraFlags = [.. _extraFlags]
         };
     }
 

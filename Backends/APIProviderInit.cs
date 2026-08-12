@@ -98,8 +98,8 @@ public class APIProviderInit
                 return model;
             }
         }
-        Logs.Warning($"[APIProviderInit] Model definition not found for: {fullModelName}, using first model as fallback");
-        return provider.Models[0];
+        // Never fall back to another model: that silently builds a request for something the user didn't ask for.
+        throw new Exception($"No model definition found for '{fullModelName}' in provider '{provider.Name}'");
     }
 
     /// <summary>Gets the endpoint URL for a specific model and input.</summary>
