@@ -181,6 +181,16 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<string> ResolutionParam_Seedance1;
     public static T2IRegisteredParam<bool> CameraFixedParam_Seedance1;
 
+    // Per-family video enums. GetValues receives a Session, not the selected model, so a single shared param
+    // cannot narrow its list per model - each family that has a distinct enum needs its own param.
+    public static T2IRegisteredParam<string> DurationParam_Wan22, AspectRatioParam_Wan22, ResolutionParam_Wan22;
+    public static T2IRegisteredParam<string> DurationParam_PixVerse, AspectRatioParam_PixVerse, ResolutionParam_PixVerse;
+    public static T2IRegisteredParam<string> DurationParam_Ltx2;
+    public static T2IRegisteredParam<string> DurationParam_Ltx13b, AspectRatioParam_Ltx13b, ResolutionParam_Ltx13b;
+    public static T2IRegisteredParam<string> DurationParam_Vidu, AspectRatioParam_Vidu, ResolutionParam_Vidu;
+    public static T2IRegisteredParam<string> DurationParam_Pika, AspectRatioParam_Pika, ResolutionParam_Pika;
+    public static T2IRegisteredParam<string> DurationParam_Kandinsky, ResolutionParam_Kandinsky;
+
     // Fal utility params (upscalers, background removal, face restoration)
     public static T2IRegisteredParam<double> UpscaleFactorParam_FalUtility;
     public static T2IRegisteredParam<string> VideoUrlParam_FalUtility;
@@ -600,58 +610,127 @@ public class SwarmUIAPIBackends : Extension
         // ImagePromptParam_Fal => T2IParamTypes.InitImage (aliased, no registration needed)
 
         // Fal.ai Video Parameters
+        // Grok Imagine Video keeps the original general-purpose set.
         DurationParam_FalVideo = T2IParamTypes.Register<string>(new("Video Duration",
-            "Length of the generated video in seconds.\n" +
-            "Available durations vary by model.\n" +
-            "Longer durations cost more and take longer to generate.",
-            "5", GetValues: _ => [
-                "3///3 seconds",
-                "4///4 seconds",
-                "5///5 seconds (Default)",
-                "6///6 seconds",
-                "8///8 seconds",
-                "10///10 seconds",
-                "12///12 seconds",
-                "15///15 seconds"
-            ],
+            "Length of the generated video in seconds.",
+            "5", GetValues: _ => ["3///3 seconds", "4///4 seconds", "5///5 seconds (Default)", "6///6 seconds", "8///8 seconds", "10///10 seconds"],
             OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_video_params"));
 
         AspectRatioParam_FalVideo = T2IParamTypes.Register<string>(new("Video Aspect Ratio",
-            "Aspect ratio for the generated video.\n" +
-            "16:9: Widescreen (landscape)\n" +
-            "9:16: Vertical (portrait/mobile)\n" +
-            "1:1: Square",
-            "16:9", GetValues: _ => [
-                "16:9///Widescreen (16:9)",
-                "9:16///Portrait (9:16)",
-                "1:1///Square (1:1)",
-                "4:3///Standard (4:3)",
-                "3:4///Portrait (3:4)"
-            ],
+            "Aspect ratio for the generated video.",
+            "16:9", GetValues: _ => ["16:9///Widescreen (16:9)", "9:16///Portrait (9:16)", "1:1///Square (1:1)"],
             OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_video_params"));
 
         ResolutionParam_FalVideo = T2IParamTypes.Register<string>(new("Video Output Resolution",
-            "Resolution of the generated video.\n" +
-            "Higher resolutions cost more and take longer.\n" +
-            "720p is standard, 1080p is available on some models.",
-            "720p", GetValues: _ => [
-                "480p///480p (Fast)",
-                "720p///720p (Standard)",
-                "1080p///1080p (HD)"
-            ],
+            "Resolution of the generated video.",
+            "720p", GetValues: _ => ["480p///480p (Fast)", "720p///720p (Standard)", "1080p///1080p (HD)"],
             OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_video_params"));
 
+        // Audio and negative prompt carry no per-model enum, so they stay shared and are gated on their own
+        // capability flags - only models whose fal schema actually accepts them will show them.
         GenerateAudioParam_FalVideo = T2IParamTypes.Register<bool>(new("Generate Audio",
             "Generate audio alongside the video.\n" +
-            "When enabled, the model will create matching audio/sound effects.\n" +
-            "Supported by Sora, Veo, Kling, and other models.",
+            "Only shown for models that actually support it.",
             "true",
-            OrderPriority: -7, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_video_params"));
+            OrderPriority: -7, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_video_audio"));
 
         NegativePromptParam_FalVideo = T2IParamTypes.Register<string>(new("Video Negative Prompt",
-            "Describe what you don't want in the generated video.\n" +
-            "Supported by Veo, Wan, PixVerse, and some other video models.",
-            "", OrderPriority: -5, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_video_params"));
+            "Describe what you don't want in the generated video.",
+            "", OrderPriority: -5, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_video_negative"));
+
+        // ===== PER-FAMILY VIDEO ENUMS =====
+        // Each fal model line accepts a different enum. GetValues cannot see the selected model (it takes a
+        // Session), so narrowing has to be done with one param per family - otherwise users can pick a value
+        // the model rejects with a 422 (Wan 2.2 caps at 720p, Kandinsky uses 512P/1024P, etc).
+        DurationParam_Wan22 = T2IParamTypes.Register<string>(new("Wan Video Duration",
+            "Length of the generated video. Wan 2.2 has no duration field, so this is sent as a frame count at 16fps.",
+            "5", GetValues: _ => ["1///1 second", "2///2 seconds", "3///3 seconds", "5///5 seconds (Default)", "8///8 seconds", "10///10 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan22_params"));
+
+        AspectRatioParam_Wan22 = T2IParamTypes.Register<string>(new("Wan Video Aspect Ratio",
+            "Aspect ratio for Wan 2.2.", "16:9",
+            GetValues: _ => ["16:9///Widescreen (16:9)", "9:16///Portrait (9:16)", "1:1///Square (1:1)"],
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan22_params"));
+
+        ResolutionParam_Wan22 = T2IParamTypes.Register<string>(new("Wan Video Resolution",
+            "Resolution for Wan 2.2. This model tops out at 720p.", "720p",
+            GetValues: _ => ["480p///480p (Fast)", "580p///580p", "720p///720p (Max)"],
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan22_params"));
+
+        DurationParam_PixVerse = T2IParamTypes.Register<string>(new("PixVerse Video Duration",
+            "Length of the generated video. PixVerse v5 supports 5 or 8 seconds.", "5",
+            GetValues: _ => ["5///5 seconds", "8///8 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_pixverse_params"));
+
+        AspectRatioParam_PixVerse = T2IParamTypes.Register<string>(new("PixVerse Video Aspect Ratio",
+            "Aspect ratio for PixVerse v5.", "16:9",
+            GetValues: _ => ["16:9///Widescreen (16:9)", "4:3///Standard (4:3)", "1:1///Square (1:1)", "3:4///Portrait (3:4)", "9:16///Portrait (9:16)"],
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_pixverse_params"));
+
+        ResolutionParam_PixVerse = T2IParamTypes.Register<string>(new("PixVerse Video Resolution",
+            "Resolution for PixVerse v5.", "720p",
+            GetValues: _ => ["360p///360p", "540p///540p", "720p///720p (Standard)", "1080p///1080p (HD)"],
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_pixverse_params"));
+
+        DurationParam_Ltx2 = T2IParamTypes.Register<string>(new("LTX-2 Video Duration",
+            "Length of the generated video. Sent as a frame count at 25fps.", "5",
+            GetValues: _ => ["3///3 seconds", "5///5 seconds (Default)", "8///8 seconds", "10///10 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_ltx2_params"));
+
+        DurationParam_Ltx13b = T2IParamTypes.Register<string>(new("LTX-13B Video Duration",
+            "Length of the generated video. Sent as a frame count at 24fps.", "5",
+            GetValues: _ => ["3///3 seconds", "5///5 seconds (Default)", "8///8 seconds", "10///10 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_ltx13b_params"));
+
+        AspectRatioParam_Ltx13b = T2IParamTypes.Register<string>(new("LTX-13B Video Aspect Ratio",
+            "Aspect ratio for LTX-13B distilled.", "auto",
+            GetValues: _ => ["auto///Auto", "16:9///Widescreen (16:9)", "9:16///Portrait (9:16)", "1:1///Square (1:1)"],
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_ltx13b_params"));
+
+        ResolutionParam_Ltx13b = T2IParamTypes.Register<string>(new("LTX-13B Video Resolution",
+            "Resolution for LTX-13B distilled. This model tops out at 720p.", "720p",
+            GetValues: _ => ["480p///480p (Fast)", "720p///720p (Max)"],
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_ltx13b_params"));
+
+        DurationParam_Vidu = T2IParamTypes.Register<string>(new("Vidu Video Duration",
+            "Length of the generated video in seconds.", "5",
+            GetValues: _ => ["3///3 seconds", "5///5 seconds (Default)", "8///8 seconds", "10///10 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_vidu_params"));
+
+        AspectRatioParam_Vidu = T2IParamTypes.Register<string>(new("Vidu Video Aspect Ratio",
+            "Aspect ratio for Vidu Q3.", "16:9",
+            GetValues: _ => ["16:9///Widescreen (16:9)", "9:16///Portrait (9:16)", "4:3///Standard (4:3)", "3:4///Portrait (3:4)", "1:1///Square (1:1)"],
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_vidu_params"));
+
+        ResolutionParam_Vidu = T2IParamTypes.Register<string>(new("Vidu Video Resolution",
+            "Resolution for Vidu Q3.", "720p",
+            GetValues: _ => ["360p///360p", "540p///540p", "720p///720p (Standard)", "1080p///1080p (HD)"],
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_vidu_params"));
+
+        DurationParam_Pika = T2IParamTypes.Register<string>(new("Pika Video Duration",
+            "Length of the generated video. Pika v2.2 supports 5 or 10 seconds.", "5",
+            GetValues: _ => ["5///5 seconds", "10///10 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_pika_params"));
+
+        AspectRatioParam_Pika = T2IParamTypes.Register<string>(new("Pika Video Aspect Ratio",
+            "Aspect ratio for Pika v2.2.", "16:9",
+            GetValues: _ => ["16:9///Widescreen (16:9)", "9:16///Portrait (9:16)", "1:1///Square (1:1)", "4:5///Portrait (4:5)", "5:4///Landscape (5:4)", "3:2///Landscape (3:2)", "2:3///Portrait (2:3)"],
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_pika_params"));
+
+        ResolutionParam_Pika = T2IParamTypes.Register<string>(new("Pika Video Resolution",
+            "Resolution for Pika v2.2.", "720p",
+            GetValues: _ => ["720p///720p (Standard)", "1080p///1080p (HD)"],
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_pika_params"));
+
+        DurationParam_Kandinsky = T2IParamTypes.Register<string>(new("Kandinsky Video Duration",
+            "Length of the generated video.", "5",
+            GetValues: _ => ["5///5 seconds", "10///10 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_kandinsky_params"));
+
+        ResolutionParam_Kandinsky = T2IParamTypes.Register<string>(new("Kandinsky Video Resolution",
+            "Resolution for Kandinsky 5 Pro. This model uses its own scale rather than 480p/720p.", "512P",
+            GetValues: _ => ["512P///512P", "1024P///1024P (High)"],
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_kandinsky_params"));
 
         // ===== SORA-SPECIFIC PARAMETERS =====
         DurationParam_Sora = T2IParamTypes.Register<string>(new("Sora Video Duration",
@@ -1025,7 +1104,10 @@ public class SwarmUIAPIBackends : Extension
             "fal_sora_video_params", "fal_kling_video_params", "fal_veo_video_params",
             "fal_luma_video_params", "fal_minimax_video_params", "fal_hunyuan_video_params",
             "fal_seedance2_video_params", "fal_seedance1_video_params", "fal_seedance_ref_params",
-            "fal_utility_video_params"
+            "fal_utility_video_params",
+            "fal_video_audio", "fal_video_negative",
+            "fal_wan22_params", "fal_pixverse_params", "fal_ltx2_params", "fal_ltx13b_params",
+            "fal_vidu_params", "fal_pika_params", "fal_kandinsky_params", "fal_cogvideox_params"
         ];
 
         // Features incompatible with API backends (local-only features)

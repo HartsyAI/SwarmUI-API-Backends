@@ -24,10 +24,19 @@ public static class ModelCapabilities
         ["video.luma"] = ["fal_luma_video_params"],
         ["video.minimax"] = ["fal_minimax_video_params"],
         ["video.hunyuan"] = ["fal_hunyuan_video_params"],
-        ["video.grok"] = ["fal_video_params"],
         ["video.seedance1"] = ["fal_seedance1_video_params"],
         ["video.seedance2"] = ["fal_seedance2_video_params"],
-        ["video.generic"] = ["fal_video_params"],
+        // Per-family video enums, verified against fal's published schemas 2026-08-12.
+        ["video.wan22"] = ["fal_wan22_params", "fal_video_negative"],
+        ["video.pixverse"] = ["fal_pixverse_params", "fal_video_negative"],
+        ["video.ltx2"] = ["fal_ltx2_params", "fal_video_audio", "fal_video_negative"],
+        ["video.ltx13b"] = ["fal_ltx13b_params", "fal_video_negative"],
+        ["video.vidu"] = ["fal_vidu_params", "fal_video_audio"],
+        ["video.pika"] = ["fal_pika_params", "fal_video_negative"],
+        ["video.kandinsky"] = ["fal_kandinsky_params"],
+        ["video.cogvideox"] = ["fal_video_negative"],
+        ["video.grok"] = ["fal_video_params", "fal_video_audio", "fal_video_negative"],
+
         // Non-Fal providers keep their own per-model flags on the ModelDefinition.
         ["image.openai"] = [],
         ["video.openai_sora"] = ["openai_sora_params"]

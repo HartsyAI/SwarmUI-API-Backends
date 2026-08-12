@@ -48,14 +48,10 @@ public sealed class FalProvider : IProviderSource
         .AddModels(LTXModels)
         .AddModels(ViduModels)
         .AddModels(HunyuanVideoModels)
-        .AddModels(MochiModels)
         .AddModels(LumaModels)
         .AddModels(PikaModels)
         .AddModels(KandinskyModels)
-        .AddModels(MagiModels)
         .AddModels(CogVideoXModels)
-        .AddModels(SkyReelsModels)
-        .AddModels(DecartModels)
         .AddModels(UtilityModels)
         .Build();
 
@@ -1711,7 +1707,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Text-to-video generation")
             .WithTags("pixverse", "text-to-video", "video")
             .WithFeatureFlag("fal_video_params")
-            .WithFamily("video.generic")
+            .WithFamily("video.pixverse")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("PixVerse/pixverse-v5-i2v")
@@ -1725,7 +1721,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Image-to-video generation")
             .WithTags("pixverse", "image-to-video", "video")
             .WithFeatureFlag("fal_video_params")
-            .WithFamily("video.generic")
+            .WithFamily("video.pixverse")
             .WithInitImage()
             .Build()
     ];
@@ -1748,7 +1744,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Text-to-video with LoRA support")
             .WithTags("wan", "text-to-video", "video")
             .WithFeatureFlag("fal_video_params")
-            .WithFamily("video.generic")
+            .WithFamily("video.wan22")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Wan/wan-2.2-i2v")
@@ -1762,7 +1758,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Image-to-video with LoRA support")
             .WithTags("wan", "image-to-video", "video")
             .WithFeatureFlag("fal_video_params")
-            .WithFamily("video.generic")
+            .WithFamily("video.wan22")
             .WithInitImage()
             .Build()
     ];
@@ -1785,7 +1781,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Image-to-video with audio")
             .WithTags("ltx", "image-to-video", "video", "audio")
             .WithFeatureFlag("fal_video_params")
-            .WithFamily("video.generic")
+            .WithFamily("video.ltx2")
             .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
@@ -1800,7 +1796,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Fast image-to-video with LoRA support")
             .WithTags("ltx", "image-to-video", "video", "lora")
             .WithFeatureFlag("fal_video_params")
-            .WithFamily("video.generic")
+            .WithFamily("video.ltx13b")
             .WithInitImage()
             .Build()
     ];
@@ -1823,7 +1819,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Text-to-video generation")
             .WithTags("vidu", "text-to-video", "video")
             .WithFeatureFlag("fal_video_params")
-            .WithFamily("video.generic")
+            .WithFamily("video.vidu")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Vidu/vidu-q3-i2v")
@@ -1837,7 +1833,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Image-to-video generation")
             .WithTags("vidu", "image-to-video", "video")
             .WithFeatureFlag("fal_video_params")
-            .WithFamily("video.generic")
+            .WithFamily("video.vidu")
             .WithInitImage()
             .Build()
     ];
@@ -1876,28 +1872,6 @@ public sealed class FalProvider : IProviderSource
             .WithFeatureFlag("fal_hunyuan_video_params")
             .WithFamily("video.hunyuan")
             .WithInitImage()
-            .Build()
-    ];
-
-    #endregion
-
-    #region Mochi
-
-    private static IEnumerable<ModelDefinition> MochiModels =>
-    [
-        ModelDefinitionBuilder.Create()
-            .WithId("Mochi/mochi-v1")
-            .WithEndpointOverride("fal-ai/mochi-v1")
-            .WithTitle("Mochi 1")
-            .WithDescription("Open state-of-the-art video model with high-fidelity motion and strong prompt adherence")
-            .WithAuthor("Genmo")
-            .WithDimensions(1280, 720)
-            .WithPreviewImage("Images/ModelPreviews/Fal/Mochi/mochi-v1.jpg")
-            .WithDate("2024")
-            .WithUsageHint("High-fidelity motion video generation")
-            .WithTags("mochi", "text-to-video", "video", "open-source")
-            .WithFeatureFlag("fal_video_params")
-            .WithFamily("video.generic")
             .Build()
     ];
 
@@ -1985,7 +1959,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Creative text-to-video generation")
             .WithTags("pika", "text-to-video", "video")
             .WithFeatureFlag("fal_video_params")
-            .WithFamily("video.generic")
+            .WithFamily("video.pika")
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Pika/pika-v2.2-i2v")
@@ -1999,7 +1973,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Creative image-to-video generation")
             .WithTags("pika", "image-to-video", "video")
             .WithFeatureFlag("fal_video_params")
-            .WithFamily("video.generic")
+            .WithFamily("video.pika")
             .WithInitImage()
             .Build()
     ];
@@ -2022,45 +1996,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Fast image-to-video generation")
             .WithTags("kandinsky", "image-to-video", "video", "fast")
             .WithFeatureFlag("fal_video_params")
-            .WithFamily("video.generic")
-            .WithInitImage()
-            .Build()
-    ];
-
-    #endregion
-
-    #region Magi
-
-    private static IEnumerable<ModelDefinition> MagiModels =>
-    [
-        ModelDefinitionBuilder.Create()
-            .WithId("Magi/magi-i2v")
-            .WithEndpointOverride("fal-ai/magi/image-to-video")
-            .WithTitle("Magi (I2V)")
-            .WithDescription("Magi image-to-video generation model")
-            .WithAuthor("Sand AI")
-            .WithDimensions(1280, 720)
-            .WithPreviewImage("Images/ModelPreviews/Fal/Magi/magi-i2v.jpg")
-            .WithDate("2025")
-            .WithUsageHint("High-quality image-to-video")
-            .WithTags("magi", "image-to-video", "video")
-            .WithFeatureFlag("fal_video_params")
-            .WithFamily("video.generic")
-            .WithInitImage()
-            .Build(),
-        ModelDefinitionBuilder.Create()
-            .WithId("Magi/magi-distilled-i2v")
-            .WithEndpointOverride("fal-ai/magi-distilled/image-to-video")
-            .WithTitle("Magi Distilled (I2V)")
-            .WithDescription("Faster distilled version of Magi image-to-video")
-            .WithAuthor("Sand AI")
-            .WithDimensions(1280, 720)
-            .WithPreviewImage("Images/ModelPreviews/Fal/Magi/magi-distilled-i2v.jpg")
-            .WithDate("2025")
-            .WithUsageHint("Fast image-to-video generation")
-            .WithTags("magi", "image-to-video", "video", "fast")
-            .WithFeatureFlag("fal_video_params")
-            .WithFamily("video.generic")
+            .WithFamily("video.kandinsky")
             .WithInitImage()
             .Build()
     ];
@@ -2083,53 +2019,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Open-source text-to-video generation")
             .WithTags("cogvideox", "text-to-video", "video", "open-source")
             .WithFeatureFlag("fal_video_params")
-            .WithFamily("video.generic")
-            .Build()
-    ];
-
-    #endregion
-
-    #region SkyReels
-
-    private static IEnumerable<ModelDefinition> SkyReelsModels =>
-    [
-        ModelDefinitionBuilder.Create()
-            .WithId("SkyReels/skyreels-i2v")
-            .WithEndpointOverride("fal-ai/skyreels-i2v")
-            .WithTitle("SkyReels (I2V)")
-            .WithDescription("SkyReels image-to-video generation")
-            .WithAuthor("SkyReels")
-            .WithDimensions(1280, 720)
-            .WithPreviewImage("Images/ModelPreviews/Fal/SkyReels/skyreels-i2v.jpg")
-            .WithDate("2025")
-            .WithUsageHint("Image-to-video generation")
-            .WithTags("skyreels", "image-to-video", "video")
-            .WithFeatureFlag("fal_video_params")
-            .WithFamily("video.generic")
-            .WithInitImage()
-            .Build()
-    ];
-
-    #endregion
-
-    #region Decart
-
-    private static IEnumerable<ModelDefinition> DecartModels =>
-    [
-        ModelDefinitionBuilder.Create()
-            .WithId("Decart/lucy-14b-i2v")
-            .WithEndpointOverride("decart/lucy-14b/image-to-video")
-            .WithTitle("Lucy-14B (I2V)")
-            .WithDescription("Lightning fast image-to-video generation")
-            .WithAuthor("Decart")
-            .WithDimensions(1280, 720)
-            .WithPreviewImage("Images/ModelPreviews/Fal/Decart/lucy-14b-i2v.jpg")
-            .WithDate("2025")
-            .WithUsageHint("Ultra-fast image-to-video")
-            .WithTags("decart", "lucy", "image-to-video", "video", "fast")
-            .WithFeatureFlag("fal_video_params")
-            .WithFamily("video.generic")
-            .WithInitImage()
+            .WithFamily("video.cogvideox")
             .Build()
     ];
 

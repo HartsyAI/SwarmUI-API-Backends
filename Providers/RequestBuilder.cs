@@ -735,7 +735,14 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
                 BuildSeedanceRefParams(i, r);
             }
         },
-        ["video.generic"] = (i, r, m) => BuildGenericVideoParams(i, r),
+        ["video.wan22"] = (i, r, m) => BuildWan22VideoParams(i, r),
+        ["video.pixverse"] = (i, r, m) => BuildPixVerseVideoParams(i, r),
+        ["video.ltx2"] = (i, r, m) => BuildLtx2VideoParams(i, r),
+        ["video.ltx13b"] = (i, r, m) => BuildLtx13bVideoParams(i, r),
+        ["video.vidu"] = (i, r, m) => BuildViduVideoParams(i, r),
+        ["video.pika"] = (i, r, m) => BuildPikaVideoParams(i, r),
+        ["video.kandinsky"] = (i, r, m) => BuildKandinskyVideoParams(i, r),
+        ["video.cogvideox"] = (i, r, m) => BuildCogVideoXParams(i, r),
         ["utility.image"] = (i, r, m) => BuildUtilityImageParams(i, r),
         ["utility.video"] = (i, r, m) => BuildUtilityVideoParams(i, r)
     };
@@ -1095,7 +1102,100 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         }
     }
 
-    /// <summary>Generic video params for models without specific handling (Wan, Pika, PixVerse, Vidu, LTX, etc.)</summary>
+    /// <summary>Adds the fields shared by every video family: an optional negative prompt and the seed.</summary>
+    private static void AddSeedAndNegative(T2IParamInput input, JObject request, bool negative)
+    {
+        if (negative && input.TryGet(SwarmUIAPIBackends.NegativePromptParam_FalVideo, out string neg) && !string.IsNullOrEmpty(neg)) request["negative_prompt"] = neg;
+        if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0) request["seed"] = seed;
+    }
+
+    private static void Put(T2IParamInput input, JObject request, string field, T2IRegisteredParam<string> param)
+    {
+        if (input.TryGet(param, out string val) && !string.IsNullOrEmpty(val)) request[field] = val;
+    }
+
+    private static int Seconds(T2IParamInput input, T2IRegisteredParam<string> param)
+    {
+        return input.TryGet(param, out string val) && int.TryParse(val, out int seconds) ? seconds : 0;
+    }
+
+    /// <summary>Wan 2.2 A14B: aspect (16:9,9:16,1:1), resolution (480p/580p/720p), negative, seed.
+    /// Length is num_frames at 16fps, not duration. Rejects duration and generate_audio.</summary>
+    private static void BuildWan22VideoParams(T2IParamInput input, JObject request)
+    {
+        int seconds = Seconds(input, SwarmUIAPIBackends.DurationParam_Wan22);
+        if (seconds > 0) request["num_frames"] = Math.Clamp(seconds * 16 + 1, 17, 161);
+        Put(input, request, "aspect_ratio", SwarmUIAPIBackends.AspectRatioParam_Wan22);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_Wan22);
+        AddSeedAndNegative(input, request, negative: true);
+    }
+
+    /// <summary>PixVerse v5: duration (5 or 8), aspect, resolution (360p-1080p), negative, seed. No audio.</summary>
+    private static void BuildPixVerseVideoParams(T2IParamInput input, JObject request)
+    {
+        int seconds = Seconds(input, SwarmUIAPIBackends.DurationParam_PixVerse);
+        if (seconds > 0) request["duration"] = seconds;
+        Put(input, request, "aspect_ratio", SwarmUIAPIBackends.AspectRatioParam_PixVerse);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_PixVerse);
+        AddSeedAndNegative(input, request, negative: true);
+    }
+
+    /// <summary>LTX-2 19B: video_size + num_frames at 25fps, generate_audio, negative, seed.
+    /// Rejects duration, aspect_ratio and resolution.</summary>
+    private static void BuildLtx2VideoParams(T2IParamInput input, JObject request)
+    {
+        int seconds = Seconds(input, SwarmUIAPIBackends.DurationParam_Ltx2);
+        if (seconds > 0) request["num_frames"] = seconds * 25 + 1;
+        if (input.TryGet(SwarmUIAPIBackends.GenerateAudioParam_FalVideo, out bool audio)) request["generate_audio"] = audio;
+        AddSeedAndNegative(input, request, negative: true);
+    }
+
+    /// <summary>LTX-13B distilled: resolution (480p/720p), aspect (incl auto), negative, seed, num_frames at 24fps.</summary>
+    private static void BuildLtx13bVideoParams(T2IParamInput input, JObject request)
+    {
+        int seconds = Seconds(input, SwarmUIAPIBackends.DurationParam_Ltx13b);
+        if (seconds > 0) request["num_frames"] = seconds * 24 + 1;
+        Put(input, request, "aspect_ratio", SwarmUIAPIBackends.AspectRatioParam_Ltx13b);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_Ltx13b);
+        AddSeedAndNegative(input, request, negative: true);
+    }
+
+    /// <summary>Vidu Q3: duration (int), aspect, resolution, seed. Audio field is 'audio', not 'generate_audio'. No negative.</summary>
+    private static void BuildViduVideoParams(T2IParamInput input, JObject request)
+    {
+        int seconds = Seconds(input, SwarmUIAPIBackends.DurationParam_Vidu);
+        if (seconds > 0) request["duration"] = seconds;
+        if (input.TryGet(SwarmUIAPIBackends.GenerateAudioParam_FalVideo, out bool audio)) request["audio"] = audio;
+        Put(input, request, "aspect_ratio", SwarmUIAPIBackends.AspectRatioParam_Vidu);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_Vidu);
+        AddSeedAndNegative(input, request, negative: false);
+    }
+
+    /// <summary>Pika v2.2: duration (5 or 10), aspect (7 ratios), resolution (720p/1080p), negative, seed. No audio.</summary>
+    private static void BuildPikaVideoParams(T2IParamInput input, JObject request)
+    {
+        Put(input, request, "duration", SwarmUIAPIBackends.DurationParam_Pika);
+        Put(input, request, "aspect_ratio", SwarmUIAPIBackends.AspectRatioParam_Pika);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_Pika);
+        AddSeedAndNegative(input, request, negative: true);
+    }
+
+    /// <summary>Kandinsky 5 Pro: resolution (512P/1024P), duration as a "5s" string, seed. No aspect, negative or audio.</summary>
+    private static void BuildKandinskyVideoParams(T2IParamInput input, JObject request)
+    {
+        int seconds = Seconds(input, SwarmUIAPIBackends.DurationParam_Kandinsky);
+        if (seconds > 0) request["duration"] = $"{seconds}s";
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_Kandinsky);
+        AddSeedAndNegative(input, request, negative: false);
+    }
+
+    /// <summary>CogVideoX-5B: video_size, negative, seed. Rejects duration, aspect_ratio, resolution and audio.</summary>
+    private static void BuildCogVideoXParams(T2IParamInput input, JObject request)
+    {
+        AddSeedAndNegative(input, request, negative: true);
+    }
+
+    /// <summary>Grok Imagine Video: duration, aspect_ratio, generate_audio, negative_prompt, seed</summary>
     private static void BuildGenericVideoParams(T2IParamInput input, JObject request)
     {
         if (input.TryGet(SwarmUIAPIBackends.DurationParam_FalVideo, out string duration))
