@@ -11,7 +11,13 @@ public static class ModelCapabilities
     /// <summary>Feature flags each param family turns on.</summary>
     private static readonly Dictionary<string, string[]> FamilyFlags = new()
     {
-        ["image.standard"] = ["fal_t2i_params"],
+        ["image.standard"] = ["fal_img_common", "fal_t2i_params"],
+        // FLUX.2 takes size plus safety only - no batch, steps, guidance or negative prompt.
+        ["image.flux2"] = ["fal_img_common", "fal_flux2_params"],
+        // Qwen 2.0 has no steps or guidance; Z-Image has steps but no guidance.
+        ["image.qwen2"] = ["fal_img_common", "fal_prompt_expansion"],
+        ["image.zimage"] = ["fal_img_common", "fal_img_steps", "fal_prompt_expansion"],
+        ["image.nanobanana2"] = ["fal_nb2_params"],
         ["image.aspect"] = ["fal_aspect_image"],
         ["image.aspect_res"] = ["fal_aspect_image", "fal_resolution_image"],
         ["image.recraft"] = ["fal_recraft_params"],

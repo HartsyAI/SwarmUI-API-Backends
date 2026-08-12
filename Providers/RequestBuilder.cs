@@ -755,6 +755,10 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
     private static readonly Dictionary<string, FamilyBuilder> Families = new()
     {
         ["image.standard"] = (i, r, m) => BuildStandardImageParams(i, r),
+        ["image.flux2"] = (i, r, m) => BuildFlux2ImageParams(i, r),
+        ["image.qwen2"] = (i, r, m) => BuildQwen2ImageParams(i, r),
+        ["image.zimage"] = (i, r, m) => BuildZImageParams(i, r),
+        ["image.nanobanana2"] = (i, r, m) => BuildNanoBanana2Params(i, r),
         ["image.aspect"] = (i, r, m) => BuildAspectRatioImageParams(i, r, m.Id),
         ["image.recraft"] = (i, r, m) => BuildRecraftImageParams(i, r),
         ["image.bria"] = (i, r, m) => BuildBriaImageParams(i, r),
@@ -852,6 +856,55 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         // Negative prompt: SD, HiDream, Qwen, Sana, Lumina, Kolors, Playground
         if (input.TryGet(SwarmUIAPIBackends.NegativePromptParam_FalImage, out string negPrompt) && !string.IsNullOrEmpty(negPrompt))
             request["negative_prompt"] = negPrompt;
+    }
+
+    /// <summary>FLUX.2 image models: image_size, seed, output_format, safety. No batch, steps, guidance
+    /// or negative prompt - the endpoint declares none of them.</summary>
+    private static void BuildFlux2ImageParams(T2IParamInput input, JObject request)
+    {
+        request["image_size"] = input.TryGet(SwarmUIAPIBackends.ImageSizeParam_Fal, out string size) ? size : "landscape_4_3";
+        if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0) request["seed"] = seed;
+        if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_Fal, out string format)) request["output_format"] = format;
+        if (input.TryGet(SwarmUIAPIBackends.SafetyCheckerParam_Fal, out bool safe)) request["enable_safety_checker"] = safe;
+        if (input.TryGet(SwarmUIAPIBackends.SafetyToleranceParam_Flux2, out int tolerance)) request["safety_tolerance"] = tolerance;
+    }
+
+    /// <summary>Qwen Image 2.0: image_size, batch, seed, negative prompt, prompt expansion. No steps or guidance.</summary>
+    private static void BuildQwen2ImageParams(T2IParamInput input, JObject request)
+    {
+        request["image_size"] = input.TryGet(SwarmUIAPIBackends.ImageSizeParam_Fal, out string size) ? size : "square_hd";
+        request["num_images"] = GetNumImages(input);
+        if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0) request["seed"] = seed;
+        if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_Fal, out string format)) request["output_format"] = format;
+        if (input.TryGet(SwarmUIAPIBackends.SafetyCheckerParam_Fal, out bool safe)) request["enable_safety_checker"] = safe;
+        if (input.TryGet(SwarmUIAPIBackends.NegativePromptParam_FalImage, out string neg) && !string.IsNullOrEmpty(neg)) request["negative_prompt"] = neg;
+        if (input.TryGet(SwarmUIAPIBackends.PromptExpansionParam_Wan, out bool expand)) request["enable_prompt_expansion"] = expand;
+    }
+
+    /// <summary>Z-Image Turbo: image_size, batch, steps, seed. No guidance or negative prompt.</summary>
+    private static void BuildZImageParams(T2IParamInput input, JObject request)
+    {
+        request["image_size"] = input.TryGet(SwarmUIAPIBackends.ImageSizeParam_Fal, out string size) ? size : "landscape_4_3";
+        request["num_images"] = GetNumImages(input);
+        if (input.TryGet(SwarmUIAPIBackends.NumInferenceStepsParam_Fal, out int steps)) request["num_inference_steps"] = steps;
+        if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0) request["seed"] = seed;
+        if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_Fal, out string format)) request["output_format"] = format;
+        if (input.TryGet(SwarmUIAPIBackends.SafetyCheckerParam_Fal, out bool safe)) request["enable_safety_checker"] = safe;
+        if (input.TryGet(SwarmUIAPIBackends.PromptExpansionParam_Wan, out bool expand)) request["enable_prompt_expansion"] = expand;
+    }
+
+    /// <summary>Nano Banana 2: extended aspect list, 0.5K-4K resolution, plus reasoning and web-search controls.</summary>
+    private static void BuildNanoBanana2Params(T2IParamInput input, JObject request)
+    {
+        Put(input, request, "aspect_ratio", SwarmUIAPIBackends.AspectRatioParam_NB2);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_NB2);
+        Put(input, request, "thinking_level", SwarmUIAPIBackends.ThinkingLevelParam_NB2);
+        Put(input, request, "system_prompt", SwarmUIAPIBackends.SystemPromptParam_NB2);
+        request["num_images"] = GetNumImages(input);
+        if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0) request["seed"] = seed;
+        if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_FalAspect, out string format)) request["output_format"] = format;
+        if (input.TryGet(SwarmUIAPIBackends.SafetyToleranceParam_NB2, out int tolerance)) request["safety_tolerance"] = tolerance;
+        if (input.TryGet(SwarmUIAPIBackends.WebSearchParam_NB2, out bool search)) request["enable_web_search"] = search;
     }
 
     /// <summary>Aspect ratio models: FLUX Ultra, Kling Image, Nano Banana, Imagen 3. Use aspect_ratio + resolution instead of image_size.</summary>

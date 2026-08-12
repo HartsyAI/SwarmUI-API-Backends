@@ -322,8 +322,13 @@ const APIBackendsConfig = {
         if (cap && paramId === 'initimage') {
             return cap.init_image === true;
         }
-        if (cap && ['steps', 'cfgscale'].includes(paramId)) {
+        if (cap && paramId === 'cfgscale') {
             return (cap.flags || []).includes('fal_t2i_params');
+        }
+        if (cap && paramId === 'steps') {
+            // Some models take steps without any guidance scale (Z-Image), so the two are gated separately.
+            const flags = cap.flags || [];
+            return flags.includes('fal_t2i_params') || flags.includes('fal_img_steps');
         }
         // Flag-based core param visibility for Fal models
         if (curArch === 'fal_api') {
