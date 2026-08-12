@@ -202,7 +202,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Premium image editing with photorealism")
             .WithTags("flux", "image-to-image", "editing", "flux2", "professional")
             .WithFeatureFlag("fal_i2i_params")
-            .WithFamily("image.standard")
+            .WithFamily("image.flux2_edit")
             .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
@@ -217,7 +217,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Maximum quality image editing")
             .WithTags("flux", "image-to-image", "editing", "flux2", "premium")
             .WithFeatureFlag("fal_i2i_params")
-            .WithFamily("image.standard")
+            .WithFamily("image.flux2_edit")
             .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
@@ -232,7 +232,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Precise image editing with color control")
             .WithTags("flux", "image-to-image", "editing", "flux2")
             .WithFeatureFlag("fal_i2i_params")
-            .WithFamily("image.standard")
+            .WithFamily("image.flux2_edit_dev")
             .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
@@ -247,7 +247,7 @@ public sealed class FalProvider : IProviderSource
             .WithUsageHint("Multi-reference editing with typography support")
             .WithTags("flux", "image-to-image", "editing", "flux2", "typography")
             .WithFeatureFlag("fal_i2i_params")
-            .WithFamily("image.standard")
+            .WithFamily("image.flux2_edit_flex")
             .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()

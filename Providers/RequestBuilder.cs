@@ -821,6 +821,9 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
     {
         ["image.standard"] = (i, r, m) => BuildStandardImageParams(i, r),
         ["image.flux2"] = (i, r, m) => BuildFlux2ImageParams(i, r),
+        ["image.flux2_edit"] = (i, r, m) => BuildFlux2EditParams(i, r, sampling: false, batch: false, expansion: false),
+        ["image.flux2_edit_flex"] = (i, r, m) => BuildFlux2EditParams(i, r, sampling: true, batch: false, expansion: false),
+        ["image.flux2_edit_dev"] = (i, r, m) => BuildFlux2EditParams(i, r, sampling: true, batch: true, expansion: true),
         ["image.qwen2"] = (i, r, m) => BuildQwen2ImageParams(i, r),
         ["image.zimage"] = (i, r, m) => BuildZImageParams(i, r),
         ["image.nanobanana2"] = (i, r, m) => BuildNanoBanana2Params(i, r),
@@ -932,6 +935,30 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_Fal, out string format)) request["output_format"] = format;
         if (input.TryGet(SwarmUIAPIBackends.SafetyCheckerParam_Fal, out bool safe)) request["enable_safety_checker"] = safe;
         if (input.TryGet(SwarmUIAPIBackends.SafetyToleranceParam_Flux2, out int tolerance)) request["safety_tolerance"] = tolerance;
+    }
+
+    /// <summary>FLUX.2 editing. All variants take image_urls plus an auto-capable image_size, seed and safety;
+    /// flex and dev additionally take steps and guidance, and dev alone takes a batch count.</summary>
+    private static void BuildFlux2EditParams(T2IParamInput input, JObject request, bool sampling, bool batch, bool expansion)
+    {
+        Put(input, request, "image_size", SwarmUIAPIBackends.ImageSizeParam_Flux2Edit);
+        if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0) request["seed"] = seed;
+        if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_Fal, out string format)) request["output_format"] = format;
+        if (input.TryGet(SwarmUIAPIBackends.SafetyCheckerParam_Fal, out bool safe)) request["enable_safety_checker"] = safe;
+        if (input.TryGet(SwarmUIAPIBackends.SafetyToleranceParam_Flux2, out int tolerance)) request["safety_tolerance"] = tolerance;
+        if (sampling)
+        {
+            if (input.TryGet(SwarmUIAPIBackends.GuidanceScaleParam_Fal, out double guidance)) request["guidance_scale"] = guidance;
+            if (input.TryGet(SwarmUIAPIBackends.NumInferenceStepsParam_Fal, out int steps)) request["num_inference_steps"] = steps;
+        }
+        if (batch)
+        {
+            // dev caps at 4 input images and accepts a batch count; the others return exactly one.
+            request["num_images"] = Math.Min(GetNumImages(input), 4);
+        }
+        if (expansion && input.TryGet(SwarmUIAPIBackends.PromptExpansionParam_Wan, out bool expand)) request["enable_prompt_expansion"] = expand;
+        // These endpoints require image_urls; image_url is not part of their schema.
+        request.Remove("image_url");
     }
 
     /// <summary>Qwen Image 2.0: image_size, batch, seed, negative prompt, prompt expansion. No steps or guidance.</summary>

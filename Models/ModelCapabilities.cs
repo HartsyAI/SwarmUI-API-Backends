@@ -11,12 +11,17 @@ public static class ModelCapabilities
     /// <summary>Feature flags each param family turns on.</summary>
     private static readonly Dictionary<string, string[]> FamilyFlags = new()
     {
-        ["image.standard"] = ["fal_img_common", "fal_t2i_params"],
+        ["image.standard"] = ["fal_img_size", "fal_img_common", "fal_t2i_params"],
         // FLUX.2 takes size plus safety only - no batch, steps, guidance or negative prompt.
-        ["image.flux2"] = ["fal_img_common", "fal_flux2_params"],
+        ["image.flux2"] = ["fal_img_size", "fal_img_common", "fal_flux2_params"],
+        // FLUX.2 editing splits three ways: pro/max take neither steps nor guidance, flex takes both,
+        // and dev additionally takes a batch count.
+        ["image.flux2_edit"] = ["fal_flux2_edit_params", "fal_img_common", "fal_flux2_params"],
+        ["image.flux2_edit_flex"] = ["fal_flux2_edit_params", "fal_img_common", "fal_flux2_params", "fal_t2i_params"],
+        ["image.flux2_edit_dev"] = ["fal_flux2_edit_params", "fal_img_common", "fal_flux2_params", "fal_t2i_params", "fal_prompt_expansion"],
         // Qwen 2.0 has no steps or guidance; Z-Image has steps but no guidance.
-        ["image.qwen2"] = ["fal_img_common", "fal_prompt_expansion"],
-        ["image.zimage"] = ["fal_img_common", "fal_img_steps", "fal_prompt_expansion"],
+        ["image.qwen2"] = ["fal_img_size", "fal_img_common", "fal_prompt_expansion"],
+        ["image.zimage"] = ["fal_img_size", "fal_img_common", "fal_img_steps", "fal_prompt_expansion"],
         ["image.nanobanana2"] = ["fal_nb2_params"],
         ["image.aspect"] = ["fal_aspect_image"],
         ["image.aspect_res"] = ["fal_aspect_image", "fal_resolution_image"],
@@ -72,7 +77,7 @@ public static class ModelCapabilities
     private static readonly HashSet<string> BatchCapableFamilies =
     [
         "image.standard", "image.aspect", "image.aspect_res",
-        "image.qwen2", "image.zimage", "image.nanobanana2", "image.openai"
+        "image.qwen2", "image.zimage", "image.nanobanana2", "image.openai", "image.flux2_edit_dev"
     ];
 
     /// <summary>Whether one call to this model can return more than one image.</summary>

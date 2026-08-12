@@ -217,6 +217,8 @@ public class SwarmUIAPIBackends : Extension
 
     // FLUX.2 image models: no batch, steps, guidance or negative prompt - just size plus safety.
     public static T2IRegisteredParam<int> SafetyToleranceParam_Flux2;
+    /// <summary>FLUX.2 edit endpoints accept an 'auto' size that the text-to-image ones do not.</summary>
+    public static T2IRegisteredParam<string> ImageSizeParam_Flux2Edit;
     // Nano Banana 2 extends the aspect list to extreme ratios and starts resolution at 0.5K.
     public static T2IRegisteredParam<string> AspectRatioParam_NB2, ResolutionParam_NB2, ThinkingLevelParam_NB2, SystemPromptParam_NB2;
     public static T2IRegisteredParam<int> SafetyToleranceParam_NB2;
@@ -582,7 +584,7 @@ public class SwarmUIAPIBackends : Extension
                 "landscape_4_3///Landscape 4:3",
                 "landscape_16_9///Landscape 16:9"
             ],
-            OrderPriority: -10, Group: T2IParamTypes.GroupResolution, FeatureFlag: "fal_img_common"));
+            OrderPriority: -10, Group: T2IParamTypes.GroupResolution, FeatureFlag: "fal_img_size"));
 
         // GuidanceScaleParam_Fal => T2IParamTypes.CFGScale (aliased, no registration needed)
         // NumInferenceStepsParam_Fal => T2IParamTypes.Steps (aliased, no registration needed)
@@ -1143,6 +1145,11 @@ public class SwarmUIAPIBackends : Extension
             Min: 0, Max: 4, ViewType: ParamViewType.SLIDER,
             OrderPriority: -6, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_flux3_params"));
 
+        ImageSizeParam_Flux2Edit = T2IParamTypes.Register<string>(new("FLUX Two Edit Image Size",
+            "Output size for FLUX.2 editing. 'Auto' keeps the input image's dimensions.", "auto",
+            GetValues: _ => ["auto///Auto (Match Input)", "square_hd///Square HD", "square///Square", "portrait_4_3///Portrait 4:3", "portrait_16_9///Portrait 16:9", "landscape_4_3///Landscape 4:3", "landscape_16_9///Landscape 16:9"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupResolution, FeatureFlag: "fal_flux2_edit_params"));
+
         SafetyToleranceParam_Flux2 = T2IParamTypes.Register<int>(new("FLUX Two Safety Tolerance",
             "Content filtering strictness. 1 is most strict, 5 is most permissive.", "2",
             Min: 1, Max: 5, ViewType: ParamViewType.SLIDER,
@@ -1315,7 +1322,8 @@ public class SwarmUIAPIBackends : Extension
             "fal_wan_multishot", "fal_end_image_url", "fal_kling_turbo_params", "fal_seedance25_params", "fal_seedance2_duration",
             "fal_ref_images", "fal_ref_videos", "fal_ref_audio",
             "fal_h3_params", "fal_h3_aspect", "fal_h3_ref_aspect", "fal_flux3_params", "bfl_flux3_params",
-            "fal_img_common", "fal_img_steps", "fal_flux2_params", "fal_nb2_params"
+            "fal_img_common", "fal_img_size", "fal_img_steps", "fal_flux2_params", "fal_nb2_params",
+            "fal_flux2_edit_params"
         ];
 
         // Features incompatible with API backends (local-only features)
