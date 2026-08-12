@@ -418,6 +418,10 @@ public sealed class BlackForestRequestBuilder : BaseRequestBuilder
 {
     public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
     {
+        if (model.Family == "video.bfl_flux3")
+        {
+            return BuildFlux3DirectRequest(input);
+        }
         string modelId = model.Id;
         bool usesAspectRatio = modelId is "flux-pro-1.1-ultra" or "flux-kontext-pro" or "flux-kontext-max";
         JObject request = new()
@@ -476,6 +480,38 @@ public sealed class BlackForestRequestBuilder : BaseRequestBuilder
         return request;
     }
 
+    /// <summary>FLUX 3 on BFL's own API is a discriminated union on 'mode'. Supplying an Init Image switches
+    /// from text-to-video to image-continuation, where the image becomes the first keyframe.
+    /// There is no seed field in this schema.</summary>
+    private static JObject BuildFlux3DirectRequest(T2IParamInput input)
+    {
+        JObject request = new()
+        {
+            ["prompt"] = input.Get(T2IParamTypes.Prompt),
+            ["version"] = "latest"
+        };
+        bool hasImage = input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null;
+        if (hasImage)
+        {
+            request["mode"] = "i2v";
+            request["keyframes"] = new JArray($"data:image/png;base64,{Convert.ToBase64String(initImg.RawData)}");
+        }
+        else
+        {
+            request["mode"] = "t2v";
+        }
+        if (input.TryGet(SwarmUIAPIBackends.DurationParam_Flux3, out string duration))
+        {
+            // 'auto' stays a string; a concrete length is an integer in this schema.
+            request["duration"] = int.TryParse(duration, out int seconds) ? seconds : duration;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Flux3, out string aspect)) request["aspect_ratio"] = aspect;
+        if (input.TryGet(SwarmUIAPIBackends.ResolutionParam_Flux3Bfl, out string resolution)) request["resolution"] = resolution;
+        if (input.TryGet(SwarmUIAPIBackends.GenerateAudioParam_FalVideo, out bool audio)) request["generate_audio"] = audio;
+        if (input.TryGet(SwarmUIAPIBackends.SafetyToleranceParam_Flux3, out int safety)) request["safety_tolerance"] = safety;
+        return request;
+    }
+
     public override string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input)
     {
         return $"{provider.BaseUrl}/v1/{model.Id}";
@@ -508,8 +544,9 @@ public sealed class BlackForestRequestBuilder : BaseRequestBuilder
 
     private async Task<byte[]> PollForResult(string pollingUrl, string apiKey)
     {
-        int maxAttempts = 120;
-        int delayMs = 1000;
+        // Video jobs run for minutes, far past the 2 minutes the original image-only budget allowed.
+        int maxAttempts = 450;
+        int delayMs = 2000;
         for (int i = 0; i < maxAttempts; i++)
         {
             await Task.Delay(delayMs);
@@ -523,12 +560,14 @@ public sealed class BlackForestRequestBuilder : BaseRequestBuilder
             Logs.Verbose($"[BFL] Polling status: {status}");
             if (status is "Ready")
             {
-                string sampleUrl = result["result"]?["sample"]?.ToString();
+                // Images come back under 'sample'; video jobs use a video key instead.
+                JToken payload = result["result"];
+                string sampleUrl = (payload?["sample"] ?? payload?["video"] ?? payload?["video_url"])?.ToString();
                 if (!string.IsNullOrEmpty(sampleUrl))
                 {
                     return await DownloadImageFromUrl(sampleUrl);
                 }
-                throw new Exception("BFL result ready but missing sample URL");
+                throw new Exception($"BFL result ready but carried no downloadable URL. Result: {payload}");
             }
             else if (status is "Error" || status is "Failed")
             {

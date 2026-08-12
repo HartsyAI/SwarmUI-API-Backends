@@ -209,6 +209,8 @@ public class SwarmUIAPIBackends : Extension
     // FLUX 3 video. No seed input; safety tolerance replaces the usual negative prompt.
     public static T2IRegisteredParam<string> DurationParam_Flux3, ResolutionParam_Flux3, AspectRatioParam_Flux3;
     public static T2IRegisteredParam<int> SafetyToleranceParam_Flux3;
+    /// <summary>BFL's direct API sizes video as hd/fhd rather than fal's 720p/1080p.</summary>
+    public static T2IRegisteredParam<string> ResolutionParam_Flux3Bfl;
 
     // Fal utility params (upscalers, background removal, face restoration)
     public static T2IRegisteredParam<double> UpscaleFactorParam_FalUtility;
@@ -1109,6 +1111,11 @@ public class SwarmUIAPIBackends : Extension
             Min: 0, Max: 4, ViewType: ParamViewType.SLIDER,
             OrderPriority: -6, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_flux3_params"));
 
+        ResolutionParam_Flux3Bfl = T2IParamTypes.Register<string>(new("FLUX Three Direct Video Resolution",
+            "Resolution for FLUX 3 on Black Forest Labs' own API, which names these hd and fhd.", "hd",
+            GetValues: _ => ["hd///HD (720p)", "fhd///Full HD (1080p)"],
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "bfl_flux3_params"));
+
         DurationParam_H3 = T2IParamTypes.Register<string>(new("MiniMax HThree Video Duration",
             "Length of the generated video in seconds.", "5",
             GetValues: _ => ["5///5 seconds (Default)", "6///6 seconds", "8///8 seconds", "10///10 seconds", "12///12 seconds", "15///15 seconds"],
@@ -1241,7 +1248,7 @@ public class SwarmUIAPIBackends : Extension
             "fal_wan27_aspect", "fal_wan2x_resolution", "fal_wan_audio", "fal_prompt_expansion",
             "fal_wan_multishot", "fal_end_image_url", "fal_kling_turbo_params", "fal_seedance25_params", "fal_seedance2_duration",
             "fal_ref_images", "fal_ref_videos", "fal_ref_audio",
-            "fal_h3_params", "fal_h3_aspect", "fal_h3_ref_aspect", "fal_flux3_params"
+            "fal_h3_params", "fal_h3_aspect", "fal_h3_ref_aspect", "fal_flux3_params", "bfl_flux3_params"
         ];
 
         // Features incompatible with API backends (local-only features)

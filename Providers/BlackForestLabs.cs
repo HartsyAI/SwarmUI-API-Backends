@@ -109,6 +109,20 @@ public sealed class BlackForestLabsProvider : IProviderSource
             .WithUsageHint("Premium FLUX 2 generation with maximum quality")
             .WithTags("flux", "flux2", "premium")
             .WithFeatureFlag("flux_2_max_params")
+            .Build(),
+
+        ModelDefinitionBuilder.Create()
+            .WithId("flux-3-video")
+            .WithTitle("FLUX 3 Video")
+            .WithDescription("Multimodal video generation with audio produced in the same pass, 5-20 seconds at HD or Full HD")
+            .WithAuthor("Black Forest Labs")
+            .WithDimensions(1920, 1080)
+            .WithPreviewImage("Images/ModelPreviews/BFL/flux-3-video.png")
+            .WithDate("2026")
+            .WithUsageHint("Text-to-video, or supply an Init Image to animate from it")
+            .WithTags("flux", "flux3", "video", "audio")
+            .WithFamily("video.bfl_flux3")
+            .WithInitImage()
             .Build()
     ];
 }
