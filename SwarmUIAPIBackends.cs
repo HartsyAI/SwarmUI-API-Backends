@@ -196,21 +196,25 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<string> DurationParam_Wan26;
     public static T2IRegisteredParam<string> DurationParam_Wan27, AspectRatioParam_Wan27, DurationParam_Wan27Ref;
     public static T2IRegisteredParam<string> ResolutionParam_Wan2x;
-    public static T2IRegisteredParam<string> AudioUrlParam_Wan, RefImageUrlsParam_Wan, RefVideoUrlsParam_Wan;
+    public static T2IRegisteredParam<string> AudioUrlParam_Wan;
     /// <summary>Shared by any i2v model that accepts a final frame (Wan 2.7, Seedance 2.5).</summary>
     public static T2IRegisteredParam<string> EndImageUrlParam;
     public static T2IRegisteredParam<string> DurationParam_Seedance25;
     public static T2IRegisteredParam<bool> PromptExpansionParam_Wan, MultiShotsParam_Wan;
     public static T2IRegisteredParam<string> DurationParam_KlingTurbo;
 
+    // MiniMax H3. Its resolution scale (768P/2K/4K) matches nothing else in the extension.
+    public static T2IRegisteredParam<string> DurationParam_H3, ResolutionParam_H3, AspectRatioParam_H3, AspectRatioParam_H3Ref;
+
     // Fal utility params (upscalers, background removal, face restoration)
     public static T2IRegisteredParam<double> UpscaleFactorParam_FalUtility;
     public static T2IRegisteredParam<string> VideoUrlParam_FalUtility;
 
-    // Seedance Ref2V multi-reference params (image_urls, video_urls, audio_urls as comma-separated strings)
-    public static T2IRegisteredParam<string> RefImageURLsParam_Seedance;
-    public static T2IRegisteredParam<string> RefVideoURLsParam_Seedance;
-    public static T2IRegisteredParam<string> RefAudioURLsParam_Seedance;
+    // Reference URLs, shared by every multi-reference model (Seedance, Wan 2.7, MiniMax H3).
+    // The field names each endpoint expects differ, so the builders map these to the right keys.
+    public static T2IRegisteredParam<string> RefImageUrlsParam;
+    public static T2IRegisteredParam<string> RefVideoUrlsParam;
+    public static T2IRegisteredParam<string> RefAudioUrlsParam;
 
     public override void OnPreInit()
     {
@@ -1066,20 +1070,10 @@ public class SwarmUIAPIBackends : Extension
             "The model generates the motion between your Init Image and this one.",
             "", OrderPriority: -5, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_end_image_url"));
 
-        RefImageUrlsParam_Wan = T2IParamTypes.Register<string>(new("Wan Reference Image URLs",
-            "Comma-separated image URLs describing character or object appearance.\n" +
-            "Pass several for multi-subject generation. Max 20 MB each.",
-            "", OrderPriority: -6, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan27ref_params"));
-
-        RefVideoUrlsParam_Wan = T2IParamTypes.Register<string>(new("Wan Reference Video URLs",
-            "Comma-separated video URLs describing appearance and motion.\n" +
-            "Pass several for multi-subject generation. Max 100 MB each.",
-            "", OrderPriority: -5, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan27ref_params"));
-
         PromptExpansionParam_Wan = T2IParamTypes.Register<bool>(new("Prompt Expansion",
             "Let the model rewrite your prompt for richer detail.\n" +
             "Disable for literal prompt following.", "true",
-            OrderPriority: -4, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_wan_expansion"));
+            OrderPriority: -4, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_prompt_expansion"));
 
         MultiShotsParam_Wan = T2IParamTypes.Register<bool>(new("Multi-Shot Segmentation",
             "Let the model split the video into multiple camera shots.\n" +
@@ -1090,6 +1084,26 @@ public class SwarmUIAPIBackends : Extension
             "Length of the generated video. Seedance 2.5 runs up to 30 seconds in a single shot.", "auto",
             GetValues: _ => ["auto///Auto (Default)", .. Enumerable.Range(4, 27).Select(i => $"{i}///{i} seconds")],
             OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance25_params"));
+
+        DurationParam_H3 = T2IParamTypes.Register<string>(new("MiniMax HThree Video Duration",
+            "Length of the generated video in seconds.", "5",
+            GetValues: _ => ["5///5 seconds (Default)", "6///6 seconds", "8///8 seconds", "10///10 seconds", "12///12 seconds", "15///15 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_h3_params"));
+
+        ResolutionParam_H3 = T2IParamTypes.Register<string>(new("MiniMax HThree Video Resolution",
+            "Output resolution. H3 uses its own scale rather than 480p/720p/1080p.", "2K",
+            GetValues: _ => ["768P///768P (Fast)", "2K///2K (Default)", "4K///4K (Highest)"],
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_h3_params"));
+
+        AspectRatioParam_H3 = T2IParamTypes.Register<string>(new("MiniMax HThree Video Aspect Ratio",
+            "Aspect ratio for H3 text-to-video. Image-to-video follows the input image instead.", "16:9",
+            GetValues: _ => ["21:9///Ultra-wide (21:9)", "16:9///Widescreen (16:9)", "4:3///Standard (4:3)", "1:1///Square (1:1)", "3:4///Portrait (3:4)", "9:16///Portrait (9:16)"],
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_h3_aspect"));
+
+        AspectRatioParam_H3Ref = T2IParamTypes.Register<string>(new("MiniMax HThree Reference Aspect Ratio",
+            "Aspect ratio for H3 reference-to-video. 'Adaptive' follows the references.", "adaptive",
+            GetValues: _ => ["adaptive///Adaptive (Default)", "21:9///Ultra-wide (21:9)", "16:9///Widescreen (16:9)", "4:3///Standard (4:3)", "1:1///Square (1:1)", "3:4///Portrait (3:4)", "9:16///Portrait (9:16)"],
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_h3_ref_aspect"));
 
         DurationParam_KlingTurbo = T2IParamTypes.Register<string>(new("Kling Turbo Video Duration",
             "Length of the generated video, 3 to 15 seconds.\n" +
@@ -1110,28 +1124,25 @@ public class SwarmUIAPIBackends : Extension
             "which take a video rather than the Init Image used by the image utilities.",
             "", OrderPriority: -9, Group: T2IParamTypes.GroupSampling, FeatureFlag: "fal_utility_video_params"));
 
-        // ===== SEEDANCE REF2V MULTI-REFERENCE PARAMETERS =====
-        RefImageURLsParam_Seedance = T2IParamTypes.Register<string>(new("Seedance Reference Image URLs",
-            "Comma-separated URLs of reference images (up to 9).\n" +
-            "In your prompt, reference them as @Image1, @Image2, etc.\n" +
-            "Supports JPEG, PNG, WebP (max 30 MB each).",
-            "",
-            OrderPriority: -6, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance_ref_params"));
+        // ===== SHARED MULTI-REFERENCE PARAMETERS =====
+        RefImageUrlsParam = T2IParamTypes.Register<string>(new("Reference Image URLs",
+            "Comma-separated URLs of reference images for subject and style.\n" +
+            "Refer to them in your prompt in order (Image 1, Image 2, ...).\n" +
+            "Seedance and MiniMax H3 accept up to 9; Wan 2.7 has no fixed cap.",
+            "", OrderPriority: -6, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_ref_images"));
 
-        RefVideoURLsParam_Seedance = T2IParamTypes.Register<string>(new("Seedance Reference Video URLs",
-            "Comma-separated URLs of reference videos (up to 3).\n" +
-            "In your prompt, reference them as @Video1, @Video2, etc.\n" +
-            "Supports MP4, MOV (2-15s combined, max 50 MB total).",
-            "",
-            OrderPriority: -5, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance_ref_params"));
+        RefVideoUrlsParam = T2IParamTypes.Register<string>(new("Reference Video URLs",
+            "Comma-separated URLs of reference videos for motion.\n" +
+            "Refer to them in your prompt in order (Video 1, Video 2, ...). Up to 3, 2-15s each.",
+            "", OrderPriority: -5, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_ref_videos"));
 
-        RefAudioURLsParam_Seedance = T2IParamTypes.Register<string>(new("Seedance Reference Audio URLs",
-            "Comma-separated URLs of reference audio files (up to 3).\n" +
-            "In your prompt, reference them as @Audio1, @Audio2, etc.\n" +
-            "Supports MP3, WAV (max 15s combined, 15 MB each).\n" +
-            "Requires at least one reference image or video.",
-            "",
-            OrderPriority: -4, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance_ref_params"));
+        RefAudioUrlsParam = T2IParamTypes.Register<string>(new("Reference Audio URLs",
+            "Comma-separated URLs of reference audio clips.\n" +
+            "Refer to them in your prompt in order (Audio 1, Audio 2, ...). Up to 3, 2-15s each.\n" +
+            "Requires at least one reference image or video alongside it.",
+            "", OrderPriority: -4, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_ref_audio"));
+
+
 
         RegisterFeatureFlags();
         Program.Backends.RegisterBackendType<DynamicAPIBackend>("dynamic_api_backend", "3rd Party Paid API Backends", "Generate images using various API services (OpenAI, Ideogram, Black Forest Labs, Grok, Google, Fal.ai)", true);
@@ -1203,8 +1214,10 @@ public class SwarmUIAPIBackends : Extension
             "fal_wan22_params", "fal_pixverse_params", "fal_ltx2_params", "fal_ltx13b_params",
             "fal_vidu_params", "fal_pika_params", "fal_kandinsky_params", "fal_cogvideox_params",
             "fal_wan25_params", "fal_wan26_params", "fal_wan27_params", "fal_wan27ref_params",
-            "fal_wan27_aspect", "fal_wan2x_resolution", "fal_wan_audio", "fal_wan_expansion",
-            "fal_wan_multishot", "fal_end_image_url", "fal_kling_turbo_params", "fal_seedance25_params", "fal_seedance2_duration"
+            "fal_wan27_aspect", "fal_wan2x_resolution", "fal_wan_audio", "fal_prompt_expansion",
+            "fal_wan_multishot", "fal_end_image_url", "fal_kling_turbo_params", "fal_seedance25_params", "fal_seedance2_duration",
+            "fal_ref_images", "fal_ref_videos", "fal_ref_audio",
+            "fal_h3_params", "fal_h3_aspect", "fal_h3_ref_aspect"
         ];
 
         // Features incompatible with API backends (local-only features)

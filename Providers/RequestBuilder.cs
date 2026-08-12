@@ -732,7 +732,7 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
             BuildSeedance2VideoParams(i, r);
             if (m.ExtraFlags.Contains("fal_seedance_ref_params"))
             {
-                BuildSeedanceRefParams(i, r);
+                AddReferenceUrls(i, r, "image_urls", "video_urls", "audio_urls");
             }
         },
         ["video.wan22"] = (i, r, m) => BuildWan22VideoParams(i, r),
@@ -748,6 +748,9 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         ["video.wan27"] = (i, r, m) => BuildWan27VideoParams(i, r, aspect: true, endImage: false),
         ["video.wan27_i2v"] = (i, r, m) => BuildWan27VideoParams(i, r, aspect: false, endImage: true),
         ["video.wan27_ref"] = (i, r, m) => BuildWan27RefVideoParams(i, r),
+        ["video.h3"] = (i, r, m) => BuildH3VideoParams(i, r, aspect: SwarmUIAPIBackends.AspectRatioParam_H3, endImage: false, refs: false),
+        ["video.h3_i2v"] = (i, r, m) => BuildH3VideoParams(i, r, aspect: null, endImage: true, refs: false),
+        ["video.h3_ref"] = (i, r, m) => BuildH3VideoParams(i, r, aspect: SwarmUIAPIBackends.AspectRatioParam_H3Ref, endImage: false, refs: true),
         ["video.kling_turbo"] = (i, r, m) => BuildKlingTurboVideoParams(i, r),
         ["video.seedance25"] = (i, r, m) => BuildSeedance25VideoParams(i, r, m, endImage: false),
         ["video.seedance25_i2v"] = (i, r, m) => BuildSeedance25VideoParams(i, r, m, endImage: true),
@@ -1028,15 +1031,7 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         PutInt(input, request, "duration", SwarmUIAPIBackends.DurationParam_Wan27Ref);
         Put(input, request, "aspect_ratio", SwarmUIAPIBackends.AspectRatioParam_Wan27);
         Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_Wan2x);
-        // The Init Image lands in image_url; reference-to-video wants it in the reference array instead.
-        JArray images = UrlList(input, SwarmUIAPIBackends.RefImageUrlsParam_Wan) ?? [];
-        if (request.Remove("image_url", out JToken initImage))
-        {
-            images.AddFirst(initImage);
-        }
-        if (images.Count > 0) request["reference_image_urls"] = images;
-        JArray videos = UrlList(input, SwarmUIAPIBackends.RefVideoUrlsParam_Wan);
-        if (videos is not null) request["reference_video_urls"] = videos;
+        AddReferenceUrls(input, request, "reference_image_urls", "reference_video_urls", null);
         if (input.TryGet(SwarmUIAPIBackends.MultiShotsParam_Wan, out bool multi)) request["multi_shots"] = multi;
         AddSeedAndNegative(input, request, negative: true);
     }
@@ -1052,8 +1047,20 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         if (endImage) Put(input, request, "end_image_url", SwarmUIAPIBackends.EndImageUrlParam);
         if (model.ExtraFlags.Contains("fal_seedance_ref_params"))
         {
-            BuildSeedanceRefParams(input, request);
+            AddReferenceUrls(input, request, "image_urls", "video_urls", "audio_urls");
         }
+    }
+
+    /// <summary>MiniMax H3: integer duration, resolution on its own 768P/2K/4K scale, prompt expansion.
+    /// Takes no seed. Aspect ratio applies to t2v and ref2v only - i2v follows the input image.</summary>
+    private static void BuildH3VideoParams(T2IParamInput input, JObject request, T2IRegisteredParam<string> aspect, bool endImage, bool refs)
+    {
+        PutInt(input, request, "duration", SwarmUIAPIBackends.DurationParam_H3);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_H3);
+        if (aspect is not null) Put(input, request, "aspect_ratio", aspect);
+        if (input.TryGet(SwarmUIAPIBackends.PromptExpansionParam_Wan, out bool expand)) request["enable_prompt_expansion"] = expand;
+        if (endImage) Put(input, request, "end_image_url", SwarmUIAPIBackends.EndImageUrlParam);
+        if (refs) AddReferenceUrls(input, request, "reference_image_urls", "reference_video_urls", "reference_audio_urls");
     }
 
     /// <summary>Kling V3 Turbo Pro: prompt, image_url and duration only. No aspect, resolution, audio, negative or seed.</summary>
@@ -1140,46 +1147,27 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         }
     }
 
-    /// <summary>Seedance Ref2V: image_urls, video_urls, audio_urls (comma-separated URL strings converted to JSON arrays)</summary>
-    private static void BuildSeedanceRefParams(T2IParamInput input, JObject request)
+    /// <summary>Attaches reference media. Endpoints disagree on the field names (Seedance uses image_urls,
+    /// Wan and H3 use reference_image_urls), so the caller supplies them. Any Init Image already placed in
+    /// image_url is folded in as the first reference.</summary>
+    private static void AddReferenceUrls(T2IParamInput input, JObject request, string imageField, string videoField, string audioField)
     {
-        // Handle image references: combine InitImage (if present as image_url) with extra URL text
-        JArray imageUrls = new();
-        if (request.ContainsKey("image_url"))
+        JArray images = UrlList(input, SwarmUIAPIBackends.RefImageUrlsParam) ?? [];
+        if (request.Remove("image_url", out JToken initImage))
         {
-            imageUrls.Add(request["image_url"].ToString());
-            request.Remove("image_url"); // ref2v uses image_urls array, not image_url
+            images.AddFirst(initImage);
         }
-        if (input.TryGet(SwarmUIAPIBackends.RefImageURLsParam_Seedance, out string imageUrlStr) && !string.IsNullOrEmpty(imageUrlStr))
+        if (images.Count > 0)
         {
-            foreach (string url in imageUrlStr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                imageUrls.Add(url);
-            }
+            request[imageField] = images;
         }
-        if (imageUrls.Count > 0)
+        if (videoField is not null && UrlList(input, SwarmUIAPIBackends.RefVideoUrlsParam) is JArray videos)
         {
-            request["image_urls"] = imageUrls;
+            request[videoField] = videos;
         }
-        // Handle video references
-        if (input.TryGet(SwarmUIAPIBackends.RefVideoURLsParam_Seedance, out string videoUrlStr) && !string.IsNullOrEmpty(videoUrlStr))
+        if (audioField is not null && UrlList(input, SwarmUIAPIBackends.RefAudioUrlsParam) is JArray audio)
         {
-            JArray videoUrls = new();
-            foreach (string url in videoUrlStr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                videoUrls.Add(url);
-            }
-            request["video_urls"] = videoUrls;
-        }
-        // Handle audio references
-        if (input.TryGet(SwarmUIAPIBackends.RefAudioURLsParam_Seedance, out string audioUrlStr) && !string.IsNullOrEmpty(audioUrlStr))
-        {
-            JArray audioUrls = new();
-            foreach (string url in audioUrlStr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                audioUrls.Add(url);
-            }
-            request["audio_urls"] = audioUrls;
+            request[audioField] = audio;
         }
     }
 
