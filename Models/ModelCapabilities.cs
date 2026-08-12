@@ -46,6 +46,8 @@ public static class ModelCapabilities
         // Seedance 2.5 runs to 30s and takes no seed input; 2.0 (incl. Mini) stays capped at 15s.
         ["video.seedance25"] = ["fal_seedance25_params", "fal_seedance2_video_params"],
         ["video.seedance25_i2v"] = ["fal_seedance25_params", "fal_seedance2_video_params", "fal_end_image_url"],
+        // FLUX 3: no seed input, safety_tolerance instead of a negative prompt. i2v shares the same params.
+        ["video.flux3"] = ["fal_flux3_params", "fal_video_audio"],
         // MiniMax H3: 768P/2K/4K, no seed input. i2v derives aspect from the image and adds a last frame.
         ["video.h3"] = ["fal_h3_params", "fal_h3_aspect", "fal_prompt_expansion"],
         ["video.h3_i2v"] = ["fal_h3_params", "fal_prompt_expansion", "fal_end_image_url"],

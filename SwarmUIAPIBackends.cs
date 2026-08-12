@@ -206,6 +206,10 @@ public class SwarmUIAPIBackends : Extension
     // MiniMax H3. Its resolution scale (768P/2K/4K) matches nothing else in the extension.
     public static T2IRegisteredParam<string> DurationParam_H3, ResolutionParam_H3, AspectRatioParam_H3, AspectRatioParam_H3Ref;
 
+    // FLUX 3 video. No seed input; safety tolerance replaces the usual negative prompt.
+    public static T2IRegisteredParam<string> DurationParam_Flux3, ResolutionParam_Flux3, AspectRatioParam_Flux3;
+    public static T2IRegisteredParam<int> SafetyToleranceParam_Flux3;
+
     // Fal utility params (upscalers, background removal, face restoration)
     public static T2IRegisteredParam<double> UpscaleFactorParam_FalUtility;
     public static T2IRegisteredParam<string> VideoUrlParam_FalUtility;
@@ -1085,6 +1089,26 @@ public class SwarmUIAPIBackends : Extension
             GetValues: _ => ["auto///Auto (Default)", .. Enumerable.Range(4, 27).Select(i => $"{i}///{i} seconds")],
             OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance25_params"));
 
+        DurationParam_Flux3 = T2IParamTypes.Register<string>(new("FLUX Three Video Duration",
+            "Length of the generated video. FLUX 3 runs any whole number of seconds from 5 to 20.", "auto",
+            GetValues: _ => ["auto///Auto (Default)", .. Enumerable.Range(5, 16).Select(i => $"{i}///{i} seconds")],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_flux3_params"));
+
+        AspectRatioParam_Flux3 = T2IParamTypes.Register<string>(new("FLUX Three Video Aspect Ratio",
+            "Aspect ratio for FLUX 3.", "auto",
+            GetValues: _ => ["auto///Auto (Default)", "21:9///Ultra-wide (21:9)", "2:1///Wide (2:1)", "16:9///Widescreen (16:9)", "4:3///Standard (4:3)", "1:1///Square (1:1)", "3:4///Portrait (3:4)", "9:16///Portrait (9:16)"],
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_flux3_params"));
+
+        ResolutionParam_Flux3 = T2IParamTypes.Register<string>(new("FLUX Three Video Resolution",
+            "Resolution for FLUX 3.", "720p",
+            GetValues: _ => ["720p///720p (Standard)", "1080p///1080p (HD)"],
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_flux3_params"));
+
+        SafetyToleranceParam_Flux3 = T2IParamTypes.Register<int>(new("FLUX Three Safety Tolerance",
+            "Content filtering strictness. 0 is strictest, 4 is most permissive.", "2",
+            Min: 0, Max: 4, ViewType: ParamViewType.SLIDER,
+            OrderPriority: -6, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_flux3_params"));
+
         DurationParam_H3 = T2IParamTypes.Register<string>(new("MiniMax HThree Video Duration",
             "Length of the generated video in seconds.", "5",
             GetValues: _ => ["5///5 seconds (Default)", "6///6 seconds", "8///8 seconds", "10///10 seconds", "12///12 seconds", "15///15 seconds"],
@@ -1217,7 +1241,7 @@ public class SwarmUIAPIBackends : Extension
             "fal_wan27_aspect", "fal_wan2x_resolution", "fal_wan_audio", "fal_prompt_expansion",
             "fal_wan_multishot", "fal_end_image_url", "fal_kling_turbo_params", "fal_seedance25_params", "fal_seedance2_duration",
             "fal_ref_images", "fal_ref_videos", "fal_ref_audio",
-            "fal_h3_params", "fal_h3_aspect", "fal_h3_ref_aspect"
+            "fal_h3_params", "fal_h3_aspect", "fal_h3_ref_aspect", "fal_flux3_params"
         ];
 
         // Features incompatible with API backends (local-only features)

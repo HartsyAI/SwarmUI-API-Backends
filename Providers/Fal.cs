@@ -44,6 +44,7 @@ public sealed class FalProvider : IProviderSource
         .AddModels(SeedanceVideoModels)
         .AddModels(MiniMaxVideoModels)
         .AddModels(PixVerseModels)
+        .AddModels(Flux3Models)
         .AddModels(WanModels)
         .AddModels(LTXModels)
         .AddModels(ViduModels)
@@ -1868,6 +1869,50 @@ public sealed class FalProvider : IProviderSource
     #endregion
 
     #region Wan
+
+    private static IEnumerable<ModelDefinition> Flux3Models =>
+    [
+        ModelDefinitionBuilder.Create()
+            .WithId("BFL/FLUX3/flux-3-t2v")
+            .WithEndpointOverride("blackforestlabs/flux-3/text-to-video")
+            .WithTitle("FLUX 3 (T2V)")
+            .WithDescription("Black Forest Labs' multimodal model: up to 20s of video with audio generated in the same pass")
+            .WithAuthor("Black Forest Labs")
+            .WithDimensions(1920, 1080)
+            .WithPreviewImage("Images/ModelPreviews/Fal/BFL/FLUX3/flux-3-t2v.jpg")
+            .WithDate("2026")
+            .WithUsageHint("Text-to-video with native audio, 5-20 seconds")
+            .WithTags("flux", "flux-3", "black forest labs", "text-to-video", "video", "audio")
+            .WithFamily("video.flux3")
+            .Build(),
+        ModelDefinitionBuilder.Create()
+            .WithId("BFL/FLUX3/flux-3-i2v")
+            .WithEndpointOverride("blackforestlabs/flux-3/image-to-video")
+            .WithTitle("FLUX 3 (I2V)")
+            .WithDescription("Animate a still image into video with native audio")
+            .WithAuthor("Black Forest Labs")
+            .WithDimensions(1920, 1080)
+            .WithPreviewImage("Images/ModelPreviews/Fal/BFL/FLUX3/flux-3-i2v.jpg")
+            .WithDate("2026")
+            .WithUsageHint("Image-to-video with native audio")
+            .WithTags("flux", "flux-3", "black forest labs", "image-to-video", "video", "audio")
+            .WithFamily("video.flux3")
+            .WithInitImage()
+            .Build(),
+        ModelDefinitionBuilder.Create()
+            .WithId("BFL/FLUX3/flux-3-draft-t2v")
+            .WithEndpointOverride("blackforestlabs/flux-3/text-to-video/draft")
+            .WithTitle("FLUX 3 Draft (T2V)")
+            .WithDescription("Fast, cheaper draft pass for previewing a FLUX 3 shot before committing to a full render")
+            .WithAuthor("Black Forest Labs")
+            .WithDimensions(1280, 720)
+            .WithPreviewImage("Images/ModelPreviews/Fal/BFL/FLUX3/flux-3-draft-t2v.jpg")
+            .WithDate("2026")
+            .WithUsageHint("Draft-quality text-to-video for previewing")
+            .WithTags("flux", "flux-3", "black forest labs", "text-to-video", "video", "draft")
+            .WithFamily("video.flux3")
+            .Build(),
+    ];
 
     private static IEnumerable<ModelDefinition> WanModels =>
     [

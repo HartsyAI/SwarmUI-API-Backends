@@ -748,6 +748,7 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         ["video.wan27"] = (i, r, m) => BuildWan27VideoParams(i, r, aspect: true, endImage: false),
         ["video.wan27_i2v"] = (i, r, m) => BuildWan27VideoParams(i, r, aspect: false, endImage: true),
         ["video.wan27_ref"] = (i, r, m) => BuildWan27RefVideoParams(i, r),
+        ["video.flux3"] = (i, r, m) => BuildFlux3VideoParams(i, r),
         ["video.h3"] = (i, r, m) => BuildH3VideoParams(i, r, aspect: SwarmUIAPIBackends.AspectRatioParam_H3, endImage: false, refs: false),
         ["video.h3_i2v"] = (i, r, m) => BuildH3VideoParams(i, r, aspect: null, endImage: true, refs: false),
         ["video.h3_ref"] = (i, r, m) => BuildH3VideoParams(i, r, aspect: SwarmUIAPIBackends.AspectRatioParam_H3Ref, endImage: false, refs: true),
@@ -1049,6 +1050,17 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         {
             AddReferenceUrls(input, request, "image_urls", "video_urls", "audio_urls");
         }
+    }
+
+    /// <summary>FLUX 3 on fal: duration (auto or 5-20), aspect_ratio, resolution (720p/1080p), generate_audio,
+    /// safety_tolerance. Takes no seed and no negative prompt - sending either would be silently ignored.</summary>
+    private static void BuildFlux3VideoParams(T2IParamInput input, JObject request)
+    {
+        Put(input, request, "duration", SwarmUIAPIBackends.DurationParam_Flux3);
+        Put(input, request, "aspect_ratio", SwarmUIAPIBackends.AspectRatioParam_Flux3);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_Flux3);
+        if (input.TryGet(SwarmUIAPIBackends.GenerateAudioParam_FalVideo, out bool audio)) request["generate_audio"] = audio;
+        if (input.TryGet(SwarmUIAPIBackends.SafetyToleranceParam_Flux3, out int safety)) request["safety_tolerance"] = safety;
     }
 
     /// <summary>MiniMax H3: integer duration, resolution on its own 768P/2K/4K scale, prompt expansion.
