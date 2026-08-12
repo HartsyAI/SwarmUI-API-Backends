@@ -743,6 +743,12 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         ["video.pika"] = (i, r, m) => BuildPikaVideoParams(i, r),
         ["video.kandinsky"] = (i, r, m) => BuildKandinskyVideoParams(i, r),
         ["video.cogvideox"] = (i, r, m) => BuildCogVideoXParams(i, r),
+        ["video.wan25"] = (i, r, m) => BuildWan25VideoParams(i, r),
+        ["video.wan26"] = (i, r, m) => BuildWan26VideoParams(i, r),
+        ["video.wan27"] = (i, r, m) => BuildWan27VideoParams(i, r, aspect: true, endImage: false),
+        ["video.wan27_i2v"] = (i, r, m) => BuildWan27VideoParams(i, r, aspect: false, endImage: true),
+        ["video.wan27_ref"] = (i, r, m) => BuildWan27RefVideoParams(i, r),
+        ["video.kling_turbo"] = (i, r, m) => BuildKlingTurboVideoParams(i, r),
         ["utility.image"] = (i, r, m) => BuildUtilityImageParams(i, r),
         ["utility.video"] = (i, r, m) => BuildUtilityVideoParams(i, r)
     };
@@ -959,6 +965,86 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         }
     }
 
+    /// <summary>Splits a comma-separated URL list into a JSON array, or null if empty.</summary>
+    private static JArray UrlList(T2IParamInput input, T2IRegisteredParam<string> param)
+    {
+        if (!input.TryGet(param, out string raw) || string.IsNullOrEmpty(raw))
+        {
+            return null;
+        }
+        JArray urls = [];
+        foreach (string url in raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            urls.Add(url);
+        }
+        return urls.Count > 0 ? urls : null;
+    }
+
+    /// <summary>Fields common to Wan 2.5+: optional audio drive and prompt expansion.</summary>
+    private static void AddWanShared(T2IParamInput input, JObject request)
+    {
+        Put(input, request, "audio_url", SwarmUIAPIBackends.AudioUrlParam_Wan);
+        if (input.TryGet(SwarmUIAPIBackends.PromptExpansionParam_Wan, out bool expand)) request["enable_prompt_expansion"] = expand;
+    }
+
+    /// <summary>Wan 2.5 preview: aspect (16:9/9:16/1:1), resolution (480p-1080p), duration (5 or 10), audio_url, negative, seed.</summary>
+    private static void BuildWan25VideoParams(T2IParamInput input, JObject request)
+    {
+        PutInt(input, request, "duration", SwarmUIAPIBackends.DurationParam_Wan25);
+        Put(input, request, "aspect_ratio", SwarmUIAPIBackends.AspectRatioParam_Wan25);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_Wan25);
+        AddWanShared(input, request);
+        AddSeedAndNegative(input, request, negative: true);
+    }
+
+    /// <summary>Wan 2.6 i2v: resolution (720p/1080p), duration (5/10/15), audio_url, multi_shots, negative, seed. No aspect.</summary>
+    private static void BuildWan26VideoParams(T2IParamInput input, JObject request)
+    {
+        PutInt(input, request, "duration", SwarmUIAPIBackends.DurationParam_Wan26);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_Wan2x);
+        AddWanShared(input, request);
+        if (input.TryGet(SwarmUIAPIBackends.MultiShotsParam_Wan, out bool multi)) request["multi_shots"] = multi;
+        AddSeedAndNegative(input, request, negative: true);
+    }
+
+    /// <summary>Wan 2.7 t2v/i2v: duration (2-15), resolution (720p/1080p), audio_url, negative, seed.
+    /// t2v takes an aspect ratio; i2v derives it from the input image and instead accepts a last frame.</summary>
+    private static void BuildWan27VideoParams(T2IParamInput input, JObject request, bool aspect, bool endImage)
+    {
+        PutInt(input, request, "duration", SwarmUIAPIBackends.DurationParam_Wan27);
+        if (aspect) Put(input, request, "aspect_ratio", SwarmUIAPIBackends.AspectRatioParam_Wan27);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_Wan2x);
+        if (endImage) Put(input, request, "end_image_url", SwarmUIAPIBackends.EndImageUrlParam_Wan);
+        AddWanShared(input, request);
+        AddSeedAndNegative(input, request, negative: true);
+    }
+
+    /// <summary>Wan 2.7 reference-to-video: reference_image_urls / reference_video_urls arrays, aspect, resolution,
+    /// duration (2-10), multi_shots, negative, seed. No audio drive.</summary>
+    private static void BuildWan27RefVideoParams(T2IParamInput input, JObject request)
+    {
+        PutInt(input, request, "duration", SwarmUIAPIBackends.DurationParam_Wan27Ref);
+        Put(input, request, "aspect_ratio", SwarmUIAPIBackends.AspectRatioParam_Wan27);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_Wan2x);
+        // The Init Image lands in image_url; reference-to-video wants it in the reference array instead.
+        JArray images = UrlList(input, SwarmUIAPIBackends.RefImageUrlsParam_Wan) ?? [];
+        if (request.Remove("image_url", out JToken initImage))
+        {
+            images.AddFirst(initImage);
+        }
+        if (images.Count > 0) request["reference_image_urls"] = images;
+        JArray videos = UrlList(input, SwarmUIAPIBackends.RefVideoUrlsParam_Wan);
+        if (videos is not null) request["reference_video_urls"] = videos;
+        if (input.TryGet(SwarmUIAPIBackends.MultiShotsParam_Wan, out bool multi)) request["multi_shots"] = multi;
+        AddSeedAndNegative(input, request, negative: true);
+    }
+
+    /// <summary>Kling V3 Turbo Pro: prompt, image_url and duration only. No aspect, resolution, audio, negative or seed.</summary>
+    private static void BuildKlingTurboVideoParams(T2IParamInput input, JObject request)
+    {
+        Put(input, request, "duration", SwarmUIAPIBackends.DurationParam_KlingTurbo);
+    }
+
     /// <summary>Grok Imagine Video: duration, aspect_ratio, generate_audio, negative_prompt, seed</summary>
     private static void BuildGrokVideoParams(T2IParamInput input, JObject request)
     {
@@ -1117,6 +1203,16 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
     private static int Seconds(T2IParamInput input, T2IRegisteredParam<string> param)
     {
         return input.TryGet(param, out string val) && int.TryParse(val, out int seconds) ? seconds : 0;
+    }
+
+    /// <summary>Writes a numeric field. Several fal endpoints declare integer enums and reject the quoted form.</summary>
+    private static void PutInt(T2IParamInput input, JObject request, string field, T2IRegisteredParam<string> param)
+    {
+        int value = Seconds(input, param);
+        if (value > 0)
+        {
+            request[field] = value;
+        }
     }
 
     /// <summary>Wan 2.2 A14B: aspect (16:9,9:16,1:1), resolution (480p/580p/720p), negative, seed.

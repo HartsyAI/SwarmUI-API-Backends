@@ -35,6 +35,14 @@ public static class ModelCapabilities
         ["video.pika"] = ["fal_pika_params", "fal_video_negative"],
         ["video.kandinsky"] = ["fal_kandinsky_params"],
         ["video.cogvideox"] = ["fal_video_negative"],
+        ["video.wan25"] = ["fal_wan25_params", "fal_wan_audio", "fal_wan_expansion", "fal_video_negative"],
+        ["video.wan26"] = ["fal_wan26_params", "fal_wan2x_resolution", "fal_wan_audio", "fal_wan_expansion", "fal_wan_multishot", "fal_video_negative"],
+        ["video.wan27"] = ["fal_wan27_params", "fal_wan27_aspect", "fal_wan2x_resolution", "fal_wan_audio", "fal_wan_expansion", "fal_video_negative"],
+        // Image-to-video takes its aspect ratio from the input image, so no aspect param.
+        ["video.wan27_i2v"] = ["fal_wan27_params", "fal_wan2x_resolution", "fal_wan_audio", "fal_wan_expansion", "fal_wan27_i2v_params", "fal_video_negative"],
+        ["video.wan27_ref"] = ["fal_wan27ref_params", "fal_wan27_aspect", "fal_wan2x_resolution", "fal_wan_multishot", "fal_video_negative"],
+        // Kling V3 Turbo takes prompt, image and duration only.
+        ["video.kling_turbo"] = ["fal_kling_turbo_params"],
         ["video.grok"] = ["fal_video_params", "fal_video_audio", "fal_video_negative"],
 
         // Non-Fal providers keep their own per-model flags on the ModelDefinition.

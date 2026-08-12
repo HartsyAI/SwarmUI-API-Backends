@@ -191,6 +191,15 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<string> DurationParam_Pika, AspectRatioParam_Pika, ResolutionParam_Pika;
     public static T2IRegisteredParam<string> DurationParam_Kandinsky, ResolutionParam_Kandinsky;
 
+    // Wan 2.5/2.6/2.7. Duration and resolution enums differ per version, so each gets its own param.
+    public static T2IRegisteredParam<string> DurationParam_Wan25, AspectRatioParam_Wan25, ResolutionParam_Wan25;
+    public static T2IRegisteredParam<string> DurationParam_Wan26;
+    public static T2IRegisteredParam<string> DurationParam_Wan27, AspectRatioParam_Wan27, DurationParam_Wan27Ref;
+    public static T2IRegisteredParam<string> ResolutionParam_Wan2x;
+    public static T2IRegisteredParam<string> AudioUrlParam_Wan, EndImageUrlParam_Wan, RefImageUrlsParam_Wan, RefVideoUrlsParam_Wan;
+    public static T2IRegisteredParam<bool> PromptExpansionParam_Wan, MultiShotsParam_Wan;
+    public static T2IRegisteredParam<string> DurationParam_KlingTurbo;
+
     // Fal utility params (upscalers, background removal, face restoration)
     public static T2IRegisteredParam<double> UpscaleFactorParam_FalUtility;
     public static T2IRegisteredParam<string> VideoUrlParam_FalUtility;
@@ -1003,6 +1012,83 @@ public class SwarmUIAPIBackends : Extension
             "false",
             OrderPriority: -7, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance1_video_params"));
 
+        // ===== WAN 2.5 / 2.6 / 2.7 =====
+        DurationParam_Wan25 = T2IParamTypes.Register<string>(new("Wan TwoFive Video Duration",
+            "Length of the generated video. Wan 2.5 supports 5 or 10 seconds.", "5",
+            GetValues: _ => ["5///5 seconds", "10///10 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan25_params"));
+
+        AspectRatioParam_Wan25 = T2IParamTypes.Register<string>(new("Wan TwoFive Video Aspect Ratio",
+            "Aspect ratio for Wan 2.5.", "16:9",
+            GetValues: _ => ["16:9///Widescreen (16:9)", "9:16///Portrait (9:16)", "1:1///Square (1:1)"],
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan25_params"));
+
+        ResolutionParam_Wan25 = T2IParamTypes.Register<string>(new("Wan TwoFive Video Resolution",
+            "Resolution for Wan 2.5.", "720p",
+            GetValues: _ => ["480p///480p (Fast)", "720p///720p (Standard)", "1080p///1080p (HD)"],
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan25_params"));
+
+        DurationParam_Wan26 = T2IParamTypes.Register<string>(new("Wan TwoSix Video Duration",
+            "Length of the generated video. Wan 2.6 supports 5, 10 or 15 seconds.", "5",
+            GetValues: _ => ["5///5 seconds", "10///10 seconds", "15///15 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan26_params"));
+
+        DurationParam_Wan27 = T2IParamTypes.Register<string>(new("Wan TwoSeven Video Duration",
+            "Length of the generated video, 2 to 15 seconds.", "5",
+            GetValues: _ => ["2///2 seconds", "3///3 seconds", "4///4 seconds", "5///5 seconds (Default)", "6///6 seconds", "7///7 seconds", "8///8 seconds", "9///9 seconds", "10///10 seconds", "11///11 seconds", "12///12 seconds", "13///13 seconds", "14///14 seconds", "15///15 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan27_params"));
+
+        DurationParam_Wan27Ref = T2IParamTypes.Register<string>(new("Wan TwoSeven Reference Video Duration",
+            "Length of the generated video. Reference-to-video is capped at 10 seconds.", "5",
+            GetValues: _ => ["2///2 seconds", "3///3 seconds", "4///4 seconds", "5///5 seconds (Default)", "6///6 seconds", "7///7 seconds", "8///8 seconds", "9///9 seconds", "10///10 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan27ref_params"));
+
+        AspectRatioParam_Wan27 = T2IParamTypes.Register<string>(new("Wan TwoSeven Video Aspect Ratio",
+            "Aspect ratio for Wan 2.7. Not used by image-to-video, which follows the input image.", "16:9",
+            GetValues: _ => ["16:9///Widescreen (16:9)", "9:16///Portrait (9:16)", "1:1///Square (1:1)", "4:3///Standard (4:3)", "3:4///Portrait (3:4)"],
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan27_aspect"));
+
+        ResolutionParam_Wan2x = T2IParamTypes.Register<string>(new("Wan TwoSixPlus Video Resolution",
+            "Resolution for Wan 2.6 and 2.7. These versions start at 720p.", "720p",
+            GetValues: _ => ["720p///720p (Standard)", "1080p///1080p (HD)"],
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan2x_resolution"));
+
+        AudioUrlParam_Wan = T2IParamTypes.Register<string>(new("Reference Audio URL",
+            "Publicly accessible WAV or MP3 URL to drive the video's motion and timing.\n" +
+            "3-30 seconds, up to 15 MB. Leave empty for a silent generation.",
+            "", OrderPriority: -6, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_wan_audio"));
+
+        EndImageUrlParam_Wan = T2IParamTypes.Register<string>(new("Last Frame Image URL",
+            "Publicly accessible image URL to use as the final frame.\n" +
+            "The model generates the motion between your Init Image and this one.",
+            "", OrderPriority: -5, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_wan27_i2v_params"));
+
+        RefImageUrlsParam_Wan = T2IParamTypes.Register<string>(new("Wan Reference Image URLs",
+            "Comma-separated image URLs describing character or object appearance.\n" +
+            "Pass several for multi-subject generation. Max 20 MB each.",
+            "", OrderPriority: -6, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan27ref_params"));
+
+        RefVideoUrlsParam_Wan = T2IParamTypes.Register<string>(new("Wan Reference Video URLs",
+            "Comma-separated video URLs describing appearance and motion.\n" +
+            "Pass several for multi-subject generation. Max 100 MB each.",
+            "", OrderPriority: -5, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan27ref_params"));
+
+        PromptExpansionParam_Wan = T2IParamTypes.Register<bool>(new("Prompt Expansion",
+            "Let the model rewrite your prompt for richer detail.\n" +
+            "Disable for literal prompt following.", "true",
+            OrderPriority: -4, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_wan_expansion"));
+
+        MultiShotsParam_Wan = T2IParamTypes.Register<bool>(new("Multi-Shot Segmentation",
+            "Let the model split the video into multiple camera shots.\n" +
+            "Only takes effect when Prompt Expansion is enabled.", "false",
+            OrderPriority: -3, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_wan_multishot"));
+
+        DurationParam_KlingTurbo = T2IParamTypes.Register<string>(new("Kling Turbo Video Duration",
+            "Length of the generated video, 3 to 15 seconds.\n" +
+            "Kling V3 Turbo takes no aspect ratio, resolution, audio or seed controls.", "5",
+            GetValues: _ => ["3///3 seconds", "4///4 seconds", "5///5 seconds (Default)", "6///6 seconds", "7///7 seconds", "8///8 seconds", "9///9 seconds", "10///10 seconds", "11///11 seconds", "12///12 seconds", "13///13 seconds", "14///14 seconds", "15///15 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_kling_turbo_params"));
+
         // ===== FAL UTILITY PARAMETERS =====
         UpscaleFactorParam_FalUtility = T2IParamTypes.Register<double>(new("Upscale Factor",
             "How many times larger to make the image.\n" +
@@ -1107,7 +1193,10 @@ public class SwarmUIAPIBackends : Extension
             "fal_utility_video_params",
             "fal_video_audio", "fal_video_negative",
             "fal_wan22_params", "fal_pixverse_params", "fal_ltx2_params", "fal_ltx13b_params",
-            "fal_vidu_params", "fal_pika_params", "fal_kandinsky_params", "fal_cogvideox_params"
+            "fal_vidu_params", "fal_pika_params", "fal_kandinsky_params", "fal_cogvideox_params",
+            "fal_wan25_params", "fal_wan26_params", "fal_wan27_params", "fal_wan27ref_params",
+            "fal_wan27_aspect", "fal_wan2x_resolution", "fal_wan_audio", "fal_wan_expansion",
+            "fal_wan_multishot", "fal_wan27_i2v_params", "fal_kling_turbo_params"
         ];
 
         // Features incompatible with API backends (local-only features)
