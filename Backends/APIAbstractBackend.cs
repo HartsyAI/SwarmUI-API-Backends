@@ -60,13 +60,54 @@ public abstract class APIAbstractBackend : AbstractT2IBackend
         }
     }
 
+    /// <summary>Max length a string value may reach in a log before it's replaced by a size marker.</summary>
+    private const int LogElideThreshold = 192;
+
+    /// <summary>Max length of a response body in a log.</summary>
+    private const int LogResponseLimit = 4096;
+
+    /// <summary>Copy of a request body safe to log: long strings (base64 images/videos) become size markers,
+    /// so the schema-relevant fields stay readable.</summary>
+    protected static string SummarizeForLog(JToken token)
+    {
+        return Elide(token.DeepClone()).ToString(Newtonsoft.Json.Formatting.None);
+    }
+
+    private static JToken Elide(JToken token)
+    {
+        if (token is JObject obj)
+        {
+            foreach (JProperty prop in obj.Properties())
+            {
+                prop.Value = Elide(prop.Value);
+            }
+        }
+        else if (token is JArray arr)
+        {
+            for (int i = 0; i < arr.Count; i++)
+            {
+                arr[i] = Elide(arr[i]);
+            }
+        }
+        else if (token.Type == JTokenType.String)
+        {
+            string str = token.ToString();
+            if (str.Length > LogElideThreshold)
+            {
+                string kind = str.StartsWith("data:") ? str[..Math.Min(str.IndexOf(',') + 1, 64)] : "<long string>";
+                return $"{kind} …elided, {str.Length} chars";
+            }
+        }
+        return token;
+    }
+
     /// <summary>Build the request body for the API call</summary>
     protected virtual JObject BuildRequestBody(T2IParamInput input)
     {
         try
         {
             JObject requestBody = ActiveProvider.RequestConfig.BuildRequest(input);
-            Logs.Verbose($"[APIAbstractBackend] {GetType().Name} - Built request body: {requestBody}");
+            Logs.Verbose($"[APIAbstractBackend] {GetType().Name} - Built request body: {SummarizeForLog(requestBody)}");
             return requestBody;
         }
         catch (Exception ex)
@@ -106,10 +147,16 @@ public abstract class APIAbstractBackend : AbstractT2IBackend
         }
     }
 
-    /// <summary>Determines the media type from the API response JSON.
-    /// Override in subclasses for provider-specific detection.</summary>
-    protected virtual MediaType DetermineResponseMediaType(JObject responseJson)
+    /// <summary>Determines the media type of a response. The model's declared modality is authoritative:
+    /// providers that return the video out-of-band (OpenAI Sora responds with a job envelope, not a "video" key)
+    /// would otherwise have their mp4 bytes mislabelled as an image.</summary>
+    protected virtual MediaType DetermineResponseMediaType(JObject responseJson, T2IParamInput input)
     {
+        string modelName = input?.Get(T2IParamTypes.Model)?.Name ?? "";
+        if (APIProviderRegistry.TryGetModel(modelName, out ModelDefinition model) && model.Modality == ModelModality.Video)
+        {
+            return MediaType.VideoMp4;
+        }
         if (responseJson["video"] is not null)
         {
             return MediaType.VideoMp4;
@@ -128,11 +175,14 @@ public abstract class APIAbstractBackend : AbstractT2IBackend
             Logs.Verbose($"[APIAbstractBackend] {GetType().Name} - Using base URL: {baseUrl}");
             JObject requestBody = BuildRequestBody(input);
             using HttpRequestMessage request = CreateHttpRequest(baseUrl, requestBody, input);
+            Logs.Verbose($"[APIAbstractBackend] {GetType().Name} - {request.Method} {request.RequestUri}");
             if (request.Content is not null)
             {
                 try
                 {
-                    await request.Content.ReadAsStringAsync();
+                    string sent = await request.Content.ReadAsStringAsync();
+                    // Reparse rather than logging requestBody: this is what actually goes on the wire, after any builder post-processing.
+                    Logs.Verbose($"[APIAbstractBackend] {GetType().Name} - Request body: {SummarizeForLog(JToken.Parse(sent))}");
                 }
                 catch (Exception ex)
                 {
@@ -140,17 +190,18 @@ public abstract class APIAbstractBackend : AbstractT2IBackend
                 }
             }
             HttpResponseMessage response = await HttpClient.SendAsync(request);
+            string responseText = await response.Content.ReadAsStringAsync();
             if (!response.IsSuccessStatusCode)
             {
-                string error = await response.Content.ReadAsStringAsync();
-                Logs.Error($"[APIAbstractBackend] {GetType().Name} - API request failed: {response.StatusCode} - {error}");
-                throw new Exception($"API request failed: {error}");
+                Logs.Error($"[APIAbstractBackend] {GetType().Name} - API request failed: {response.StatusCode} - {responseText}");
+                throw new Exception($"API request failed: {responseText}");
             }
             Logs.Verbose($"[APIAbstractBackend] {GetType().Name} - Received successful response: {response.StatusCode}");
-            JObject responseJson = JObject.Parse(await response.Content.ReadAsStringAsync());
+            Logs.Verbose($"[APIAbstractBackend] {GetType().Name} - Response body: {(responseText.Length > LogResponseLimit ? $"{responseText[..LogResponseLimit]}… ({responseText.Length} chars)" : responseText)}");
+            JObject responseJson = JObject.Parse(responseText);
             string apiKey = GetApiKey(input);
             byte[] data = await ProcessResponse(responseJson, apiKey);
-            MediaType mediaType = DetermineResponseMediaType(responseJson);
+            MediaType mediaType = DetermineResponseMediaType(responseJson, input);
             Logs.Verbose($"[APIAbstractBackend] {GetType().Name} - Response media type: {mediaType.Extension}");
             return [new Image(data, mediaType)];
         }
