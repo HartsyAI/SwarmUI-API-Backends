@@ -43,6 +43,7 @@ public class SwarmUIAPIBackends : Extension
 
     // OpenAI Parameters
     public static T2IRegisteredParam<string> SizeParam_OpenAI;
+    public static T2IRegisteredParam<string> SizeParam_DallE2, SizeParam_GPTImage, SizeParam_GPTImage2;
     public static T2IRegisteredParam<string> QualityParam_OpenAI;
     public static T2IRegisteredParam<string> StyleParam_OpenAI;
     public static T2IRegisteredParam<string> ResponseFormatParam_OpenAI;
@@ -71,6 +72,8 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<string> RenderingSpeedParam_Ideogram;
 
     public static T2IRegisteredParam<string> RenderingSpeedParam_IdeogramV4;
+    public static T2IRegisteredParam<string> ResolutionParam_IdeogramV4;
+    public static T2IRegisteredParam<bool> CopyrightDetectionParam_IdeogramV4;
 
     public static T2IRegisteredParam<string> ColorPaletteParam_Ideogram;
     public static T2IRegisteredParam<Image> ImagePromptParam_Ideogram;
@@ -256,16 +259,29 @@ public class SwarmUIAPIBackends : Extension
         BlackForestGeneralGroup = new("Flux Core Settings", Toggles: false, Open: true, OrderPriority: 40, Description: "Core parameters for Flux image generation.\nFlux models excel at high-quality image generation with strong artistic control.");
         BlackForestAdvancedGroup = new("Flux Advanced Settings", Toggles: true, Open: false, OrderPriority: 41, Description: "Additional options for fine-tuning Flux generations and output processing.");
 
-        SizeParam_OpenAI = T2IParamTypes.Register<string>(new("Output Resolution", "Controls the dimensions of the generated image.\n" + "DALL-E 2: 256x256, 512x512, or 1024x1024\n" + "DALL-E 3: 1024x1024, 1792x1024, or 1024x1792\n" +
-            "GPT Image 1: auto, 1024x1024, 1536x1024, or 1024x1536\n" + "GPT Image 2: auto, up to 2K (edges must be multiples of 16, max 3840px)", "1024x1024", GetValues: model =>
-            {
-                if (model.ID.Contains("dall-e-2")) return ["256x256", "512x512", "1024x1024"];
-                else if (model.ID.Contains("gpt-image-2")) return ["auto///Auto (Recommended)", "1024x1024///Square (1K)", "1536x1024///Landscape (1.5K)", "1024x1536///Portrait (1.5K)", "2048x2048///Square (2K)", "2048x1152///Wide Landscape (2K)", "1152x2048///Tall Portrait (2K)"];
-                else if (model.ID.Contains("gpt-image-1")) return ["auto///Auto (Recommended)", "1024x1024///Square", "1536x1024///Landscape", "1024x1536///Portrait"];
-                else return ["1024x1024", "1792x1024", "1024x1792"];
-            },
+        // One size list per model family. GetValues receives a Session, not the selected model, so the old
+        // model.ID checks here were really testing the session GUID and never matched - every OpenAI model
+        // silently showed the DALL-E 3 sizes.
+        SizeParam_OpenAI = T2IParamTypes.Register<string>(new("Output Resolution",
+            "Dimensions of the generated image (DALL-E 3).", "1024x1024",
+            GetValues: _ => ["1024x1024///Square", "1792x1024///Landscape", "1024x1792///Portrait"],
             OrderPriority: -10, ViewType: ParamViewType.POT_SLIDER,
-            Group: T2IParamTypes.GroupResolution, FeatureFlag: "openai_image_size"));
+            Group: T2IParamTypes.GroupResolution, FeatureFlag: "dalle3_params"));
+
+        SizeParam_DallE2 = T2IParamTypes.Register<string>(new("DALL-E Two Output Resolution",
+            "Dimensions of the generated image. DALL-E 2 only supports these three square sizes.", "1024x1024",
+            GetValues: _ => ["256x256///Small (256x256)", "512x512///Medium (512x512)", "1024x1024///Large (1024x1024)"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupResolution, FeatureFlag: "dalle2_params"));
+
+        SizeParam_GPTImage = T2IParamTypes.Register<string>(new("GPT Image Output Resolution",
+            "Dimensions of the generated image.", "auto",
+            GetValues: _ => ["auto///Auto (Recommended)", "1024x1024///Square", "1536x1024///Landscape", "1024x1536///Portrait"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupResolution, FeatureFlag: "gpt_image_params"));
+
+        SizeParam_GPTImage2 = T2IParamTypes.Register<string>(new("GPT Image Two Output Resolution",
+            "Dimensions of the generated image. GPT Image 2 reaches 2K; edges must be multiples of 16.", "auto",
+            GetValues: _ => ["auto///Auto (Recommended)", "1024x1024///Square (1K)", "1536x1024///Landscape (1.5K)", "1024x1536///Portrait (1.5K)", "2048x2048///Square (2K)", "2048x1152///Wide Landscape (2K)", "1152x2048///Tall Portrait (2K)"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupResolution, FeatureFlag: "gpt-image-2_params"));
 
         QualityParam_OpenAI = T2IParamTypes.Register<string>(new("Generation Quality",
             "Controls the level of detail and consistency in DALL-E 3 images.\n" +
@@ -399,6 +415,15 @@ public class SwarmUIAPIBackends : Extension
             "'Quality' - Highest quality, slower generation",
             "DEFAULT", GetValues: _ => ["TURBO///Turbo (Faster)", "DEFAULT///Default (Balanced)", "QUALITY///Quality (Best)"],
             OrderPriority: -9, Group: IdeogramGeneralGroup, FeatureFlag: "ideogram_v4_params"));
+
+        ResolutionParam_IdeogramV4 = T2IParamTypes.Register<string>(new("Ideogram VFour Resolution",
+            "Output resolution for Ideogram V4.", "1024x1024",
+            GetValues: _ => ["1024x1024///Square", "1344x768///Landscape", "768x1344///Portrait", "1536x640///Wide", "640x1536///Tall"],
+            OrderPriority: -8, Group: T2IParamTypes.GroupResolution, FeatureFlag: "ideogram_v4_params"));
+
+        CopyrightDetectionParam_IdeogramV4 = T2IParamTypes.Register<bool>(new("Ideogram Copyright Detection",
+            "Ask Ideogram to flag potentially copyrighted content in the result.", "false",
+            OrderPriority: -7, Group: IdeogramAdvancedGroup, FeatureFlag: "ideogram_v4_params"));
 
         ImageWeightParam_Ideogram = T2IParamTypes.Register<double>(new("Image Remix Weight",
             "Controls how strongly the input image influences the remixed generation (V3 only).\n" +
@@ -1270,7 +1295,7 @@ public class SwarmUIAPIBackends : Extension
 
         // Model-specific feature flags
         string[] modelFlags = [
-            "dalle2_params", "dalle3_params", "gpt-image-1_params", "gpt-image-1.5_params", "gpt_image_params", "openai_image_size",
+            "dalle2_params", "dalle3_params", "flux_2_flex_params", "gpt-image-1_params", "gpt-image-1.5_params", "gpt_image_params", "openai_image_size",
             "ideogram_v1_params", "ideogram_v2_params", "ideogram_v3_params", "ideogram_v4_params", "ideogram_style",
             "flux_ultra_params", "flux_pro_params", "flux_dev_params",
             "flux_kontext_pro_params", "flux_kontext_max_params", "flux_2_max_params", "flux_2_pro_params",

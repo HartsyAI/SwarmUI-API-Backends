@@ -95,6 +95,21 @@ public abstract class BaseRequestBuilder : IRequestBuilder
         return await HttpClient.GetByteArrayAsync(url);
     }
 
+    /// <summary>Splits a comma-separated URL list into a JSON array, or null if empty.</summary>
+    protected static JArray UrlList(T2IParamInput input, T2IRegisteredParam<string> param)
+    {
+        if (!input.TryGet(param, out string raw) || string.IsNullOrEmpty(raw))
+        {
+            return null;
+        }
+        JArray urls = [];
+        foreach (string url in raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            urls.Add(url);
+        }
+        return urls.Count > 0 ? urls : null;
+    }
+
     protected static byte[] DecodeBase64Image(string base64Data)
     {
         if (base64Data.Contains(','))
@@ -124,7 +139,7 @@ public sealed class OpenAIRequestBuilder : BaseRequestBuilder
             ["prompt"] = input.Get(T2IParamTypes.Prompt),
             ["model"] = modelName,
             ["n"] = GetNumImages(input),
-            ["size"] = input.TryGet(SwarmUIAPIBackends.SizeParam_OpenAI, out string size) ? size : "1024x1024"
+            ["size"] = SizeForOpenAIModel(input, modelName)
         };
         if (modelName is "gpt-image-1" or "gpt-image-1.5" or "gpt-image-2")
         {
@@ -145,6 +160,19 @@ public sealed class OpenAIRequestBuilder : BaseRequestBuilder
             request["response_format"] = "b64_json";
         }
         return request;
+    }
+
+    /// <summary>Each OpenAI image model accepts a different size list, so each has its own param.</summary>
+    private static string SizeForOpenAIModel(T2IParamInput input, string modelName)
+    {
+        T2IRegisteredParam<string> param = modelName switch
+        {
+            "dall-e-2" => SwarmUIAPIBackends.SizeParam_DallE2,
+            "gpt-image-2" => SwarmUIAPIBackends.SizeParam_GPTImage2,
+            "gpt-image-1" or "gpt-image-1.5" => SwarmUIAPIBackends.SizeParam_GPTImage,
+            _ => SwarmUIAPIBackends.SizeParam_OpenAI
+        };
+        return input.TryGet(param, out string size) ? size : "1024x1024";
     }
 
     private static bool IsSoraModel(string modelName) => modelName.StartsWith("sora-");
@@ -322,6 +350,14 @@ public sealed class IdeogramRequestBuilder : BaseRequestBuilder
             {
                 v4["rendering_speed"] = v4speed;
             }
+            if (input.TryGet(SwarmUIAPIBackends.ResolutionParam_IdeogramV4, out string v4res) && !string.IsNullOrEmpty(v4res))
+            {
+                v4["resolution"] = v4res;
+            }
+            if (input.TryGet(SwarmUIAPIBackends.CopyrightDetectionParam_IdeogramV4, out bool v4copy))
+            {
+                v4["enable_copyright_detection"] = v4copy;
+            }
             return v4;
         }
         bool isV3 = IsV3Model(model);
@@ -443,8 +479,8 @@ public sealed class BlackForestRequestBuilder : BaseRequestBuilder
         if (input.TryGet(SwarmUIAPIBackends.SafetyTolerance_BlackForest, out int safety)) request["safety_tolerance"] = safety;
         if (input.TryGet(SwarmUIAPIBackends.SeedParam_BlackForest, out long seed) && seed >= 0) request["seed"] = seed;
         if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_BlackForest, out string format)) request["output_format"] = format;
-        // Guidance and steps: flux-dev only
-        if (modelId == "flux-dev")
+        // Guidance and steps: flux-dev and flux-2-flex both expose them
+        if (modelId is "flux-dev" or "flux-2-flex")
         {
             if (input.TryGet(SwarmUIAPIBackends.GuidanceParam_BlackForest, out double guidance)) request["guidance"] = guidance;
             if (input.TryGet(SwarmUIAPIBackends.StepsParam_BlackForest, out int steps)) request["steps"] = steps;
@@ -463,9 +499,17 @@ public sealed class BlackForestRequestBuilder : BaseRequestBuilder
         if (input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null)
         {
             string base64Image = Convert.ToBase64String(initImg.RawData);
-            if (modelId is "flux-kontext-pro" or "flux-kontext-max" or "flux-2-pro" or "flux-2-max")
+            if (modelId is "flux-kontext-pro" or "flux-kontext-max" or "flux-2-pro" or "flux-2-max" or "flux-2-flex")
             {
                 request["input_image"] = base64Image;
+                // FLUX.2 also accepts input_image_2..8; extra references come from the shared reference URL param.
+                if (modelId.StartsWith("flux-2-") && UrlList(input, SwarmUIAPIBackends.RefImageUrlsParam) is JArray extras)
+                {
+                    for (int i = 0; i < extras.Count && i < 7; i++)
+                    {
+                        request[$"input_image_{i + 2}"] = extras[i];
+                    }
+                }
             }
             else
             {
@@ -1061,21 +1105,6 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         {
             request["seed"] = seed;
         }
-    }
-
-    /// <summary>Splits a comma-separated URL list into a JSON array, or null if empty.</summary>
-    private static JArray UrlList(T2IParamInput input, T2IRegisteredParam<string> param)
-    {
-        if (!input.TryGet(param, out string raw) || string.IsNullOrEmpty(raw))
-        {
-            return null;
-        }
-        JArray urls = [];
-        foreach (string url in raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            urls.Add(url);
-        }
-        return urls.Count > 0 ? urls : null;
     }
 
     /// <summary>Fields common to Wan 2.5+: optional audio drive and prompt expansion.</summary>

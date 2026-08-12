@@ -112,6 +112,45 @@ public sealed class BlackForestLabsProvider : IProviderSource
             .Build(),
 
         ModelDefinitionBuilder.Create()
+            .WithId("flux-2-flex")
+            .WithTitle("FLUX 2 Flex")
+            .WithDescription("FLUX.2 tuned for typography and text rendering, with step and guidance control")
+            .WithAuthor("Black Forest Labs")
+            .WithDimensions(1024, 1024)
+            .WithPreviewImage("Images/ModelPreviews/BFL/flux-2-flex.png")
+            .WithDate("2026")
+            .WithUsageHint("Best for posters, packaging and dense text")
+            .WithTags("flux", "flux2", "typography")
+            .WithFeatureFlag("flux_2_flex_params")
+            .Build(),
+
+        ModelDefinitionBuilder.Create()
+            .WithId("flux-2-klein-9b")
+            .WithTitle("FLUX 2 Klein 9B")
+            .WithDescription("Compact 9B FLUX.2 variant")
+            .WithAuthor("Black Forest Labs")
+            .WithDimensions(1024, 1024)
+            .WithPreviewImage("Images/ModelPreviews/BFL/flux-2-klein-9b.png")
+            .WithDate("2026")
+            .WithUsageHint("Faster, cheaper FLUX.2 generation")
+            .WithTags("flux", "flux2", "klein", "compact")
+            .WithFeatureFlag("flux_2_pro_params")
+            .Build(),
+
+        ModelDefinitionBuilder.Create()
+            .WithId("flux-2-klein-4b")
+            .WithTitle("FLUX 2 Klein 4B")
+            .WithDescription("Smallest FLUX.2 variant")
+            .WithAuthor("Black Forest Labs")
+            .WithDimensions(1024, 1024)
+            .WithPreviewImage("Images/ModelPreviews/BFL/flux-2-klein-4b.png")
+            .WithDate("2026")
+            .WithUsageHint("Fastest, cheapest FLUX.2 generation")
+            .WithTags("flux", "flux2", "klein", "compact")
+            .WithFeatureFlag("flux_2_pro_params")
+            .Build(),
+
+        ModelDefinitionBuilder.Create()
             .WithId("flux-3-video")
             .WithTitle("FLUX 3 Video")
             .WithDescription("Multimodal video generation with audio produced in the same pass, 5-20 seconds at HD or Full HD")
