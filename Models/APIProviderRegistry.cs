@@ -18,7 +18,7 @@ public sealed class APIProviderRegistry
     /// <summary>Provider definitions by ID, carrying the declared model capabilities.</summary>
     public IReadOnlyDictionary<string, ProviderDefinition> ProviderDefs { get; }
 
-    /// <summary>Every model by its full SwarmUI name ("API Models/Fal/FLUX/flux-dev"). The one place model
+    /// <summary>Every model by its full SwarmUI name ("API Models/Fal/BFL/FLUX/flux-dev"). The one place model
     /// capabilities are resolved from, so request building, output handling and the UI cannot drift apart.</summary>
     public IReadOnlyDictionary<string, ModelDefinition> ModelsByFullName { get; }
 
