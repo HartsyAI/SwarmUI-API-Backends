@@ -70,6 +70,6 @@ public class RequestConfig
     /// <summary>Function to build the API request body from the input parameters.</summary>
     public Func<T2IParamInput, JObject> BuildRequest { get; set; }
 
-    /// <summary>Function to process the API response into a byte array of image data.</summary>
-    public Func<JObject, string, Task<byte[]>> ProcessResponse { get; set; }
+    /// <summary>Function to process the API response into one byte array per returned image.</summary>
+    public Func<JObject, string, Task<byte[][]>> ProcessResponse { get; set; }
 }

@@ -67,6 +67,17 @@ public static class ModelCapabilities
         ["video.openai_sora"] = ["openai_sora_params"]
     };
 
+    /// <summary>Families whose request builders send a per-call image count. Everything else produces exactly
+    /// one result per call, so offering Batch Size for them would be a knob that does nothing.</summary>
+    private static readonly HashSet<string> BatchCapableFamilies =
+    [
+        "image.standard", "image.aspect", "image.aspect_res",
+        "image.qwen2", "image.zimage", "image.nanobanana2", "image.openai"
+    ];
+
+    /// <summary>Whether one call to this model can return more than one image.</summary>
+    public static bool SupportsBatch(ModelDefinition model) => BatchCapableFamilies.Contains(model.Family);
+
     /// <summary>All flags a model activates: its family's, its own declared flag, and any extras.</summary>
     public static List<string> FlagsFor(ModelDefinition model)
     {
@@ -110,6 +121,7 @@ public static class ModelCapabilities
                 ["family"] = model.Family,
                 ["modality"] = model.Modality.ToString().ToLowerInvariant(),
                 ["init_image"] = model.SupportsInitImage,
+                ["supports_batch"] = SupportsBatch(model),
                 ["flags"] = new JArray(FlagsFor(model))
             };
         }

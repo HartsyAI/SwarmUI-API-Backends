@@ -18,7 +18,7 @@ public interface IRequestBuilder
     JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider);
 
     /// <summary>Processes the API response and extracts image data.</summary>
-    Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null);
+    Task<byte[][]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null);
 
     /// <summary>Gets the endpoint URL for the specific model.</summary>
     string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input);
@@ -62,7 +62,7 @@ public abstract class BaseRequestBuilder : IRequestBuilder
 {
     protected static readonly HttpClient HttpClient = NetworkBackendUtils.MakeHttpClient();
     public abstract JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider);
-    public abstract Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null);
+    public abstract Task<byte[][]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null);
     public virtual string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input)
     {
         if (!string.IsNullOrEmpty(model.EndpointOverride))
@@ -85,9 +85,13 @@ public abstract class BaseRequestBuilder : IRequestBuilder
         }
     }
 
+    /// <summary>How many images this single API call should return.
+    /// Swarm's Images param is the number of separate generation calls it will make - it already loops and
+    /// issues one backend call per image - so using it here would multiply the bill by asking each of those
+    /// calls for that many images again. BatchSize is the per-call count.</summary>
     protected static int GetNumImages(T2IParamInput input)
     {
-        return input.TryGet(T2IParamTypes.Images, out int num) && num > 0 ? num : 1;
+        return input.TryGet(T2IParamTypes.BatchSize, out int num) && num > 0 ? num : 1;
     }
 
     protected static async Task<byte[]> DownloadImageFromUrl(string url)
@@ -108,6 +112,32 @@ public abstract class BaseRequestBuilder : IRequestBuilder
             urls.Add(url);
         }
         return urls.Count > 0 ? urls : null;
+    }
+
+    /// <summary>Pulls every image out of a provider's result array, taking base64 where offered and
+    /// downloading otherwise. Providers return one entry per image requested.</summary>
+    protected static async Task<byte[][]> CollectImages(JArray entries, string base64Key, string urlKey, string providerName)
+    {
+        List<byte[]> results = [];
+        foreach (JToken entry in entries)
+        {
+            string base64 = base64Key is null ? null : entry[base64Key]?.ToString();
+            if (!string.IsNullOrEmpty(base64))
+            {
+                results.Add(DecodeBase64Image(base64));
+                continue;
+            }
+            string url = entry[urlKey]?.ToString();
+            if (!string.IsNullOrEmpty(url))
+            {
+                results.Add(url.StartsWith("data:") ? DecodeBase64Image(url) : await DownloadImageFromUrl(url));
+            }
+        }
+        if (results.Count == 0)
+        {
+            throw new Exception($"{providerName} response carried no usable image data");
+        }
+        return [.. results];
     }
 
     protected static byte[] DecodeBase64Image(string base64Data)
@@ -138,7 +168,8 @@ public sealed class OpenAIRequestBuilder : BaseRequestBuilder
         {
             ["prompt"] = input.Get(T2IParamTypes.Prompt),
             ["model"] = modelName,
-            ["n"] = GetNumImages(input),
+            // DALL-E 3 rejects any n above 1; the others accept a real batch.
+            ["n"] = modelName == "dall-e-3" ? 1 : GetNumImages(input),
             ["size"] = SizeForOpenAIModel(input, modelName)
         };
         if (modelName is "gpt-image-1" or "gpt-image-1.5" or "gpt-image-2")
@@ -197,28 +228,19 @@ public sealed class OpenAIRequestBuilder : BaseRequestBuilder
         return request;
     }
 
-    public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
+    public override async Task<byte[][]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
     {
         // Check if this is a Sora video response (has "id" and "status" fields)
         if (response["id"] != null && response["status"] != null)
         {
-            return await ProcessSoraVideoResponse(response, apiKey);
+            return [await ProcessSoraVideoResponse(response, apiKey)];
         }
         JArray data = response["data"] as JArray;
         if (data is null || data.Count is 0)
         {
             throw new Exception("No image data in OpenAI response");
         }
-        JToken firstImage = data[0];
-        if (firstImage["b64_json"] is not null)
-        {
-            return DecodeBase64Image(firstImage["b64_json"].ToString());
-        }
-        else if (firstImage["url"] != null)
-        {
-            return await DownloadImageFromUrl(firstImage["url"].ToString());
-        }
-        throw new Exception("OpenAI response missing image data");
+        return await CollectImages(data, "b64_json", "url", "OpenAI");
     }
 
     private async Task<byte[]> ProcessSoraVideoResponse(JObject initialResponse, string apiKey)
@@ -430,19 +452,14 @@ public sealed class IdeogramRequestBuilder : BaseRequestBuilder
         request.Headers.TryAddWithoutValidation("Api-Key", apiKey);
     }
 
-    public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
+    public override async Task<byte[][]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
     {
         JArray data = response["data"] as JArray;
         if (data is null || data.Count == 0)
         {
             throw new Exception("No image data in Ideogram response");
         }
-        string url = data[0]["url"]?.ToString();
-        if (string.IsNullOrEmpty(url))
-        {
-            throw new Exception("Ideogram response missing image URL");
-        }
-        return await DownloadImageFromUrl(url);
+        return await CollectImages(data, null, "url", "Ideogram");
     }
 }
 
@@ -566,22 +583,22 @@ public sealed class BlackForestRequestBuilder : BaseRequestBuilder
         request.Headers.TryAddWithoutValidation("x-key", apiKey);
     }
 
-    public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
+    public override async Task<byte[][]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
     {
         string pollingUrl = response["polling_url"]?.ToString();
         if (!string.IsNullOrEmpty(pollingUrl) && !string.IsNullOrEmpty(apiKey))
         {
-            return await PollForResult(pollingUrl, apiKey);
+            return [await PollForResult(pollingUrl, apiKey)];
         }
         string resultUrl = response["result"]?["sample"]?.ToString();
         if (!string.IsNullOrEmpty(resultUrl))
         {
-            return await DownloadImageFromUrl(resultUrl);
+            return [await DownloadImageFromUrl(resultUrl)];
         }
         if (response["sample"] is not null)
         {
             string sampleUrl = response["sample"].ToString();
-            return await DownloadImageFromUrl(sampleUrl);
+            return [await DownloadImageFromUrl(sampleUrl)];
         }
         throw new Exception($"Black Forest Labs response missing image data. Response: {response}");
     }
@@ -650,23 +667,14 @@ public sealed class GrokRequestBuilder : BaseRequestBuilder
         return request;
     }
 
-    public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
+    public override async Task<byte[][]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
     {
         JArray data = response["data"] as JArray;
         if (data is null || data.Count is 0)
         {
             throw new Exception("No image data in Grok response");
         }
-        JToken firstImage = data[0];
-        if (firstImage["b64_json"] is not null)
-        {
-            return DecodeBase64Image(firstImage["b64_json"].ToString());
-        }
-        else if (firstImage["url"] is not null)
-        {
-            return await DownloadImageFromUrl(firstImage["url"].ToString());
-        }
-        throw new Exception("Grok response missing image data");
+        return await CollectImages(data, "b64_json", "url", "Grok");
     }
 }
 
@@ -753,34 +761,47 @@ public sealed class GoogleRequestBuilder : BaseRequestBuilder
         return isGemini ? $"{provider.BaseUrl}/{model.Id}:generateContent" : $"{provider.BaseUrl}/{model.Id}:predict";
     }
 
-    public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
+    public override async Task<byte[][]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
     {
         JArray candidates = response["candidates"] as JArray;
         if (candidates is not null && candidates.Count > 0)
         {
-            JArray parts = candidates[0]["content"]?["parts"] as JArray;
-            if (parts is not null)
+            List<byte[]> parsed = [];
+            foreach (JToken candidate in candidates)
             {
+                if (candidate["content"]?["parts"] is not JArray parts)
+                {
+                    continue;
+                }
                 foreach (JToken part in parts)
                 {
-                    if (part["inlineData"] is not null)
+                    string base64 = part["inlineData"]?["data"]?.ToString();
+                    if (!string.IsNullOrEmpty(base64))
                     {
-                        string base64 = part["inlineData"]["data"]?.ToString();
-                        if (!string.IsNullOrEmpty(base64))
-                        {
-                            return DecodeBase64Image(base64);
-                        }
+                        parsed.Add(DecodeBase64Image(base64));
                     }
                 }
+            }
+            if (parsed.Count > 0)
+            {
+                return [.. parsed];
             }
         }
         JArray predictions = response["predictions"] as JArray;
         if (predictions is not null && predictions.Count > 0)
         {
-            string base64 = predictions[0]["bytesBase64Encoded"]?.ToString();
-            if (!string.IsNullOrEmpty(base64))
+            List<byte[]> parsed = [];
+            foreach (JToken prediction in predictions)
             {
-                return DecodeBase64Image(base64);
+                string base64 = prediction["bytesBase64Encoded"]?.ToString();
+                if (!string.IsNullOrEmpty(base64))
+                {
+                    parsed.Add(DecodeBase64Image(base64));
+                }
+            }
+            if (parsed.Count > 0)
+            {
+                return [.. parsed];
             }
         }
         throw new Exception("Google response missing image data");
@@ -1472,57 +1493,25 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         return $"{provider.BaseUrl}/{path}";
     }
 
-    public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
+    public override async Task<byte[][]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
     {
-        // Handle image responses (most text-to-image models)
-        JArray images = response["images"] as JArray;
-        if (images is not null && images.Count > 0)
+        // Most image models return an array, one entry per image requested.
+        if (response["images"] is JArray images && images.Count > 0)
         {
-            JToken firstImage = images[0];
-            string url = firstImage["url"]?.ToString();
+            return await CollectImages(images, "base64", "url", "Fal.ai");
+        }
+        // Some models return a single object instead.
+        foreach (string key in (string[])["image", "video"])
+        {
+            string url = response[key]?["url"]?.ToString();
             if (!string.IsNullOrEmpty(url))
             {
-                if (url.StartsWith("data:"))
-                {
-                    return DecodeBase64Image(url);
-                }
-                return await DownloadImageFromUrl(url);
-            }
-            string base64 = firstImage["base64"]?.ToString();
-            if (!string.IsNullOrEmpty(base64))
-            {
-                return DecodeBase64Image(base64);
+                return [url.StartsWith("data:") ? DecodeBase64Image(url) : await DownloadImageFromUrl(url)];
             }
         }
-        // Handle single image response (some models return {image: {url: ...}})
-        JToken imageObj = response["image"];
-        if (imageObj is not null)
+        if (response["output"] is JArray outputArr && outputArr.Count > 0)
         {
-            string imageUrl = imageObj["url"]?.ToString();
-            if (!string.IsNullOrEmpty(imageUrl))
-            {
-                return await DownloadImageFromUrl(imageUrl);
-            }
-        }
-        // Handle video responses (video generation models)
-        JToken video = response["video"];
-        if (video is not null)
-        {
-            string videoUrl = video["url"]?.ToString();
-            if (!string.IsNullOrEmpty(videoUrl))
-            {
-                return await DownloadImageFromUrl(videoUrl);
-            }
-        }
-        // Handle output array (some utility models)
-        JToken output = response["output"];
-        if (output is JArray outputArr && outputArr.Count > 0)
-        {
-            string outputUrl = outputArr[0]["url"]?.ToString();
-            if (!string.IsNullOrEmpty(outputUrl))
-            {
-                return await DownloadImageFromUrl(outputUrl);
-            }
+            return await CollectImages(outputArr, null, "url", "Fal.ai");
         }
         throw new Exception($"Fal.ai response missing image/video data. Response keys: {string.Join(", ", response.Properties().Select(p => p.Name))}");
     }

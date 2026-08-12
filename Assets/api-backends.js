@@ -322,6 +322,10 @@ const APIBackendsConfig = {
         if (cap && paramId === 'initimage') {
             return cap.init_image === true;
         }
+        if (cap && paramId === 'batchsize') {
+            // Batch Size is images-per-API-call. Swarm's Images param is separate calls and is handled by Swarm.
+            return cap.supports_batch === true;
+        }
         if (cap && paramId === 'cfgscale') {
             return (cap.flags || []).includes('fal_t2i_params');
         }

@@ -118,7 +118,7 @@ public abstract class APIAbstractBackend : AbstractT2IBackend
     }
 
     /// <summary>Process the API response to extract image data</summary>
-    protected virtual async Task<byte[]> ProcessResponse(JObject responseJson, string apiKey)
+    protected virtual async Task<byte[][]> ProcessResponse(JObject responseJson, string apiKey)
     {
         try
         {
@@ -200,10 +200,10 @@ public abstract class APIAbstractBackend : AbstractT2IBackend
             Logs.Verbose($"[APIAbstractBackend] {GetType().Name} - Response body: {(responseText.Length > LogResponseLimit ? $"{responseText[..LogResponseLimit]}… ({responseText.Length} chars)" : responseText)}");
             JObject responseJson = JObject.Parse(responseText);
             string apiKey = GetApiKey(input);
-            byte[] data = await ProcessResponse(responseJson, apiKey);
+            byte[][] data = await ProcessResponse(responseJson, apiKey);
             MediaType mediaType = DetermineResponseMediaType(responseJson, input);
-            Logs.Verbose($"[APIAbstractBackend] {GetType().Name} - Response media type: {mediaType.Extension}");
-            return [new Image(data, mediaType)];
+            Logs.Verbose($"[APIAbstractBackend] {GetType().Name} - Response media type: {mediaType.Extension}, {data.Length} result(s)");
+            return [.. data.Select(d => new Image(d, mediaType))];
         }
         catch (Exception ex)
         {
