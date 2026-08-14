@@ -31,6 +31,32 @@ public sealed class GrokProvider : IProviderSource
             .WithUsageHint("High-quality image generation from xAI")
             .WithTags("grok", "xai", "generative")
             .WithFeatureFlag("grok_2_image_params")
+            .Build(),
+
+        ModelDefinitionBuilder.Create()
+            .WithId("grok-imagine-image")
+            .WithTitle("Grok Imagine Image")
+            .WithDescription("xAI's current image model, built on their own Aurora engine rather than a licensed diffusion model")
+            .WithAuthor("xAI")
+            .WithDimensions(1024, 1024)
+            .WithPreviewImage("Images/ModelPreviews/Grok/grok-imagine-image.png")
+            .WithDate("2026")
+            .WithUsageHint("Photoreal image generation from xAI")
+            .WithTags("grok", "xai", "imagine", "generative")
+            .WithFeatureFlag("grok_2_image_params")
+            .Build(),
+
+        ModelDefinitionBuilder.Create()
+            .WithId("grok-imagine-image-quality")
+            .WithTitle("Grok Imagine Image (Quality)")
+            .WithDescription("Higher quality tier of Grok Imagine, slower per image")
+            .WithAuthor("xAI")
+            .WithDimensions(1024, 1024)
+            .WithPreviewImage("Images/ModelPreviews/Grok/grok-imagine-image-quality.png")
+            .WithDate("2026")
+            .WithUsageHint("Highest quality Grok Imagine generation")
+            .WithTags("grok", "xai", "imagine", "generative", "quality")
+            .WithFeatureFlag("grok_2_image_params")
             .Build()
     ];
 }

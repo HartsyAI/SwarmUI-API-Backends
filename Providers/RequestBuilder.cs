@@ -18,7 +18,7 @@ public interface IRequestBuilder
     JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider);
 
     /// <summary>Processes the API response and extracts image data.</summary>
-    Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null);
+    Task<byte[][]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null);
 
     /// <summary>Gets the endpoint URL for the specific model.</summary>
     string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input);
@@ -62,7 +62,7 @@ public abstract class BaseRequestBuilder : IRequestBuilder
 {
     protected static readonly HttpClient HttpClient = NetworkBackendUtils.MakeHttpClient();
     public abstract JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider);
-    public abstract Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null);
+    public abstract Task<byte[][]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null);
     public virtual string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input)
     {
         if (!string.IsNullOrEmpty(model.EndpointOverride))
@@ -85,14 +85,59 @@ public abstract class BaseRequestBuilder : IRequestBuilder
         }
     }
 
+    /// <summary>How many images this single API call should return.
+    /// Swarm's Images param is the number of separate generation calls it will make - it already loops and
+    /// issues one backend call per image - so using it here would multiply the bill by asking each of those
+    /// calls for that many images again. BatchSize is the per-call count.</summary>
     protected static int GetNumImages(T2IParamInput input)
     {
-        return input.TryGet(T2IParamTypes.Images, out int num) && num > 0 ? num : 1;
+        return input.TryGet(T2IParamTypes.BatchSize, out int num) && num > 0 ? num : 1;
     }
 
     protected static async Task<byte[]> DownloadImageFromUrl(string url)
     {
         return await HttpClient.GetByteArrayAsync(url);
+    }
+
+    /// <summary>Splits a comma-separated URL list into a JSON array, or null if empty.</summary>
+    protected static JArray UrlList(T2IParamInput input, T2IRegisteredParam<string> param)
+    {
+        if (!input.TryGet(param, out string raw) || string.IsNullOrEmpty(raw))
+        {
+            return null;
+        }
+        JArray urls = [];
+        foreach (string url in raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            urls.Add(url);
+        }
+        return urls.Count > 0 ? urls : null;
+    }
+
+    /// <summary>Pulls every image out of a provider's result array, taking base64 where offered and
+    /// downloading otherwise. Providers return one entry per image requested.</summary>
+    protected static async Task<byte[][]> CollectImages(JArray entries, string base64Key, string urlKey, string providerName)
+    {
+        List<byte[]> results = [];
+        foreach (JToken entry in entries)
+        {
+            string base64 = base64Key is null ? null : entry[base64Key]?.ToString();
+            if (!string.IsNullOrEmpty(base64))
+            {
+                results.Add(DecodeBase64Image(base64));
+                continue;
+            }
+            string url = entry[urlKey]?.ToString();
+            if (!string.IsNullOrEmpty(url))
+            {
+                results.Add(url.StartsWith("data:") ? DecodeBase64Image(url) : await DownloadImageFromUrl(url));
+            }
+        }
+        if (results.Count == 0)
+        {
+            throw new Exception($"{providerName} response carried no usable image data");
+        }
+        return [.. results];
     }
 
     protected static byte[] DecodeBase64Image(string base64Data)
@@ -123,8 +168,9 @@ public sealed class OpenAIRequestBuilder : BaseRequestBuilder
         {
             ["prompt"] = input.Get(T2IParamTypes.Prompt),
             ["model"] = modelName,
-            ["n"] = GetNumImages(input),
-            ["size"] = input.TryGet(SwarmUIAPIBackends.SizeParam_OpenAI, out string size) ? size : "1024x1024"
+            // DALL-E 3 rejects any n above 1; the others accept a real batch.
+            ["n"] = modelName == "dall-e-3" ? 1 : GetNumImages(input),
+            ["size"] = SizeForOpenAIModel(input, modelName)
         };
         if (modelName is "gpt-image-1" or "gpt-image-1.5" or "gpt-image-2")
         {
@@ -145,6 +191,19 @@ public sealed class OpenAIRequestBuilder : BaseRequestBuilder
             request["response_format"] = "b64_json";
         }
         return request;
+    }
+
+    /// <summary>Each OpenAI image model accepts a different size list, so each has its own param.</summary>
+    private static string SizeForOpenAIModel(T2IParamInput input, string modelName)
+    {
+        T2IRegisteredParam<string> param = modelName switch
+        {
+            "dall-e-2" => SwarmUIAPIBackends.SizeParam_DallE2,
+            "gpt-image-2" => SwarmUIAPIBackends.SizeParam_GPTImage2,
+            "gpt-image-1" or "gpt-image-1.5" => SwarmUIAPIBackends.SizeParam_GPTImage,
+            _ => SwarmUIAPIBackends.SizeParam_OpenAI
+        };
+        return input.TryGet(param, out string size) ? size : "1024x1024";
     }
 
     private static bool IsSoraModel(string modelName) => modelName.StartsWith("sora-");
@@ -169,28 +228,19 @@ public sealed class OpenAIRequestBuilder : BaseRequestBuilder
         return request;
     }
 
-    public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
+    public override async Task<byte[][]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
     {
         // Check if this is a Sora video response (has "id" and "status" fields)
         if (response["id"] != null && response["status"] != null)
         {
-            return await ProcessSoraVideoResponse(response, apiKey);
+            return [await ProcessSoraVideoResponse(response, apiKey)];
         }
         JArray data = response["data"] as JArray;
         if (data is null || data.Count is 0)
         {
             throw new Exception("No image data in OpenAI response");
         }
-        JToken firstImage = data[0];
-        if (firstImage["b64_json"] is not null)
-        {
-            return DecodeBase64Image(firstImage["b64_json"].ToString());
-        }
-        else if (firstImage["url"] != null)
-        {
-            return await DownloadImageFromUrl(firstImage["url"].ToString());
-        }
-        throw new Exception("OpenAI response missing image data");
+        return await CollectImages(data, "b64_json", "url", "OpenAI");
     }
 
     private async Task<byte[]> ProcessSoraVideoResponse(JObject initialResponse, string apiKey)
@@ -322,6 +372,14 @@ public sealed class IdeogramRequestBuilder : BaseRequestBuilder
             {
                 v4["rendering_speed"] = v4speed;
             }
+            if (input.TryGet(SwarmUIAPIBackends.ResolutionParam_IdeogramV4, out string v4res) && !string.IsNullOrEmpty(v4res))
+            {
+                v4["resolution"] = v4res;
+            }
+            if (input.TryGet(SwarmUIAPIBackends.CopyrightDetectionParam_IdeogramV4, out bool v4copy))
+            {
+                v4["enable_copyright_detection"] = v4copy;
+            }
             return v4;
         }
         bool isV3 = IsV3Model(model);
@@ -394,19 +452,14 @@ public sealed class IdeogramRequestBuilder : BaseRequestBuilder
         request.Headers.TryAddWithoutValidation("Api-Key", apiKey);
     }
 
-    public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
+    public override async Task<byte[][]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
     {
         JArray data = response["data"] as JArray;
         if (data is null || data.Count == 0)
         {
             throw new Exception("No image data in Ideogram response");
         }
-        string url = data[0]["url"]?.ToString();
-        if (string.IsNullOrEmpty(url))
-        {
-            throw new Exception("Ideogram response missing image URL");
-        }
-        return await DownloadImageFromUrl(url);
+        return await CollectImages(data, null, "url", "Ideogram");
     }
 }
 
@@ -418,6 +471,10 @@ public sealed class BlackForestRequestBuilder : BaseRequestBuilder
 {
     public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
     {
+        if (model.Family == "video.bfl_flux3")
+        {
+            return BuildFlux3DirectRequest(input);
+        }
         string modelId = model.Id;
         bool usesAspectRatio = modelId is "flux-pro-1.1-ultra" or "flux-kontext-pro" or "flux-kontext-max";
         JObject request = new()
@@ -439,8 +496,8 @@ public sealed class BlackForestRequestBuilder : BaseRequestBuilder
         if (input.TryGet(SwarmUIAPIBackends.SafetyTolerance_BlackForest, out int safety)) request["safety_tolerance"] = safety;
         if (input.TryGet(SwarmUIAPIBackends.SeedParam_BlackForest, out long seed) && seed >= 0) request["seed"] = seed;
         if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_BlackForest, out string format)) request["output_format"] = format;
-        // Guidance and steps: flux-dev only
-        if (modelId == "flux-dev")
+        // Guidance and steps: flux-dev and flux-2-flex both expose them
+        if (modelId is "flux-dev" or "flux-2-flex")
         {
             if (input.TryGet(SwarmUIAPIBackends.GuidanceParam_BlackForest, out double guidance)) request["guidance"] = guidance;
             if (input.TryGet(SwarmUIAPIBackends.StepsParam_BlackForest, out int steps)) request["steps"] = steps;
@@ -459,9 +516,17 @@ public sealed class BlackForestRequestBuilder : BaseRequestBuilder
         if (input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null)
         {
             string base64Image = Convert.ToBase64String(initImg.RawData);
-            if (modelId is "flux-kontext-pro" or "flux-kontext-max" or "flux-2-pro" or "flux-2-max")
+            if (modelId is "flux-kontext-pro" or "flux-kontext-max" or "flux-2-pro" or "flux-2-max" or "flux-2-flex")
             {
                 request["input_image"] = base64Image;
+                // FLUX.2 also accepts input_image_2..8; extra references come from the shared reference URL param.
+                if (modelId.StartsWith("flux-2-") && UrlList(input, SwarmUIAPIBackends.RefImageUrlsParam) is JArray extras)
+                {
+                    for (int i = 0; i < extras.Count && i < 7; i++)
+                    {
+                        request[$"input_image_{i + 2}"] = extras[i];
+                    }
+                }
             }
             else
             {
@@ -476,6 +541,38 @@ public sealed class BlackForestRequestBuilder : BaseRequestBuilder
         return request;
     }
 
+    /// <summary>FLUX 3 on BFL's own API is a discriminated union on 'mode'. Supplying an Init Image switches
+    /// from text-to-video to image-continuation, where the image becomes the first keyframe.
+    /// There is no seed field in this schema.</summary>
+    private static JObject BuildFlux3DirectRequest(T2IParamInput input)
+    {
+        JObject request = new()
+        {
+            ["prompt"] = input.Get(T2IParamTypes.Prompt),
+            ["version"] = "latest"
+        };
+        bool hasImage = input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null;
+        if (hasImage)
+        {
+            request["mode"] = "i2v";
+            request["keyframes"] = new JArray($"data:image/png;base64,{Convert.ToBase64String(initImg.RawData)}");
+        }
+        else
+        {
+            request["mode"] = "t2v";
+        }
+        if (input.TryGet(SwarmUIAPIBackends.DurationParam_Flux3, out string duration))
+        {
+            // 'auto' stays a string; a concrete length is an integer in this schema.
+            request["duration"] = int.TryParse(duration, out int seconds) ? seconds : duration;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Flux3, out string aspect)) request["aspect_ratio"] = aspect;
+        if (input.TryGet(SwarmUIAPIBackends.ResolutionParam_Flux3Bfl, out string resolution)) request["resolution"] = resolution;
+        if (input.TryGet(SwarmUIAPIBackends.GenerateAudioParam_FalVideo, out bool audio)) request["generate_audio"] = audio;
+        if (input.TryGet(SwarmUIAPIBackends.SafetyToleranceParam_Flux3, out int safety)) request["safety_tolerance"] = safety;
+        return request;
+    }
+
     public override string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input)
     {
         return $"{provider.BaseUrl}/v1/{model.Id}";
@@ -486,30 +583,31 @@ public sealed class BlackForestRequestBuilder : BaseRequestBuilder
         request.Headers.TryAddWithoutValidation("x-key", apiKey);
     }
 
-    public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
+    public override async Task<byte[][]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
     {
         string pollingUrl = response["polling_url"]?.ToString();
         if (!string.IsNullOrEmpty(pollingUrl) && !string.IsNullOrEmpty(apiKey))
         {
-            return await PollForResult(pollingUrl, apiKey);
+            return [await PollForResult(pollingUrl, apiKey)];
         }
         string resultUrl = response["result"]?["sample"]?.ToString();
         if (!string.IsNullOrEmpty(resultUrl))
         {
-            return await DownloadImageFromUrl(resultUrl);
+            return [await DownloadImageFromUrl(resultUrl)];
         }
         if (response["sample"] is not null)
         {
             string sampleUrl = response["sample"].ToString();
-            return await DownloadImageFromUrl(sampleUrl);
+            return [await DownloadImageFromUrl(sampleUrl)];
         }
         throw new Exception($"Black Forest Labs response missing image data. Response: {response}");
     }
 
     private async Task<byte[]> PollForResult(string pollingUrl, string apiKey)
     {
-        int maxAttempts = 120;
-        int delayMs = 1000;
+        // Video jobs run for minutes, far past the 2 minutes the original image-only budget allowed.
+        int maxAttempts = 450;
+        int delayMs = 2000;
         for (int i = 0; i < maxAttempts; i++)
         {
             await Task.Delay(delayMs);
@@ -523,12 +621,14 @@ public sealed class BlackForestRequestBuilder : BaseRequestBuilder
             Logs.Verbose($"[BFL] Polling status: {status}");
             if (status is "Ready")
             {
-                string sampleUrl = result["result"]?["sample"]?.ToString();
+                // Images come back under 'sample'; video jobs use a video key instead.
+                JToken payload = result["result"];
+                string sampleUrl = (payload?["sample"] ?? payload?["video"] ?? payload?["video_url"])?.ToString();
                 if (!string.IsNullOrEmpty(sampleUrl))
                 {
                     return await DownloadImageFromUrl(sampleUrl);
                 }
-                throw new Exception("BFL result ready but missing sample URL");
+                throw new Exception($"BFL result ready but carried no downloadable URL. Result: {payload}");
             }
             else if (status is "Error" || status is "Failed")
             {
@@ -567,23 +667,14 @@ public sealed class GrokRequestBuilder : BaseRequestBuilder
         return request;
     }
 
-    public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
+    public override async Task<byte[][]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
     {
         JArray data = response["data"] as JArray;
         if (data is null || data.Count is 0)
         {
             throw new Exception("No image data in Grok response");
         }
-        JToken firstImage = data[0];
-        if (firstImage["b64_json"] is not null)
-        {
-            return DecodeBase64Image(firstImage["b64_json"].ToString());
-        }
-        else if (firstImage["url"] is not null)
-        {
-            return await DownloadImageFromUrl(firstImage["url"].ToString());
-        }
-        throw new Exception("Grok response missing image data");
+        return await CollectImages(data, "b64_json", "url", "Grok");
     }
 }
 
@@ -670,34 +761,47 @@ public sealed class GoogleRequestBuilder : BaseRequestBuilder
         return isGemini ? $"{provider.BaseUrl}/{model.Id}:generateContent" : $"{provider.BaseUrl}/{model.Id}:predict";
     }
 
-    public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
+    public override async Task<byte[][]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
     {
         JArray candidates = response["candidates"] as JArray;
         if (candidates is not null && candidates.Count > 0)
         {
-            JArray parts = candidates[0]["content"]?["parts"] as JArray;
-            if (parts is not null)
+            List<byte[]> parsed = [];
+            foreach (JToken candidate in candidates)
             {
+                if (candidate["content"]?["parts"] is not JArray parts)
+                {
+                    continue;
+                }
                 foreach (JToken part in parts)
                 {
-                    if (part["inlineData"] is not null)
+                    string base64 = part["inlineData"]?["data"]?.ToString();
+                    if (!string.IsNullOrEmpty(base64))
                     {
-                        string base64 = part["inlineData"]["data"]?.ToString();
-                        if (!string.IsNullOrEmpty(base64))
-                        {
-                            return DecodeBase64Image(base64);
-                        }
+                        parsed.Add(DecodeBase64Image(base64));
                     }
                 }
+            }
+            if (parsed.Count > 0)
+            {
+                return [.. parsed];
             }
         }
         JArray predictions = response["predictions"] as JArray;
         if (predictions is not null && predictions.Count > 0)
         {
-            string base64 = predictions[0]["bytesBase64Encoded"]?.ToString();
-            if (!string.IsNullOrEmpty(base64))
+            List<byte[]> parsed = [];
+            foreach (JToken prediction in predictions)
             {
-                return DecodeBase64Image(base64);
+                string base64 = prediction["bytesBase64Encoded"]?.ToString();
+                if (!string.IsNullOrEmpty(base64))
+                {
+                    parsed.Add(DecodeBase64Image(base64));
+                }
+            }
+            if (parsed.Count > 0)
+            {
+                return [.. parsed];
             }
         }
         throw new Exception("Google response missing image data");
@@ -710,67 +814,101 @@ public sealed class GoogleRequestBuilder : BaseRequestBuilder
 
 public sealed class FalRequestBuilder : BaseRequestBuilder
 {
+    /// <summary>Fills in the params for one model family. Families are declared on the model, never inferred from its name.</summary>
+    private delegate void FamilyBuilder(T2IParamInput input, JObject request, ModelDefinition model);
+
+    private static readonly Dictionary<string, FamilyBuilder> Families = new()
+    {
+        ["image.standard"] = (i, r, m) => BuildStandardImageParams(i, r),
+        ["image.flux2"] = (i, r, m) => BuildFlux2ImageParams(i, r),
+        ["image.flux2_edit"] = (i, r, m) => BuildFlux2EditParams(i, r, sampling: false, batch: false, expansion: false),
+        ["image.flux2_edit_flex"] = (i, r, m) => BuildFlux2EditParams(i, r, sampling: true, batch: false, expansion: false),
+        ["image.flux2_edit_dev"] = (i, r, m) => BuildFlux2EditParams(i, r, sampling: true, batch: true, expansion: true),
+        ["image.qwen2"] = (i, r, m) => BuildQwen2ImageParams(i, r),
+        ["image.zimage"] = (i, r, m) => BuildZImageParams(i, r),
+        ["image.nanobanana2"] = (i, r, m) => BuildNanoBanana2Params(i, r),
+        ["image.aspect"] = (i, r, m) => BuildAspectRatioImageParams(i, r, m.Id),
+        ["image.recraft"] = (i, r, m) => BuildRecraftImageParams(i, r),
+        ["image.bria"] = (i, r, m) => BuildBriaImageParams(i, r),
+        ["video.sora"] = (i, r, m) => BuildSoraVideoParams(i, r),
+        ["video.kling"] = (i, r, m) => BuildKlingVideoParams(i, r),
+        ["video.veo"] = (i, r, m) => BuildVeoVideoParams(i, r),
+        ["video.luma"] = (i, r, m) => BuildLumaVideoParams(i, r),
+        ["video.minimax"] = (i, r, m) => BuildMiniMaxVideoParams(i, r),
+        ["video.hunyuan"] = (i, r, m) => BuildHunyuanVideoParams(i, r),
+        ["video.grok"] = (i, r, m) => BuildGrokVideoParams(i, r),
+        ["video.seedance1"] = (i, r, m) => BuildSeedance1VideoParams(i, r),
+        ["video.seedance2"] = (i, r, m) =>
+        {
+            BuildSeedance2VideoParams(i, r);
+            if (m.ExtraFlags.Contains("fal_seedance_ref_params"))
+            {
+                AddReferenceUrls(i, r, "image_urls", "video_urls", "audio_urls");
+            }
+        },
+        ["video.wan22"] = (i, r, m) => BuildWan22VideoParams(i, r),
+        ["video.pixverse"] = (i, r, m) => BuildPixVerseVideoParams(i, r),
+        ["video.ltx2"] = (i, r, m) => BuildLtx2VideoParams(i, r),
+        ["video.ltx13b"] = (i, r, m) => BuildLtx13bVideoParams(i, r),
+        ["video.vidu"] = (i, r, m) => BuildViduVideoParams(i, r),
+        ["video.pika"] = (i, r, m) => BuildPikaVideoParams(i, r),
+        ["video.kandinsky"] = (i, r, m) => BuildKandinskyVideoParams(i, r),
+        ["video.cogvideox"] = (i, r, m) => BuildCogVideoXParams(i, r),
+        ["video.wan25"] = (i, r, m) => BuildWan25VideoParams(i, r),
+        ["video.wan26"] = (i, r, m) => BuildWan26VideoParams(i, r),
+        ["video.wan27"] = (i, r, m) => BuildWan27VideoParams(i, r, aspect: true, endImage: false),
+        ["video.wan27_i2v"] = (i, r, m) => BuildWan27VideoParams(i, r, aspect: false, endImage: true),
+        ["video.wan27_ref"] = (i, r, m) => BuildWan27RefVideoParams(i, r),
+        ["video.flux3"] = (i, r, m) => BuildFlux3VideoParams(i, r),
+        ["video.h3"] = (i, r, m) => BuildH3VideoParams(i, r, aspect: SwarmUIAPIBackends.AspectRatioParam_H3, endImage: false, refs: false),
+        ["video.h3_i2v"] = (i, r, m) => BuildH3VideoParams(i, r, aspect: null, endImage: true, refs: false),
+        ["video.h3_ref"] = (i, r, m) => BuildH3VideoParams(i, r, aspect: SwarmUIAPIBackends.AspectRatioParam_H3Ref, endImage: false, refs: true),
+        ["video.kling_turbo"] = (i, r, m) => BuildKlingTurboVideoParams(i, r),
+        ["video.seedance25"] = (i, r, m) => BuildSeedance25VideoParams(i, r, m, endImage: false),
+        ["video.seedance25_i2v"] = (i, r, m) => BuildSeedance25VideoParams(i, r, m, endImage: true),
+        ["utility.image"] = (i, r, m) => BuildUtilityImageParams(i, r),
+        ["utility.video"] = (i, r, m) => BuildUtilityVideoParams(i, r)
+    };
+
     public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
     {
-        bool isVideo = model.Id.EndsWith("-t2v") || model.Id.EndsWith("-i2v") || model.Id.EndsWith("-ref2v");
-        bool isUtility = model.Id.StartsWith("Utility/");
-        if (isVideo)
+        if (!Families.TryGetValue(model.Family, out FamilyBuilder buildFamily))
         {
-            return BuildVideoRequest(input, model);
+            throw new Exception($"Fal model '{model.Id}' declares unknown param family '{model.Family}'");
         }
-        if (isUtility)
+        JObject request = [];
+        if (model.Modality != ModelModality.Utility)
         {
-            return BuildUtilityRequest(input, model);
+            request["prompt"] = input.Get(T2IParamTypes.Prompt);
         }
-        return BuildImageRequest(input, model);
-    }
-
-    private static JObject BuildImageRequest(T2IParamInput input, ModelDefinition model)
-    {
-        string modelId = model.Id;
-        JObject request = new()
+        AttachInputMedia(input, request, model);
+        buildFamily(input, request, model);
+        // Videos are polled rather than returned inline, so sync_mode only applies to image/utility results.
+        if (model.Modality != ModelModality.Video)
         {
-            ["prompt"] = input.Get(T2IParamTypes.Prompt)
-        };
-        // Input image for edit/i2i models (custom Fal param)
-        bool hasInputImage = input.TryGet(SwarmUIAPIBackends.ImagePromptParam_Fal, out Image inputImg) && inputImg?.RawData is not null;
-        if (hasInputImage)
-        {
-            string base64Image = Convert.ToBase64String(inputImg.RawData);
-            string dataUrl = $"data:image/png;base64,{base64Image}";
-            request["image_url"] = dataUrl;
-            request["image_urls"] = new JArray(dataUrl);
+            request["sync_mode"] = true;
         }
-        // Determine model family for param handling
-        if (modelId.StartsWith("Recraft/"))
-        {
-            BuildRecraftImageParams(input, request);
-        }
-        else if (modelId.StartsWith("Bria/") && !modelId.EndsWith("-edit"))
-        {
-            BuildBriaImageParams(input, request);
-        }
-        else if (IsAspectRatioImageModel(modelId))
-        {
-            BuildAspectRatioImageParams(input, request, modelId);
-        }
-        else
-        {
-            BuildStandardImageParams(input, request);
-        }
-        request["sync_mode"] = true;
         return request;
     }
 
-    /// <summary>Check if a Fal image model uses aspect_ratio instead of image_size.</summary>
-    private static bool IsAspectRatioImageModel(string modelId) =>
-        modelId is "FLUX/flux-pro-ultra"
-        || modelId.StartsWith("Kling/kling-image")
-        || modelId.StartsWith("Google/nano-banana-pro")
-        || modelId.StartsWith("Google/imagen-3")
-        || modelId.StartsWith("Grok/grok-imagine-image") && !modelId.Contains("-video")
-        || modelId is "MiniMax/minimax-image-01"
-        || modelId.StartsWith("ImagineArt/");
+    /// <summary>Attaches the user's init/reference image, in whichever shape the family expects.</summary>
+    private static void AttachInputMedia(T2IParamInput input, JObject request, ModelDefinition model)
+    {
+        if (!model.SupportsInitImage || model.Family == "utility.video")
+        {
+            return;
+        }
+        if (!input.TryGet(T2IParamTypes.InitImage, out Image img) || img?.RawData is null)
+        {
+            return;
+        }
+        string dataUrl = $"data:image/png;base64,{Convert.ToBase64String(img.RawData)}";
+        request["image_url"] = dataUrl;
+        if (model.Modality == ModelModality.Image)
+        {
+            request["image_urls"] = new JArray(dataUrl);
+        }
+    }
 
     /// <summary>Standard Fal image params: image_size, guidance, steps, seed, safety_checker, output_format, negative_prompt.</summary>
     private static void BuildStandardImageParams(T2IParamInput input, JObject request)
@@ -786,6 +924,79 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         // Negative prompt: SD, HiDream, Qwen, Sana, Lumina, Kolors, Playground
         if (input.TryGet(SwarmUIAPIBackends.NegativePromptParam_FalImage, out string negPrompt) && !string.IsNullOrEmpty(negPrompt))
             request["negative_prompt"] = negPrompt;
+    }
+
+    /// <summary>FLUX.2 image models: image_size, seed, output_format, safety. No batch, steps, guidance
+    /// or negative prompt - the endpoint declares none of them.</summary>
+    private static void BuildFlux2ImageParams(T2IParamInput input, JObject request)
+    {
+        request["image_size"] = input.TryGet(SwarmUIAPIBackends.ImageSizeParam_Fal, out string size) ? size : "landscape_4_3";
+        if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0) request["seed"] = seed;
+        if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_Fal, out string format)) request["output_format"] = format;
+        if (input.TryGet(SwarmUIAPIBackends.SafetyCheckerParam_Fal, out bool safe)) request["enable_safety_checker"] = safe;
+        if (input.TryGet(SwarmUIAPIBackends.SafetyToleranceParam_Flux2, out int tolerance)) request["safety_tolerance"] = tolerance;
+    }
+
+    /// <summary>FLUX.2 editing. All variants take image_urls plus an auto-capable image_size, seed and safety;
+    /// flex and dev additionally take steps and guidance, and dev alone takes a batch count.</summary>
+    private static void BuildFlux2EditParams(T2IParamInput input, JObject request, bool sampling, bool batch, bool expansion)
+    {
+        Put(input, request, "image_size", SwarmUIAPIBackends.ImageSizeParam_Flux2Edit);
+        if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0) request["seed"] = seed;
+        if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_Fal, out string format)) request["output_format"] = format;
+        if (input.TryGet(SwarmUIAPIBackends.SafetyCheckerParam_Fal, out bool safe)) request["enable_safety_checker"] = safe;
+        if (input.TryGet(SwarmUIAPIBackends.SafetyToleranceParam_Flux2, out int tolerance)) request["safety_tolerance"] = tolerance;
+        if (sampling)
+        {
+            if (input.TryGet(SwarmUIAPIBackends.GuidanceScaleParam_Fal, out double guidance)) request["guidance_scale"] = guidance;
+            if (input.TryGet(SwarmUIAPIBackends.NumInferenceStepsParam_Fal, out int steps)) request["num_inference_steps"] = steps;
+        }
+        if (batch)
+        {
+            // dev caps at 4 input images and accepts a batch count; the others return exactly one.
+            request["num_images"] = Math.Min(GetNumImages(input), 4);
+        }
+        if (expansion && input.TryGet(SwarmUIAPIBackends.PromptExpansionParam_Wan, out bool expand)) request["enable_prompt_expansion"] = expand;
+        // These endpoints require image_urls; image_url is not part of their schema.
+        request.Remove("image_url");
+    }
+
+    /// <summary>Qwen Image 2.0: image_size, batch, seed, negative prompt, prompt expansion. No steps or guidance.</summary>
+    private static void BuildQwen2ImageParams(T2IParamInput input, JObject request)
+    {
+        request["image_size"] = input.TryGet(SwarmUIAPIBackends.ImageSizeParam_Fal, out string size) ? size : "square_hd";
+        request["num_images"] = GetNumImages(input);
+        if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0) request["seed"] = seed;
+        if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_Fal, out string format)) request["output_format"] = format;
+        if (input.TryGet(SwarmUIAPIBackends.SafetyCheckerParam_Fal, out bool safe)) request["enable_safety_checker"] = safe;
+        if (input.TryGet(SwarmUIAPIBackends.NegativePromptParam_FalImage, out string neg) && !string.IsNullOrEmpty(neg)) request["negative_prompt"] = neg;
+        if (input.TryGet(SwarmUIAPIBackends.PromptExpansionParam_Wan, out bool expand)) request["enable_prompt_expansion"] = expand;
+    }
+
+    /// <summary>Z-Image Turbo: image_size, batch, steps, seed. No guidance or negative prompt.</summary>
+    private static void BuildZImageParams(T2IParamInput input, JObject request)
+    {
+        request["image_size"] = input.TryGet(SwarmUIAPIBackends.ImageSizeParam_Fal, out string size) ? size : "landscape_4_3";
+        request["num_images"] = GetNumImages(input);
+        if (input.TryGet(SwarmUIAPIBackends.NumInferenceStepsParam_Fal, out int steps)) request["num_inference_steps"] = steps;
+        if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0) request["seed"] = seed;
+        if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_Fal, out string format)) request["output_format"] = format;
+        if (input.TryGet(SwarmUIAPIBackends.SafetyCheckerParam_Fal, out bool safe)) request["enable_safety_checker"] = safe;
+        if (input.TryGet(SwarmUIAPIBackends.PromptExpansionParam_Wan, out bool expand)) request["enable_prompt_expansion"] = expand;
+    }
+
+    /// <summary>Nano Banana 2: extended aspect list, 0.5K-4K resolution, plus reasoning and web-search controls.</summary>
+    private static void BuildNanoBanana2Params(T2IParamInput input, JObject request)
+    {
+        Put(input, request, "aspect_ratio", SwarmUIAPIBackends.AspectRatioParam_NB2);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_NB2);
+        Put(input, request, "thinking_level", SwarmUIAPIBackends.ThinkingLevelParam_NB2);
+        Put(input, request, "system_prompt", SwarmUIAPIBackends.SystemPromptParam_NB2);
+        request["num_images"] = GetNumImages(input);
+        if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0) request["seed"] = seed;
+        if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_FalAspect, out string format)) request["output_format"] = format;
+        if (input.TryGet(SwarmUIAPIBackends.SafetyToleranceParam_NB2, out int tolerance)) request["safety_tolerance"] = tolerance;
+        if (input.TryGet(SwarmUIAPIBackends.WebSearchParam_NB2, out bool search)) request["enable_web_search"] = search;
     }
 
     /// <summary>Aspect ratio models: FLUX Ultra, Kling Image, Nano Banana, Imagen 3. Use aspect_ratio + resolution instead of image_size.</summary>
@@ -832,69 +1043,6 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         if (input.TryGet(SwarmUIAPIBackends.NumInferenceStepsParam_Fal, out int steps)) request["steps_num"] = steps;
         if (input.TryGet(SwarmUIAPIBackends.NegativePromptParam_FalImage, out string negPrompt) && !string.IsNullOrEmpty(negPrompt))
             request["negative_prompt"] = negPrompt;
-    }
-
-    private static JObject BuildVideoRequest(T2IParamInput input, ModelDefinition model)
-    {
-        JObject request = new()
-        {
-            ["prompt"] = input.Get(T2IParamTypes.Prompt)
-        };
-        // I2V models: send input image via core Swarm InitImage
-        bool isI2V = model.Id.EndsWith("-i2v");
-        if (isI2V && input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null)
-        {
-            string base64Image = Convert.ToBase64String(initImg.RawData);
-            request["image_url"] = $"data:image/png;base64,{base64Image}";
-        }
-        string modelId = model.Id;
-        // Determine model family for parameter handling
-        if (modelId.StartsWith("Sora/"))
-        {
-            BuildSoraVideoParams(input, request);
-        }
-        else if (modelId.StartsWith("Kling/"))
-        {
-            BuildKlingVideoParams(input, request);
-        }
-        else if (modelId.StartsWith("Google/") && modelId.Contains("veo"))
-        {
-            BuildVeoVideoParams(input, request);
-        }
-        else if (modelId.StartsWith("Luma/"))
-        {
-            BuildLumaVideoParams(input, request);
-        }
-        else if (modelId.StartsWith("MiniMax/"))
-        {
-            BuildMiniMaxVideoParams(input, request);
-        }
-        else if (modelId.StartsWith("Hunyuan/") && modelId.Contains("video"))
-        {
-            BuildHunyuanVideoParams(input, request);
-        }
-        else if (modelId.StartsWith("Grok/") && modelId.Contains("video"))
-        {
-            BuildGrokVideoParams(input, request);
-        }
-        else if (modelId.Contains("seedance") && modelId.Contains("2.0"))
-        {
-            BuildSeedance2VideoParams(input, request);
-            if (modelId.Contains("ref2v"))
-            {
-                BuildSeedanceRefParams(input, request);
-            }
-        }
-        else if (modelId.Contains("seedance") && modelId.Contains("1.0"))
-        {
-            BuildSeedance1VideoParams(input, request);
-        }
-        else
-        {
-            // Generic video params for other models (Wan, Pika, PixVerse, Vidu, LTX, Mochi, etc.)
-            BuildGenericVideoParams(input, request);
-        }
-        return request;
     }
 
     /// <summary>Sora 2: duration (int: 4,8,12), aspect_ratio (16:9,9:16), resolution (720p,1080p). NO: generate_audio, negative_prompt, seed</summary>
@@ -1007,6 +1155,101 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         }
     }
 
+    /// <summary>Fields common to Wan 2.5+: optional audio drive and prompt expansion.</summary>
+    private static void AddWanShared(T2IParamInput input, JObject request)
+    {
+        Put(input, request, "audio_url", SwarmUIAPIBackends.AudioUrlParam_Wan);
+        if (input.TryGet(SwarmUIAPIBackends.PromptExpansionParam_Wan, out bool expand)) request["enable_prompt_expansion"] = expand;
+    }
+
+    /// <summary>Wan 2.5 preview: aspect (16:9/9:16/1:1), resolution (480p-1080p), duration (5 or 10), audio_url, negative, seed.</summary>
+    private static void BuildWan25VideoParams(T2IParamInput input, JObject request)
+    {
+        PutInt(input, request, "duration", SwarmUIAPIBackends.DurationParam_Wan25);
+        Put(input, request, "aspect_ratio", SwarmUIAPIBackends.AspectRatioParam_Wan25);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_Wan25);
+        AddWanShared(input, request);
+        AddSeedAndNegative(input, request, negative: true);
+    }
+
+    /// <summary>Wan 2.6 i2v: resolution (720p/1080p), duration (5/10/15), audio_url, multi_shots, negative, seed. No aspect.</summary>
+    private static void BuildWan26VideoParams(T2IParamInput input, JObject request)
+    {
+        PutInt(input, request, "duration", SwarmUIAPIBackends.DurationParam_Wan26);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_Wan2x);
+        AddWanShared(input, request);
+        if (input.TryGet(SwarmUIAPIBackends.MultiShotsParam_Wan, out bool multi)) request["multi_shots"] = multi;
+        AddSeedAndNegative(input, request, negative: true);
+    }
+
+    /// <summary>Wan 2.7 t2v/i2v: duration (2-15), resolution (720p/1080p), audio_url, negative, seed.
+    /// t2v takes an aspect ratio; i2v derives it from the input image and instead accepts a last frame.</summary>
+    private static void BuildWan27VideoParams(T2IParamInput input, JObject request, bool aspect, bool endImage)
+    {
+        PutInt(input, request, "duration", SwarmUIAPIBackends.DurationParam_Wan27);
+        if (aspect) Put(input, request, "aspect_ratio", SwarmUIAPIBackends.AspectRatioParam_Wan27);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_Wan2x);
+        if (endImage) Put(input, request, "end_image_url", SwarmUIAPIBackends.EndImageUrlParam);
+        AddWanShared(input, request);
+        AddSeedAndNegative(input, request, negative: true);
+    }
+
+    /// <summary>Wan 2.7 reference-to-video: reference_image_urls / reference_video_urls arrays, aspect, resolution,
+    /// duration (2-10), multi_shots, negative, seed. No audio drive.</summary>
+    private static void BuildWan27RefVideoParams(T2IParamInput input, JObject request)
+    {
+        PutInt(input, request, "duration", SwarmUIAPIBackends.DurationParam_Wan27Ref);
+        Put(input, request, "aspect_ratio", SwarmUIAPIBackends.AspectRatioParam_Wan27);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_Wan2x);
+        AddReferenceUrls(input, request, "reference_image_urls", "reference_video_urls", null);
+        if (input.TryGet(SwarmUIAPIBackends.MultiShotsParam_Wan, out bool multi)) request["multi_shots"] = multi;
+        AddSeedAndNegative(input, request, negative: true);
+    }
+
+    /// <summary>Seedance 2.5: duration (auto or 4-30, as a string), aspect_ratio, resolution (480p/720p),
+    /// generate_audio. Takes no seed input - seed is only returned in the response.</summary>
+    private static void BuildSeedance25VideoParams(T2IParamInput input, JObject request, ModelDefinition model, bool endImage)
+    {
+        Put(input, request, "duration", SwarmUIAPIBackends.DurationParam_Seedance25);
+        Put(input, request, "aspect_ratio", SwarmUIAPIBackends.AspectRatioParam_Seedance2);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_Seedance2);
+        if (input.TryGet(SwarmUIAPIBackends.GenerateAudioParam_Seedance2, out bool audio)) request["generate_audio"] = audio;
+        if (endImage) Put(input, request, "end_image_url", SwarmUIAPIBackends.EndImageUrlParam);
+        if (model.ExtraFlags.Contains("fal_seedance_ref_params"))
+        {
+            AddReferenceUrls(input, request, "image_urls", "video_urls", "audio_urls");
+        }
+    }
+
+    /// <summary>FLUX 3 on fal: duration (auto or 5-20), aspect_ratio, resolution (720p/1080p), generate_audio,
+    /// safety_tolerance. Takes no seed and no negative prompt - sending either would be silently ignored.</summary>
+    private static void BuildFlux3VideoParams(T2IParamInput input, JObject request)
+    {
+        Put(input, request, "duration", SwarmUIAPIBackends.DurationParam_Flux3);
+        Put(input, request, "aspect_ratio", SwarmUIAPIBackends.AspectRatioParam_Flux3);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_Flux3);
+        if (input.TryGet(SwarmUIAPIBackends.GenerateAudioParam_FalVideo, out bool audio)) request["generate_audio"] = audio;
+        if (input.TryGet(SwarmUIAPIBackends.SafetyToleranceParam_Flux3, out int safety)) request["safety_tolerance"] = safety;
+    }
+
+    /// <summary>MiniMax H3: integer duration, resolution on its own 768P/2K/4K scale, prompt expansion.
+    /// Takes no seed. Aspect ratio applies to t2v and ref2v only - i2v follows the input image.</summary>
+    private static void BuildH3VideoParams(T2IParamInput input, JObject request, T2IRegisteredParam<string> aspect, bool endImage, bool refs)
+    {
+        PutInt(input, request, "duration", SwarmUIAPIBackends.DurationParam_H3);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_H3);
+        if (aspect is not null) Put(input, request, "aspect_ratio", aspect);
+        if (input.TryGet(SwarmUIAPIBackends.PromptExpansionParam_Wan, out bool expand)) request["enable_prompt_expansion"] = expand;
+        if (endImage) Put(input, request, "end_image_url", SwarmUIAPIBackends.EndImageUrlParam);
+        if (refs) AddReferenceUrls(input, request, "reference_image_urls", "reference_video_urls", "reference_audio_urls");
+    }
+
+    /// <summary>Kling V3 Turbo Pro: prompt, image_url and duration only. No aspect, resolution, audio, negative or seed.</summary>
+    private static void BuildKlingTurboVideoParams(T2IParamInput input, JObject request)
+    {
+        Put(input, request, "duration", SwarmUIAPIBackends.DurationParam_KlingTurbo);
+    }
+
     /// <summary>Grok Imagine Video: duration, aspect_ratio, generate_audio, negative_prompt, seed</summary>
     private static void BuildGrokVideoParams(T2IParamInput input, JObject request)
     {
@@ -1085,50 +1328,156 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         }
     }
 
-    /// <summary>Seedance Ref2V: image_urls, video_urls, audio_urls (comma-separated URL strings converted to JSON arrays)</summary>
-    private static void BuildSeedanceRefParams(T2IParamInput input, JObject request)
+    /// <summary>Attaches reference media. Endpoints disagree on the field names (Seedance uses image_urls,
+    /// Wan and H3 use reference_image_urls), so the caller supplies them. Any Init Image already placed in
+    /// image_url is folded in as the first reference.</summary>
+    private static void AddReferenceUrls(T2IParamInput input, JObject request, string imageField, string videoField, string audioField)
     {
-        // Handle image references: combine InitImage (if present as image_url) with extra URL text
-        JArray imageUrls = new();
-        if (request.ContainsKey("image_url"))
+        JArray images = UrlList(input, SwarmUIAPIBackends.RefImageUrlsParam) ?? [];
+        if (request.Remove("image_url", out JToken initImage))
         {
-            imageUrls.Add(request["image_url"].ToString());
-            request.Remove("image_url"); // ref2v uses image_urls array, not image_url
+            images.AddFirst(initImage);
         }
-        if (input.TryGet(SwarmUIAPIBackends.RefImageURLsParam_Seedance, out string imageUrlStr) && !string.IsNullOrEmpty(imageUrlStr))
+        if (images.Count > 0)
         {
-            foreach (string url in imageUrlStr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                imageUrls.Add(url);
-            }
+            request[imageField] = images;
         }
-        if (imageUrls.Count > 0)
+        if (videoField is not null && UrlList(input, SwarmUIAPIBackends.RefVideoUrlsParam) is JArray videos)
         {
-            request["image_urls"] = imageUrls;
+            request[videoField] = videos;
         }
-        // Handle video references
-        if (input.TryGet(SwarmUIAPIBackends.RefVideoURLsParam_Seedance, out string videoUrlStr) && !string.IsNullOrEmpty(videoUrlStr))
+        if (audioField is not null && UrlList(input, SwarmUIAPIBackends.RefAudioUrlsParam) is JArray audio)
         {
-            JArray videoUrls = new();
-            foreach (string url in videoUrlStr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                videoUrls.Add(url);
-            }
-            request["video_urls"] = videoUrls;
-        }
-        // Handle audio references
-        if (input.TryGet(SwarmUIAPIBackends.RefAudioURLsParam_Seedance, out string audioUrlStr) && !string.IsNullOrEmpty(audioUrlStr))
-        {
-            JArray audioUrls = new();
-            foreach (string url in audioUrlStr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                audioUrls.Add(url);
-            }
-            request["audio_urls"] = audioUrls;
+            request[audioField] = audio;
         }
     }
 
-    /// <summary>Generic video params for models without specific handling (Wan, Pika, PixVerse, Vidu, LTX, Mochi, CogVideoX, etc.)</summary>
+    /// <summary>Image utilities (upscalers, background removal, face restoration). Input image comes from AttachInputMedia.</summary>
+    private static void BuildUtilityImageParams(T2IParamInput input, JObject request)
+    {
+        if (input.TryGet(SwarmUIAPIBackends.UpscaleFactorParam_FalUtility, out double scale))
+        {
+            request["upscale_factor"] = scale;
+        }
+    }
+
+    /// <summary>Video utilities (video upscale, video background removal). These take video_url, not image_url.</summary>
+    private static void BuildUtilityVideoParams(T2IParamInput input, JObject request)
+    {
+        if (input.TryGet(SwarmUIAPIBackends.VideoUrlParam_FalUtility, out string videoUrl) && !string.IsNullOrEmpty(videoUrl))
+        {
+            request["video_url"] = videoUrl;
+        }
+        if (input.TryGet(SwarmUIAPIBackends.UpscaleFactorParam_FalUtility, out double scale))
+        {
+            request["upscale_factor"] = scale;
+        }
+    }
+
+    /// <summary>Adds the fields shared by every video family: an optional negative prompt and the seed.</summary>
+    private static void AddSeedAndNegative(T2IParamInput input, JObject request, bool negative)
+    {
+        if (negative && input.TryGet(SwarmUIAPIBackends.NegativePromptParam_FalVideo, out string neg) && !string.IsNullOrEmpty(neg)) request["negative_prompt"] = neg;
+        if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0) request["seed"] = seed;
+    }
+
+    private static void Put(T2IParamInput input, JObject request, string field, T2IRegisteredParam<string> param)
+    {
+        if (input.TryGet(param, out string val) && !string.IsNullOrEmpty(val)) request[field] = val;
+    }
+
+    private static int Seconds(T2IParamInput input, T2IRegisteredParam<string> param)
+    {
+        return input.TryGet(param, out string val) && int.TryParse(val, out int seconds) ? seconds : 0;
+    }
+
+    /// <summary>Writes a numeric field. Several fal endpoints declare integer enums and reject the quoted form.</summary>
+    private static void PutInt(T2IParamInput input, JObject request, string field, T2IRegisteredParam<string> param)
+    {
+        int value = Seconds(input, param);
+        if (value > 0)
+        {
+            request[field] = value;
+        }
+    }
+
+    /// <summary>Wan 2.2 A14B: aspect (16:9,9:16,1:1), resolution (480p/580p/720p), negative, seed.
+    /// Length is num_frames at 16fps, not duration. Rejects duration and generate_audio.</summary>
+    private static void BuildWan22VideoParams(T2IParamInput input, JObject request)
+    {
+        int seconds = Seconds(input, SwarmUIAPIBackends.DurationParam_Wan22);
+        if (seconds > 0) request["num_frames"] = Math.Clamp(seconds * 16 + 1, 17, 161);
+        Put(input, request, "aspect_ratio", SwarmUIAPIBackends.AspectRatioParam_Wan22);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_Wan22);
+        AddSeedAndNegative(input, request, negative: true);
+    }
+
+    /// <summary>PixVerse v5: duration (5 or 8), aspect, resolution (360p-1080p), negative, seed. No audio.</summary>
+    private static void BuildPixVerseVideoParams(T2IParamInput input, JObject request)
+    {
+        int seconds = Seconds(input, SwarmUIAPIBackends.DurationParam_PixVerse);
+        if (seconds > 0) request["duration"] = seconds;
+        Put(input, request, "aspect_ratio", SwarmUIAPIBackends.AspectRatioParam_PixVerse);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_PixVerse);
+        AddSeedAndNegative(input, request, negative: true);
+    }
+
+    /// <summary>LTX-2 19B: video_size + num_frames at 25fps, generate_audio, negative, seed.
+    /// Rejects duration, aspect_ratio and resolution.</summary>
+    private static void BuildLtx2VideoParams(T2IParamInput input, JObject request)
+    {
+        int seconds = Seconds(input, SwarmUIAPIBackends.DurationParam_Ltx2);
+        if (seconds > 0) request["num_frames"] = seconds * 25 + 1;
+        if (input.TryGet(SwarmUIAPIBackends.GenerateAudioParam_FalVideo, out bool audio)) request["generate_audio"] = audio;
+        AddSeedAndNegative(input, request, negative: true);
+    }
+
+    /// <summary>LTX-13B distilled: resolution (480p/720p), aspect (incl auto), negative, seed, num_frames at 24fps.</summary>
+    private static void BuildLtx13bVideoParams(T2IParamInput input, JObject request)
+    {
+        int seconds = Seconds(input, SwarmUIAPIBackends.DurationParam_Ltx13b);
+        if (seconds > 0) request["num_frames"] = seconds * 24 + 1;
+        Put(input, request, "aspect_ratio", SwarmUIAPIBackends.AspectRatioParam_Ltx13b);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_Ltx13b);
+        AddSeedAndNegative(input, request, negative: true);
+    }
+
+    /// <summary>Vidu Q3: duration (int), aspect, resolution, seed. Audio field is 'audio', not 'generate_audio'. No negative.</summary>
+    private static void BuildViduVideoParams(T2IParamInput input, JObject request)
+    {
+        int seconds = Seconds(input, SwarmUIAPIBackends.DurationParam_Vidu);
+        if (seconds > 0) request["duration"] = seconds;
+        if (input.TryGet(SwarmUIAPIBackends.GenerateAudioParam_FalVideo, out bool audio)) request["audio"] = audio;
+        Put(input, request, "aspect_ratio", SwarmUIAPIBackends.AspectRatioParam_Vidu);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_Vidu);
+        AddSeedAndNegative(input, request, negative: false);
+    }
+
+    /// <summary>Pika v2.2: duration (5 or 10), aspect (7 ratios), resolution (720p/1080p), negative, seed. No audio.</summary>
+    private static void BuildPikaVideoParams(T2IParamInput input, JObject request)
+    {
+        Put(input, request, "duration", SwarmUIAPIBackends.DurationParam_Pika);
+        Put(input, request, "aspect_ratio", SwarmUIAPIBackends.AspectRatioParam_Pika);
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_Pika);
+        AddSeedAndNegative(input, request, negative: true);
+    }
+
+    /// <summary>Kandinsky 5 Pro: resolution (512P/1024P), duration as a "5s" string, seed. No aspect, negative or audio.</summary>
+    private static void BuildKandinskyVideoParams(T2IParamInput input, JObject request)
+    {
+        int seconds = Seconds(input, SwarmUIAPIBackends.DurationParam_Kandinsky);
+        if (seconds > 0) request["duration"] = $"{seconds}s";
+        Put(input, request, "resolution", SwarmUIAPIBackends.ResolutionParam_Kandinsky);
+        AddSeedAndNegative(input, request, negative: false);
+    }
+
+    /// <summary>CogVideoX-5B: video_size, negative, seed. Rejects duration, aspect_ratio, resolution and audio.</summary>
+    private static void BuildCogVideoXParams(T2IParamInput input, JObject request)
+    {
+        AddSeedAndNegative(input, request, negative: true);
+    }
+
+    /// <summary>Grok Imagine Video: duration, aspect_ratio, generate_audio, negative_prompt, seed</summary>
     private static void BuildGenericVideoParams(T2IParamInput input, JObject request)
     {
         if (input.TryGet(SwarmUIAPIBackends.DurationParam_FalVideo, out string duration))
@@ -1165,76 +1514,31 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         }
     }
 
-    private static JObject BuildUtilityRequest(T2IParamInput input, ModelDefinition model)
-    {
-        JObject request = new();
-        // Utility models (upscalers, bg removers, face restoration) need input image
-        if (input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null)
-        {
-            string base64Image = Convert.ToBase64String(initImg.RawData);
-            request["image_url"] = $"data:image/png;base64,{base64Image}";
-        }
-        request["sync_mode"] = true;
-        return request;
-    }
-
     public override string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input)
     {
         string path = !string.IsNullOrEmpty(model.EndpointOverride) ? model.EndpointOverride : model.Id;
         return $"{provider.BaseUrl}/{path}";
     }
 
-    public override async Task<byte[]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
+    public override async Task<byte[][]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
     {
-        // Handle image responses (most text-to-image models)
-        JArray images = response["images"] as JArray;
-        if (images is not null && images.Count > 0)
+        // Most image models return an array, one entry per image requested.
+        if (response["images"] is JArray images && images.Count > 0)
         {
-            JToken firstImage = images[0];
-            string url = firstImage["url"]?.ToString();
+            return await CollectImages(images, "base64", "url", "Fal.ai");
+        }
+        // Some models return a single object instead.
+        foreach (string key in (string[])["image", "video"])
+        {
+            string url = response[key]?["url"]?.ToString();
             if (!string.IsNullOrEmpty(url))
             {
-                if (url.StartsWith("data:"))
-                {
-                    return DecodeBase64Image(url);
-                }
-                return await DownloadImageFromUrl(url);
-            }
-            string base64 = firstImage["base64"]?.ToString();
-            if (!string.IsNullOrEmpty(base64))
-            {
-                return DecodeBase64Image(base64);
+                return [url.StartsWith("data:") ? DecodeBase64Image(url) : await DownloadImageFromUrl(url)];
             }
         }
-        // Handle single image response (some models return {image: {url: ...}})
-        JToken imageObj = response["image"];
-        if (imageObj is not null)
+        if (response["output"] is JArray outputArr && outputArr.Count > 0)
         {
-            string imageUrl = imageObj["url"]?.ToString();
-            if (!string.IsNullOrEmpty(imageUrl))
-            {
-                return await DownloadImageFromUrl(imageUrl);
-            }
-        }
-        // Handle video responses (video generation models)
-        JToken video = response["video"];
-        if (video is not null)
-        {
-            string videoUrl = video["url"]?.ToString();
-            if (!string.IsNullOrEmpty(videoUrl))
-            {
-                return await DownloadImageFromUrl(videoUrl);
-            }
-        }
-        // Handle output array (some utility models)
-        JToken output = response["output"];
-        if (output is JArray outputArr && outputArr.Count > 0)
-        {
-            string outputUrl = outputArr[0]["url"]?.ToString();
-            if (!string.IsNullOrEmpty(outputUrl))
-            {
-                return await DownloadImageFromUrl(outputUrl);
-            }
+            return await CollectImages(outputArr, null, "url", "Fal.ai");
         }
         throw new Exception($"Fal.ai response missing image/video data. Response keys: {string.Join(", ", response.Properties().Select(p => p.Name))}");
     }

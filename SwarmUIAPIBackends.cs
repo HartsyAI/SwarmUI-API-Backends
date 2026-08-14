@@ -19,6 +19,7 @@ public static class APIBackendsPermissions
     public static readonly PermInfo PermUseGrok = Permissions.Register(new("use_grok", "Use Grok API", "Allows using Grok's API for image generation.", PermissionDefault.POWERUSERS, APIBackendsPermGroup));
     public static readonly PermInfo PermUseGoogleImagen = Permissions.Register(new("use_google_api", "Use Google API", "Allows using Google's image generation models (Imagen, Gemini) for image generation.", PermissionDefault.POWERUSERS, APIBackendsPermGroup));
     public static readonly PermInfo PermUseFal = Permissions.Register(new("use_fal_api", "Use Fal.ai API", "Allows using Fal.ai's 600+ models for image and video generation.", PermissionDefault.POWERUSERS, APIBackendsPermGroup));
+    public static readonly PermInfo PermViewCapabilities = Permissions.Register(new("view_api_model_capabilities", "View API Model Capabilities", "Allows reading the API model capability map that drives parameter visibility.", PermissionDefault.GUEST, APIBackendsPermGroup));
 }
 
 /// <summary>Extension that adds support for various API-based image generation services.</summary>
@@ -42,6 +43,7 @@ public class SwarmUIAPIBackends : Extension
 
     // OpenAI Parameters
     public static T2IRegisteredParam<string> SizeParam_OpenAI;
+    public static T2IRegisteredParam<string> SizeParam_DallE2, SizeParam_GPTImage, SizeParam_GPTImage2;
     public static T2IRegisteredParam<string> QualityParam_OpenAI;
     public static T2IRegisteredParam<string> StyleParam_OpenAI;
     public static T2IRegisteredParam<string> ResponseFormatParam_OpenAI;
@@ -70,6 +72,8 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<string> RenderingSpeedParam_Ideogram;
 
     public static T2IRegisteredParam<string> RenderingSpeedParam_IdeogramV4;
+    public static T2IRegisteredParam<string> ResolutionParam_IdeogramV4;
+    public static T2IRegisteredParam<bool> CopyrightDetectionParam_IdeogramV4;
 
     public static T2IRegisteredParam<string> ColorPaletteParam_Ideogram;
     public static T2IRegisteredParam<Image> ImagePromptParam_Ideogram;
@@ -180,10 +184,55 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<string> ResolutionParam_Seedance1;
     public static T2IRegisteredParam<bool> CameraFixedParam_Seedance1;
 
-    // Seedance Ref2V multi-reference params (image_urls, video_urls, audio_urls as comma-separated strings)
-    public static T2IRegisteredParam<string> RefImageURLsParam_Seedance;
-    public static T2IRegisteredParam<string> RefVideoURLsParam_Seedance;
-    public static T2IRegisteredParam<string> RefAudioURLsParam_Seedance;
+    // Per-family video enums. GetValues receives a Session, not the selected model, so a single shared param
+    // cannot narrow its list per model - each family that has a distinct enum needs its own param.
+    public static T2IRegisteredParam<string> DurationParam_Wan22, AspectRatioParam_Wan22, ResolutionParam_Wan22;
+    public static T2IRegisteredParam<string> DurationParam_PixVerse, AspectRatioParam_PixVerse, ResolutionParam_PixVerse;
+    public static T2IRegisteredParam<string> DurationParam_Ltx2;
+    public static T2IRegisteredParam<string> DurationParam_Ltx13b, AspectRatioParam_Ltx13b, ResolutionParam_Ltx13b;
+    public static T2IRegisteredParam<string> DurationParam_Vidu, AspectRatioParam_Vidu, ResolutionParam_Vidu;
+    public static T2IRegisteredParam<string> DurationParam_Pika, AspectRatioParam_Pika, ResolutionParam_Pika;
+    public static T2IRegisteredParam<string> DurationParam_Kandinsky, ResolutionParam_Kandinsky;
+
+    // Wan 2.5/2.6/2.7. Duration and resolution enums differ per version, so each gets its own param.
+    public static T2IRegisteredParam<string> DurationParam_Wan25, AspectRatioParam_Wan25, ResolutionParam_Wan25;
+    public static T2IRegisteredParam<string> DurationParam_Wan26;
+    public static T2IRegisteredParam<string> DurationParam_Wan27, AspectRatioParam_Wan27, DurationParam_Wan27Ref;
+    public static T2IRegisteredParam<string> ResolutionParam_Wan2x;
+    public static T2IRegisteredParam<string> AudioUrlParam_Wan;
+    /// <summary>Shared by any i2v model that accepts a final frame (Wan 2.7, Seedance 2.5).</summary>
+    public static T2IRegisteredParam<string> EndImageUrlParam;
+    public static T2IRegisteredParam<string> DurationParam_Seedance25;
+    public static T2IRegisteredParam<bool> PromptExpansionParam_Wan, MultiShotsParam_Wan;
+    public static T2IRegisteredParam<string> DurationParam_KlingTurbo;
+
+    // MiniMax H3. Its resolution scale (768P/2K/4K) matches nothing else in the extension.
+    public static T2IRegisteredParam<string> DurationParam_H3, ResolutionParam_H3, AspectRatioParam_H3, AspectRatioParam_H3Ref;
+
+    // FLUX 3 video. No seed input; safety tolerance replaces the usual negative prompt.
+    public static T2IRegisteredParam<string> DurationParam_Flux3, ResolutionParam_Flux3, AspectRatioParam_Flux3;
+    public static T2IRegisteredParam<int> SafetyToleranceParam_Flux3;
+    /// <summary>BFL's direct API sizes video as hd/fhd rather than fal's 720p/1080p.</summary>
+    public static T2IRegisteredParam<string> ResolutionParam_Flux3Bfl;
+
+    // FLUX.2 image models: no batch, steps, guidance or negative prompt - just size plus safety.
+    public static T2IRegisteredParam<int> SafetyToleranceParam_Flux2;
+    /// <summary>FLUX.2 edit endpoints accept an 'auto' size that the text-to-image ones do not.</summary>
+    public static T2IRegisteredParam<string> ImageSizeParam_Flux2Edit;
+    // Nano Banana 2 extends the aspect list to extreme ratios and starts resolution at 0.5K.
+    public static T2IRegisteredParam<string> AspectRatioParam_NB2, ResolutionParam_NB2, ThinkingLevelParam_NB2, SystemPromptParam_NB2;
+    public static T2IRegisteredParam<int> SafetyToleranceParam_NB2;
+    public static T2IRegisteredParam<bool> WebSearchParam_NB2;
+
+    // Fal utility params (upscalers, background removal, face restoration)
+    public static T2IRegisteredParam<double> UpscaleFactorParam_FalUtility;
+    public static T2IRegisteredParam<string> VideoUrlParam_FalUtility;
+
+    // Reference URLs, shared by every multi-reference model (Seedance, Wan 2.7, MiniMax H3).
+    // The field names each endpoint expects differ, so the builders map these to the right keys.
+    public static T2IRegisteredParam<string> RefImageUrlsParam;
+    public static T2IRegisteredParam<string> RefVideoUrlsParam;
+    public static T2IRegisteredParam<string> RefAudioUrlsParam;
 
     public override void OnPreInit()
     {
@@ -212,16 +261,29 @@ public class SwarmUIAPIBackends : Extension
         BlackForestGeneralGroup = new("Flux Core Settings", Toggles: false, Open: true, OrderPriority: 40, Description: "Core parameters for Flux image generation.\nFlux models excel at high-quality image generation with strong artistic control.");
         BlackForestAdvancedGroup = new("Flux Advanced Settings", Toggles: true, Open: false, OrderPriority: 41, Description: "Additional options for fine-tuning Flux generations and output processing.");
 
-        SizeParam_OpenAI = T2IParamTypes.Register<string>(new("Output Resolution", "Controls the dimensions of the generated image.\n" + "DALL-E 2: 256x256, 512x512, or 1024x1024\n" + "DALL-E 3: 1024x1024, 1792x1024, or 1024x1792\n" +
-            "GPT Image 1: auto, 1024x1024, 1536x1024, or 1024x1536\n" + "GPT Image 2: auto, up to 2K (edges must be multiples of 16, max 3840px)", "1024x1024", GetValues: model =>
-            {
-                if (model.ID.Contains("dall-e-2")) return ["256x256", "512x512", "1024x1024"];
-                else if (model.ID.Contains("gpt-image-2")) return ["auto///Auto (Recommended)", "1024x1024///Square (1K)", "1536x1024///Landscape (1.5K)", "1024x1536///Portrait (1.5K)", "2048x2048///Square (2K)", "2048x1152///Wide Landscape (2K)", "1152x2048///Tall Portrait (2K)"];
-                else if (model.ID.Contains("gpt-image-1")) return ["auto///Auto (Recommended)", "1024x1024///Square", "1536x1024///Landscape", "1024x1536///Portrait"];
-                else return ["1024x1024", "1792x1024", "1024x1792"];
-            },
+        // One size list per model family. GetValues receives a Session, not the selected model, so the old
+        // model.ID checks here were really testing the session GUID and never matched - every OpenAI model
+        // silently showed the DALL-E 3 sizes.
+        SizeParam_OpenAI = T2IParamTypes.Register<string>(new("Output Resolution",
+            "Dimensions of the generated image (DALL-E 3).", "1024x1024",
+            GetValues: _ => ["1024x1024///Square", "1792x1024///Landscape", "1024x1792///Portrait"],
             OrderPriority: -10, ViewType: ParamViewType.POT_SLIDER,
-            Group: T2IParamTypes.GroupResolution, FeatureFlag: "openai_image_size"));
+            Group: T2IParamTypes.GroupResolution, FeatureFlag: "dalle3_params"));
+
+        SizeParam_DallE2 = T2IParamTypes.Register<string>(new("DALL-E Two Output Resolution",
+            "Dimensions of the generated image. DALL-E 2 only supports these three square sizes.", "1024x1024",
+            GetValues: _ => ["256x256///Small (256x256)", "512x512///Medium (512x512)", "1024x1024///Large (1024x1024)"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupResolution, FeatureFlag: "dalle2_params"));
+
+        SizeParam_GPTImage = T2IParamTypes.Register<string>(new("GPT Image Output Resolution",
+            "Dimensions of the generated image.", "auto",
+            GetValues: _ => ["auto///Auto (Recommended)", "1024x1024///Square", "1536x1024///Landscape", "1024x1536///Portrait"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupResolution, FeatureFlag: "gpt_image_params"));
+
+        SizeParam_GPTImage2 = T2IParamTypes.Register<string>(new("GPT Image Two Output Resolution",
+            "Dimensions of the generated image. GPT Image 2 reaches 2K; edges must be multiples of 16.", "auto",
+            GetValues: _ => ["auto///Auto (Recommended)", "1024x1024///Square (1K)", "1536x1024///Landscape (1.5K)", "1024x1536///Portrait (1.5K)", "2048x2048///Square (2K)", "2048x1152///Wide Landscape (2K)", "1152x2048///Tall Portrait (2K)"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupResolution, FeatureFlag: "gpt-image-2_params"));
 
         QualityParam_OpenAI = T2IParamTypes.Register<string>(new("Generation Quality",
             "Controls the level of detail and consistency in DALL-E 3 images.\n" +
@@ -355,6 +417,15 @@ public class SwarmUIAPIBackends : Extension
             "'Quality' - Highest quality, slower generation",
             "DEFAULT", GetValues: _ => ["TURBO///Turbo (Faster)", "DEFAULT///Default (Balanced)", "QUALITY///Quality (Best)"],
             OrderPriority: -9, Group: IdeogramGeneralGroup, FeatureFlag: "ideogram_v4_params"));
+
+        ResolutionParam_IdeogramV4 = T2IParamTypes.Register<string>(new("Ideogram VFour Resolution",
+            "Output resolution for Ideogram V4.", "1024x1024",
+            GetValues: _ => ["1024x1024///Square", "1344x768///Landscape", "768x1344///Portrait", "1536x640///Wide", "640x1536///Tall"],
+            OrderPriority: -8, Group: T2IParamTypes.GroupResolution, FeatureFlag: "ideogram_v4_params"));
+
+        CopyrightDetectionParam_IdeogramV4 = T2IParamTypes.Register<bool>(new("Ideogram Copyright Detection",
+            "Ask Ideogram to flag potentially copyrighted content in the result.", "false",
+            OrderPriority: -7, Group: IdeogramAdvancedGroup, FeatureFlag: "ideogram_v4_params"));
 
         ImageWeightParam_Ideogram = T2IParamTypes.Register<double>(new("Image Remix Weight",
             "Controls how strongly the input image influences the remixed generation (V3 only).\n" +
@@ -513,7 +584,7 @@ public class SwarmUIAPIBackends : Extension
                 "landscape_4_3///Landscape 4:3",
                 "landscape_16_9///Landscape 16:9"
             ],
-            OrderPriority: -10, Group: T2IParamTypes.GroupResolution, FeatureFlag: "fal_t2i_params"));
+            OrderPriority: -10, Group: T2IParamTypes.GroupResolution, FeatureFlag: "fal_img_size"));
 
         // GuidanceScaleParam_Fal => T2IParamTypes.CFGScale (aliased, no registration needed)
         // NumInferenceStepsParam_Fal => T2IParamTypes.Steps (aliased, no registration needed)
@@ -522,14 +593,14 @@ public class SwarmUIAPIBackends : Extension
             "Enable or disable the NSFW safety checker.\n" +
             "When enabled, inappropriate content will be filtered.",
             "true",
-            OrderPriority: -3, Group: T2IParamTypes.GroupSampling, FeatureFlag: "fal_t2i_params"));
+            OrderPriority: -3, Group: T2IParamTypes.GroupSampling, FeatureFlag: "fal_img_common"));
 
         OutputFormatParam_Fal = T2IParamTypes.Register<string>(new("Output File Format",
             "Choose the file format for generated images:\n" +
             "JPEG: Smaller files, slight quality loss, good for sharing\n" +
             "PNG: Lossless quality, larger files, best for editing.",
             "jpeg", GetValues: _ => ["jpeg///JPEG (Smaller)", "png///PNG (Lossless)"],
-            OrderPriority: -2, Group: T2IParamTypes.GroupSampling, FeatureFlag: "fal_t2i_params"));
+            OrderPriority: -2, Group: T2IParamTypes.GroupSampling, FeatureFlag: "fal_img_common"));
 
         // Fal.ai Aspect Ratio Image Parameters (FLUX Ultra, Kling Image, Nano Banana, Imagen 3)
         AspectRatioParam_FalImage = T2IParamTypes.Register<string>(new("Image Aspect Ratio",
@@ -595,58 +666,127 @@ public class SwarmUIAPIBackends : Extension
         // ImagePromptParam_Fal => T2IParamTypes.InitImage (aliased, no registration needed)
 
         // Fal.ai Video Parameters
+        // Grok Imagine Video keeps the original general-purpose set.
         DurationParam_FalVideo = T2IParamTypes.Register<string>(new("Video Duration",
-            "Length of the generated video in seconds.\n" +
-            "Available durations vary by model.\n" +
-            "Longer durations cost more and take longer to generate.",
-            "5", GetValues: _ => [
-                "3///3 seconds",
-                "4///4 seconds",
-                "5///5 seconds (Default)",
-                "6///6 seconds",
-                "8///8 seconds",
-                "10///10 seconds",
-                "12///12 seconds",
-                "15///15 seconds"
-            ],
+            "Length of the generated video in seconds.",
+            "5", GetValues: _ => ["3///3 seconds", "4///4 seconds", "5///5 seconds (Default)", "6///6 seconds", "8///8 seconds", "10///10 seconds"],
             OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_video_params"));
 
         AspectRatioParam_FalVideo = T2IParamTypes.Register<string>(new("Video Aspect Ratio",
-            "Aspect ratio for the generated video.\n" +
-            "16:9: Widescreen (landscape)\n" +
-            "9:16: Vertical (portrait/mobile)\n" +
-            "1:1: Square",
-            "16:9", GetValues: _ => [
-                "16:9///Widescreen (16:9)",
-                "9:16///Portrait (9:16)",
-                "1:1///Square (1:1)",
-                "4:3///Standard (4:3)",
-                "3:4///Portrait (3:4)"
-            ],
+            "Aspect ratio for the generated video.",
+            "16:9", GetValues: _ => ["16:9///Widescreen (16:9)", "9:16///Portrait (9:16)", "1:1///Square (1:1)"],
             OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_video_params"));
 
         ResolutionParam_FalVideo = T2IParamTypes.Register<string>(new("Video Output Resolution",
-            "Resolution of the generated video.\n" +
-            "Higher resolutions cost more and take longer.\n" +
-            "720p is standard, 1080p is available on some models.",
-            "720p", GetValues: _ => [
-                "480p///480p (Fast)",
-                "720p///720p (Standard)",
-                "1080p///1080p (HD)"
-            ],
+            "Resolution of the generated video.",
+            "720p", GetValues: _ => ["480p///480p (Fast)", "720p///720p (Standard)", "1080p///1080p (HD)"],
             OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_video_params"));
 
+        // Audio and negative prompt carry no per-model enum, so they stay shared and are gated on their own
+        // capability flags - only models whose fal schema actually accepts them will show them.
         GenerateAudioParam_FalVideo = T2IParamTypes.Register<bool>(new("Generate Audio",
             "Generate audio alongside the video.\n" +
-            "When enabled, the model will create matching audio/sound effects.\n" +
-            "Supported by Sora, Veo, Kling, and other models.",
+            "Only shown for models that actually support it.",
             "true",
-            OrderPriority: -7, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_video_params"));
+            OrderPriority: -7, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_video_audio"));
 
         NegativePromptParam_FalVideo = T2IParamTypes.Register<string>(new("Video Negative Prompt",
-            "Describe what you don't want in the generated video.\n" +
-            "Supported by Veo, Wan, PixVerse, and some other video models.",
-            "", OrderPriority: -5, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_video_params"));
+            "Describe what you don't want in the generated video.",
+            "", OrderPriority: -5, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_video_negative"));
+
+        // ===== PER-FAMILY VIDEO ENUMS =====
+        // Each fal model line accepts a different enum. GetValues cannot see the selected model (it takes a
+        // Session), so narrowing has to be done with one param per family - otherwise users can pick a value
+        // the model rejects with a 422 (Wan 2.2 caps at 720p, Kandinsky uses 512P/1024P, etc).
+        DurationParam_Wan22 = T2IParamTypes.Register<string>(new("Wan Video Duration",
+            "Length of the generated video. Wan 2.2 has no duration field, so this is sent as a frame count at 16fps.",
+            "5", GetValues: _ => ["1///1 second", "2///2 seconds", "3///3 seconds", "5///5 seconds (Default)", "8///8 seconds", "10///10 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan22_params"));
+
+        AspectRatioParam_Wan22 = T2IParamTypes.Register<string>(new("Wan Video Aspect Ratio",
+            "Aspect ratio for Wan 2.2.", "16:9",
+            GetValues: _ => ["16:9///Widescreen (16:9)", "9:16///Portrait (9:16)", "1:1///Square (1:1)"],
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan22_params"));
+
+        ResolutionParam_Wan22 = T2IParamTypes.Register<string>(new("Wan Video Resolution",
+            "Resolution for Wan 2.2. This model tops out at 720p.", "720p",
+            GetValues: _ => ["480p///480p (Fast)", "580p///580p", "720p///720p (Max)"],
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan22_params"));
+
+        DurationParam_PixVerse = T2IParamTypes.Register<string>(new("PixVerse Video Duration",
+            "Length of the generated video. PixVerse v5 supports 5 or 8 seconds.", "5",
+            GetValues: _ => ["5///5 seconds", "8///8 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_pixverse_params"));
+
+        AspectRatioParam_PixVerse = T2IParamTypes.Register<string>(new("PixVerse Video Aspect Ratio",
+            "Aspect ratio for PixVerse v5.", "16:9",
+            GetValues: _ => ["16:9///Widescreen (16:9)", "4:3///Standard (4:3)", "1:1///Square (1:1)", "3:4///Portrait (3:4)", "9:16///Portrait (9:16)"],
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_pixverse_params"));
+
+        ResolutionParam_PixVerse = T2IParamTypes.Register<string>(new("PixVerse Video Resolution",
+            "Resolution for PixVerse v5.", "720p",
+            GetValues: _ => ["360p///360p", "540p///540p", "720p///720p (Standard)", "1080p///1080p (HD)"],
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_pixverse_params"));
+
+        DurationParam_Ltx2 = T2IParamTypes.Register<string>(new("LTX-2 Video Duration",
+            "Length of the generated video. Sent as a frame count at 25fps.", "5",
+            GetValues: _ => ["3///3 seconds", "5///5 seconds (Default)", "8///8 seconds", "10///10 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_ltx2_params"));
+
+        DurationParam_Ltx13b = T2IParamTypes.Register<string>(new("LTX-13B Video Duration",
+            "Length of the generated video. Sent as a frame count at 24fps.", "5",
+            GetValues: _ => ["3///3 seconds", "5///5 seconds (Default)", "8///8 seconds", "10///10 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_ltx13b_params"));
+
+        AspectRatioParam_Ltx13b = T2IParamTypes.Register<string>(new("LTX-13B Video Aspect Ratio",
+            "Aspect ratio for LTX-13B distilled.", "auto",
+            GetValues: _ => ["auto///Auto", "16:9///Widescreen (16:9)", "9:16///Portrait (9:16)", "1:1///Square (1:1)"],
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_ltx13b_params"));
+
+        ResolutionParam_Ltx13b = T2IParamTypes.Register<string>(new("LTX-13B Video Resolution",
+            "Resolution for LTX-13B distilled. This model tops out at 720p.", "720p",
+            GetValues: _ => ["480p///480p (Fast)", "720p///720p (Max)"],
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_ltx13b_params"));
+
+        DurationParam_Vidu = T2IParamTypes.Register<string>(new("Vidu Video Duration",
+            "Length of the generated video in seconds.", "5",
+            GetValues: _ => ["3///3 seconds", "5///5 seconds (Default)", "8///8 seconds", "10///10 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_vidu_params"));
+
+        AspectRatioParam_Vidu = T2IParamTypes.Register<string>(new("Vidu Video Aspect Ratio",
+            "Aspect ratio for Vidu Q3.", "16:9",
+            GetValues: _ => ["16:9///Widescreen (16:9)", "9:16///Portrait (9:16)", "4:3///Standard (4:3)", "3:4///Portrait (3:4)", "1:1///Square (1:1)"],
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_vidu_params"));
+
+        ResolutionParam_Vidu = T2IParamTypes.Register<string>(new("Vidu Video Resolution",
+            "Resolution for Vidu Q3.", "720p",
+            GetValues: _ => ["360p///360p", "540p///540p", "720p///720p (Standard)", "1080p///1080p (HD)"],
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_vidu_params"));
+
+        DurationParam_Pika = T2IParamTypes.Register<string>(new("Pika Video Duration",
+            "Length of the generated video. Pika v2.2 supports 5 or 10 seconds.", "5",
+            GetValues: _ => ["5///5 seconds", "10///10 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_pika_params"));
+
+        AspectRatioParam_Pika = T2IParamTypes.Register<string>(new("Pika Video Aspect Ratio",
+            "Aspect ratio for Pika v2.2.", "16:9",
+            GetValues: _ => ["16:9///Widescreen (16:9)", "9:16///Portrait (9:16)", "1:1///Square (1:1)", "4:5///Portrait (4:5)", "5:4///Landscape (5:4)", "3:2///Landscape (3:2)", "2:3///Portrait (2:3)"],
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_pika_params"));
+
+        ResolutionParam_Pika = T2IParamTypes.Register<string>(new("Pika Video Resolution",
+            "Resolution for Pika v2.2.", "720p",
+            GetValues: _ => ["720p///720p (Standard)", "1080p///1080p (HD)"],
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_pika_params"));
+
+        DurationParam_Kandinsky = T2IParamTypes.Register<string>(new("Kandinsky Video Duration",
+            "Length of the generated video.", "5",
+            GetValues: _ => ["5///5 seconds", "10///10 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_kandinsky_params"));
+
+        ResolutionParam_Kandinsky = T2IParamTypes.Register<string>(new("Kandinsky Video Resolution",
+            "Resolution for Kandinsky 5 Pro. This model uses its own scale rather than 480p/720p.", "512P",
+            GetValues: _ => ["512P///512P", "1024P///1024P (High)"],
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_kandinsky_params"));
 
         // ===== SORA-SPECIFIC PARAMETERS =====
         DurationParam_Sora = T2IParamTypes.Register<string>(new("Sora Video Duration",
@@ -840,7 +980,7 @@ public class SwarmUIAPIBackends : Extension
                 "14///14 seconds",
                 "15///15 seconds"
             ],
-            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance2_video_params"));
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance2_duration"));
 
         AspectRatioParam_Seedance2 = T2IParamTypes.Register<string>(new("Seedance Two Video Aspect Ratio",
             "Aspect ratio for the generated video.\n" +
@@ -919,28 +1059,194 @@ public class SwarmUIAPIBackends : Extension
             "false",
             OrderPriority: -7, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance1_video_params"));
 
-        // ===== SEEDANCE REF2V MULTI-REFERENCE PARAMETERS =====
-        RefImageURLsParam_Seedance = T2IParamTypes.Register<string>(new("Seedance Reference Image URLs",
-            "Comma-separated URLs of reference images (up to 9).\n" +
-            "In your prompt, reference them as @Image1, @Image2, etc.\n" +
-            "Supports JPEG, PNG, WebP (max 30 MB each).",
-            "",
-            OrderPriority: -6, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance_ref_params"));
+        // ===== WAN 2.5 / 2.6 / 2.7 =====
+        DurationParam_Wan25 = T2IParamTypes.Register<string>(new("Wan TwoFive Video Duration",
+            "Length of the generated video. Wan 2.5 supports 5 or 10 seconds.", "5",
+            GetValues: _ => ["5///5 seconds", "10///10 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan25_params"));
 
-        RefVideoURLsParam_Seedance = T2IParamTypes.Register<string>(new("Seedance Reference Video URLs",
-            "Comma-separated URLs of reference videos (up to 3).\n" +
-            "In your prompt, reference them as @Video1, @Video2, etc.\n" +
-            "Supports MP4, MOV (2-15s combined, max 50 MB total).",
-            "",
-            OrderPriority: -5, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance_ref_params"));
+        AspectRatioParam_Wan25 = T2IParamTypes.Register<string>(new("Wan TwoFive Video Aspect Ratio",
+            "Aspect ratio for Wan 2.5.", "16:9",
+            GetValues: _ => ["16:9///Widescreen (16:9)", "9:16///Portrait (9:16)", "1:1///Square (1:1)"],
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan25_params"));
 
-        RefAudioURLsParam_Seedance = T2IParamTypes.Register<string>(new("Seedance Reference Audio URLs",
-            "Comma-separated URLs of reference audio files (up to 3).\n" +
-            "In your prompt, reference them as @Audio1, @Audio2, etc.\n" +
-            "Supports MP3, WAV (max 15s combined, 15 MB each).\n" +
-            "Requires at least one reference image or video.",
-            "",
-            OrderPriority: -4, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance_ref_params"));
+        ResolutionParam_Wan25 = T2IParamTypes.Register<string>(new("Wan TwoFive Video Resolution",
+            "Resolution for Wan 2.5.", "720p",
+            GetValues: _ => ["480p///480p (Fast)", "720p///720p (Standard)", "1080p///1080p (HD)"],
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan25_params"));
+
+        DurationParam_Wan26 = T2IParamTypes.Register<string>(new("Wan TwoSix Video Duration",
+            "Length of the generated video. Wan 2.6 supports 5, 10 or 15 seconds.", "5",
+            GetValues: _ => ["5///5 seconds", "10///10 seconds", "15///15 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan26_params"));
+
+        DurationParam_Wan27 = T2IParamTypes.Register<string>(new("Wan TwoSeven Video Duration",
+            "Length of the generated video, 2 to 15 seconds.", "5",
+            GetValues: _ => ["2///2 seconds", "3///3 seconds", "4///4 seconds", "5///5 seconds (Default)", "6///6 seconds", "7///7 seconds", "8///8 seconds", "9///9 seconds", "10///10 seconds", "11///11 seconds", "12///12 seconds", "13///13 seconds", "14///14 seconds", "15///15 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan27_params"));
+
+        DurationParam_Wan27Ref = T2IParamTypes.Register<string>(new("Wan TwoSeven Reference Video Duration",
+            "Length of the generated video. Reference-to-video is capped at 10 seconds.", "5",
+            GetValues: _ => ["2///2 seconds", "3///3 seconds", "4///4 seconds", "5///5 seconds (Default)", "6///6 seconds", "7///7 seconds", "8///8 seconds", "9///9 seconds", "10///10 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan27ref_params"));
+
+        AspectRatioParam_Wan27 = T2IParamTypes.Register<string>(new("Wan TwoSeven Video Aspect Ratio",
+            "Aspect ratio for Wan 2.7. Not used by image-to-video, which follows the input image.", "16:9",
+            GetValues: _ => ["16:9///Widescreen (16:9)", "9:16///Portrait (9:16)", "1:1///Square (1:1)", "4:3///Standard (4:3)", "3:4///Portrait (3:4)"],
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan27_aspect"));
+
+        ResolutionParam_Wan2x = T2IParamTypes.Register<string>(new("Wan TwoSixPlus Video Resolution",
+            "Resolution for Wan 2.6 and 2.7. These versions start at 720p.", "720p",
+            GetValues: _ => ["720p///720p (Standard)", "1080p///1080p (HD)"],
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_wan2x_resolution"));
+
+        AudioUrlParam_Wan = T2IParamTypes.Register<string>(new("Reference Audio URL",
+            "Publicly accessible WAV or MP3 URL to drive the video's motion and timing.\n" +
+            "3-30 seconds, up to 15 MB. Leave empty for a silent generation.",
+            "", OrderPriority: -6, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_wan_audio"));
+
+        EndImageUrlParam = T2IParamTypes.Register<string>(new("Last Frame Image URL",
+            "Publicly accessible image URL to use as the final frame.\n" +
+            "The model generates the motion between your Init Image and this one.",
+            "", OrderPriority: -5, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_end_image_url"));
+
+        PromptExpansionParam_Wan = T2IParamTypes.Register<bool>(new("Prompt Expansion",
+            "Let the model rewrite your prompt for richer detail.\n" +
+            "Disable for literal prompt following.", "true",
+            OrderPriority: -4, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_prompt_expansion"));
+
+        MultiShotsParam_Wan = T2IParamTypes.Register<bool>(new("Multi-Shot Segmentation",
+            "Let the model split the video into multiple camera shots.\n" +
+            "Only takes effect when Prompt Expansion is enabled.", "false",
+            OrderPriority: -3, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_wan_multishot"));
+
+        DurationParam_Seedance25 = T2IParamTypes.Register<string>(new("Seedance TwoFive Video Duration",
+            "Length of the generated video. Seedance 2.5 runs up to 30 seconds in a single shot.", "auto",
+            GetValues: _ => ["auto///Auto (Default)", .. Enumerable.Range(4, 27).Select(i => $"{i}///{i} seconds")],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_seedance25_params"));
+
+        DurationParam_Flux3 = T2IParamTypes.Register<string>(new("FLUX Three Video Duration",
+            "Length of the generated video. FLUX 3 runs any whole number of seconds from 5 to 20.", "auto",
+            GetValues: _ => ["auto///Auto (Default)", .. Enumerable.Range(5, 16).Select(i => $"{i}///{i} seconds")],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_flux3_params"));
+
+        AspectRatioParam_Flux3 = T2IParamTypes.Register<string>(new("FLUX Three Video Aspect Ratio",
+            "Aspect ratio for FLUX 3.", "auto",
+            GetValues: _ => ["auto///Auto (Default)", "21:9///Ultra-wide (21:9)", "2:1///Wide (2:1)", "16:9///Widescreen (16:9)", "4:3///Standard (4:3)", "1:1///Square (1:1)", "3:4///Portrait (3:4)", "9:16///Portrait (9:16)"],
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_flux3_params"));
+
+        ResolutionParam_Flux3 = T2IParamTypes.Register<string>(new("FLUX Three Video Resolution",
+            "Resolution for FLUX 3.", "720p",
+            GetValues: _ => ["720p///720p (Standard)", "1080p///1080p (HD)"],
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_flux3_params"));
+
+        SafetyToleranceParam_Flux3 = T2IParamTypes.Register<int>(new("FLUX Three Safety Tolerance",
+            "Content filtering strictness. 0 is strictest, 4 is most permissive.", "2",
+            Min: 0, Max: 4, ViewType: ParamViewType.SLIDER,
+            OrderPriority: -6, Group: T2IParamTypes.GroupAdvancedVideo, FeatureFlag: "fal_flux3_params"));
+
+        ImageSizeParam_Flux2Edit = T2IParamTypes.Register<string>(new("FLUX Two Edit Image Size",
+            "Output size for FLUX.2 editing. 'Auto' keeps the input image's dimensions.", "auto",
+            GetValues: _ => ["auto///Auto (Match Input)", "square_hd///Square HD", "square///Square", "portrait_4_3///Portrait 4:3", "portrait_16_9///Portrait 16:9", "landscape_4_3///Landscape 4:3", "landscape_16_9///Landscape 16:9"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupResolution, FeatureFlag: "fal_flux2_edit_params"));
+
+        SafetyToleranceParam_Flux2 = T2IParamTypes.Register<int>(new("FLUX Two Safety Tolerance",
+            "Content filtering strictness. 1 is most strict, 5 is most permissive.", "2",
+            Min: 1, Max: 5, ViewType: ParamViewType.SLIDER,
+            OrderPriority: -4, Group: T2IParamTypes.GroupSampling, FeatureFlag: "fal_flux2_params"));
+
+        AspectRatioParam_NB2 = T2IParamTypes.Register<string>(new("Nano Banana Two Aspect Ratio",
+            "Aspect ratio. Nano Banana 2 also accepts extreme banner and strip ratios.", "auto",
+            GetValues: _ => ["auto///Auto (Default)", "21:9///Ultrawide (21:9)", "16:9///Widescreen (16:9)", "3:2///Standard (3:2)", "4:3///Classic (4:3)", "5:4///Photo (5:4)", "1:1///Square (1:1)", "4:5///Portrait (4:5)", "3:4///Portrait (3:4)", "2:3///Portrait (2:3)", "9:16///Portrait (9:16)", "4:1///Banner (4:1)", "1:4///Strip (1:4)", "8:1///Wide Banner (8:1)", "1:8///Tall Strip (1:8)"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupResolution, FeatureFlag: "fal_nb2_params"));
+
+        ResolutionParam_NB2 = T2IParamTypes.Register<string>(new("Nano Banana Two Resolution",
+            "Output resolution. Starts at 0.5K, unlike the other aspect-ratio models.", "1K",
+            GetValues: _ => ["0.5K///0.5K (Fastest)", "1K///1K (Default)", "2K///2K", "4K///4K (Highest)"],
+            OrderPriority: -9, Group: T2IParamTypes.GroupResolution, FeatureFlag: "fal_nb2_params"));
+
+        SafetyToleranceParam_NB2 = T2IParamTypes.Register<int>(new("Nano Banana Two Safety Tolerance",
+            "Content filtering strictness, 1 (most strict) to 6 (most permissive).", "4",
+            Min: 1, Max: 6, ViewType: ParamViewType.SLIDER,
+            OrderPriority: -5, Group: T2IParamTypes.GroupSampling, FeatureFlag: "fal_nb2_params"));
+
+        ThinkingLevelParam_NB2 = T2IParamTypes.Register<string>(new("Nano Banana Two Thinking Level",
+            "How much reasoning the model applies before generating.\n" +
+            "'High' improves complex prompts and text rendering at the cost of speed.", "",
+            GetValues: _ => ["///Model Default", "minimal///Minimal (Fastest)", "high///High (Best Quality)"],
+            OrderPriority: -4, Group: T2IParamTypes.GroupSampling, FeatureFlag: "fal_nb2_params"));
+
+        WebSearchParam_NB2 = T2IParamTypes.Register<bool>(new("Nano Banana Two Web Search",
+            "Let the model search the web for reference while generating.", "false",
+            OrderPriority: -3, Group: T2IParamTypes.GroupSampling, FeatureFlag: "fal_nb2_params"));
+
+        SystemPromptParam_NB2 = T2IParamTypes.Register<string>(new("Nano Banana Two System Prompt",
+            "Optional system-level instruction applied before your prompt.", "",
+            OrderPriority: -2, Group: T2IParamTypes.GroupSampling, FeatureFlag: "fal_nb2_params"));
+
+        ResolutionParam_Flux3Bfl = T2IParamTypes.Register<string>(new("FLUX Three Direct Video Resolution",
+            "Resolution for FLUX 3 on Black Forest Labs' own API, which names these hd and fhd.", "hd",
+            GetValues: _ => ["hd///HD (720p)", "fhd///Full HD (1080p)"],
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "bfl_flux3_params"));
+
+        DurationParam_H3 = T2IParamTypes.Register<string>(new("MiniMax HThree Video Duration",
+            "Length of the generated video in seconds.", "5",
+            GetValues: _ => ["5///5 seconds (Default)", "6///6 seconds", "8///8 seconds", "10///10 seconds", "12///12 seconds", "15///15 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_h3_params"));
+
+        ResolutionParam_H3 = T2IParamTypes.Register<string>(new("MiniMax HThree Video Resolution",
+            "Output resolution. H3 uses its own scale rather than 480p/720p/1080p.", "2K",
+            GetValues: _ => ["768P///768P (Fast)", "2K///2K (Default)", "4K///4K (Highest)"],
+            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_h3_params"));
+
+        AspectRatioParam_H3 = T2IParamTypes.Register<string>(new("MiniMax HThree Video Aspect Ratio",
+            "Aspect ratio for H3 text-to-video. Image-to-video follows the input image instead.", "16:9",
+            GetValues: _ => ["21:9///Ultra-wide (21:9)", "16:9///Widescreen (16:9)", "4:3///Standard (4:3)", "1:1///Square (1:1)", "3:4///Portrait (3:4)", "9:16///Portrait (9:16)"],
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_h3_aspect"));
+
+        AspectRatioParam_H3Ref = T2IParamTypes.Register<string>(new("MiniMax HThree Reference Aspect Ratio",
+            "Aspect ratio for H3 reference-to-video. 'Adaptive' follows the references.", "adaptive",
+            GetValues: _ => ["adaptive///Adaptive (Default)", "21:9///Ultra-wide (21:9)", "16:9///Widescreen (16:9)", "4:3///Standard (4:3)", "1:1///Square (1:1)", "3:4///Portrait (3:4)", "9:16///Portrait (9:16)"],
+            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_h3_ref_aspect"));
+
+        DurationParam_KlingTurbo = T2IParamTypes.Register<string>(new("Kling Turbo Video Duration",
+            "Length of the generated video, 3 to 15 seconds.\n" +
+            "Kling V3 Turbo takes no aspect ratio, resolution, audio or seed controls.", "5",
+            GetValues: _ => ["3///3 seconds", "4///4 seconds", "5///5 seconds (Default)", "6///6 seconds", "7///7 seconds", "8///8 seconds", "9///9 seconds", "10///10 seconds", "11///11 seconds", "12///12 seconds", "13///13 seconds", "14///14 seconds", "15///15 seconds"],
+            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_kling_turbo_params"));
+
+        // ===== FAL UTILITY PARAMETERS =====
+        UpscaleFactorParam_FalUtility = T2IParamTypes.Register<double>(new("Upscale Factor",
+            "How many times larger to make the image.\n" +
+            "Only applies to upscaler models; ignored by background removal and face restoration.",
+            "2", Min: 1.0, Max: 4.0, Step: 0.5, ViewType: ParamViewType.SLIDER,
+            OrderPriority: -10, Group: T2IParamTypes.GroupSampling, FeatureFlag: "fal_utility_params"));
+
+        VideoUrlParam_FalUtility = T2IParamTypes.Register<string>(new("Input Video URL",
+            "Publicly accessible URL of the video to process.\n" +
+            "Required by the video utility models (video upscale, video background removal),\n" +
+            "which take a video rather than the Init Image used by the image utilities.",
+            "", OrderPriority: -9, Group: T2IParamTypes.GroupSampling, FeatureFlag: "fal_utility_video_params"));
+
+        // ===== SHARED MULTI-REFERENCE PARAMETERS =====
+        RefImageUrlsParam = T2IParamTypes.Register<string>(new("Reference Image URLs",
+            "Comma-separated URLs of reference images for subject and style.\n" +
+            "Refer to them in your prompt in order (Image 1, Image 2, ...).\n" +
+            "Seedance and MiniMax H3 accept up to 9; Wan 2.7 has no fixed cap.",
+            "", OrderPriority: -6, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_ref_images"));
+
+        RefVideoUrlsParam = T2IParamTypes.Register<string>(new("Reference Video URLs",
+            "Comma-separated URLs of reference videos for motion.\n" +
+            "Refer to them in your prompt in order (Video 1, Video 2, ...). Up to 3, 2-15s each.",
+            "", OrderPriority: -5, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_ref_videos"));
+
+        RefAudioUrlsParam = T2IParamTypes.Register<string>(new("Reference Audio URLs",
+            "Comma-separated URLs of reference audio clips.\n" +
+            "Refer to them in your prompt in order (Audio 1, Audio 2, ...). Up to 3, 2-15s each.\n" +
+            "Requires at least one reference image or video alongside it.",
+            "", OrderPriority: -4, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_ref_audio"));
+
+
 
         RegisterFeatureFlags();
         Program.Backends.RegisterBackendType<DynamicAPIBackend>("dynamic_api_backend", "3rd Party Paid API Backends", "Generate images using various API services (OpenAI, Ideogram, Black Forest Labs, Grok, Google, Fal.ai)", true);
@@ -951,6 +1257,13 @@ public class SwarmUIAPIBackends : Extension
             BasicAPIFeatures.AcceptedAPIKeyTypes.Add(keyType);
         }
         _ = APIProviderRegistry.Instance;
+        WebAPI.APIBackendsAPI.Register();
+        // A model declaring a family nothing knows about would silently lose all its params, so fail loudly at startup.
+        List<string> unknown = ModelCapabilities.UnknownFamilies(APIProviderRegistry.Instance.ModelsByFullName.Values);
+        if (unknown.Count > 0)
+        {
+            Logs.Error($"[APIBackends] Models declare unknown param families: {string.Join(", ", unknown)}. Their parameters will not appear.");
+        }
         RegisterApiKeyIfNeeded("openai_api", "openai", "OpenAI (ChatGPT)", "https://platform.openai.com/api-keys", new HtmlString("To use OpenAI models in SwarmUI (via Hartsy extensions), you must set your OpenAI API key."));
         RegisterApiKeyIfNeeded("bfl_api", "black_forest", "Black Forest Labs (FLUX)", "https://dashboard.bfl.ai/", new HtmlString("To use Black Forest in SwarmUI (via Hartsy extensions), you must set your Black Forest API key."));
         RegisterApiKeyIfNeeded("ideogram_api", "ideogram", "Ideogram", "https://developer.ideogram.ai/ideogram-api/api-setup", new HtmlString("To use Ideogram in SwarmUI (via Hartsy extensions), you must set your Ideogram API key."));
@@ -989,7 +1302,7 @@ public class SwarmUIAPIBackends : Extension
 
         // Model-specific feature flags
         string[] modelFlags = [
-            "dalle2_params", "dalle3_params", "gpt-image-1_params", "gpt-image-1.5_params", "gpt_image_params", "openai_image_size",
+            "dalle2_params", "dalle3_params", "flux_2_flex_params", "gpt-image-1_params", "gpt-image-1.5_params", "gpt_image_params", "openai_image_size",
             "ideogram_v1_params", "ideogram_v2_params", "ideogram_v3_params", "ideogram_v4_params", "ideogram_style",
             "flux_ultra_params", "flux_pro_params", "flux_dev_params",
             "flux_kontext_pro_params", "flux_kontext_max_params", "flux_2_max_params", "flux_2_pro_params",
@@ -999,7 +1312,18 @@ public class SwarmUIAPIBackends : Extension
             "fal_aspect_image", "fal_resolution_image", "fal_recraft_params",
             "fal_sora_video_params", "fal_kling_video_params", "fal_veo_video_params",
             "fal_luma_video_params", "fal_minimax_video_params", "fal_hunyuan_video_params",
-            "fal_seedance2_video_params", "fal_seedance1_video_params", "fal_seedance_ref_params"
+            "fal_seedance2_video_params", "fal_seedance1_video_params", "fal_seedance_ref_params",
+            "fal_utility_video_params",
+            "fal_video_audio", "fal_video_negative",
+            "fal_wan22_params", "fal_pixverse_params", "fal_ltx2_params", "fal_ltx13b_params",
+            "fal_vidu_params", "fal_pika_params", "fal_kandinsky_params", "fal_cogvideox_params",
+            "fal_wan25_params", "fal_wan26_params", "fal_wan27_params", "fal_wan27ref_params",
+            "fal_wan27_aspect", "fal_wan2x_resolution", "fal_wan_audio", "fal_prompt_expansion",
+            "fal_wan_multishot", "fal_end_image_url", "fal_kling_turbo_params", "fal_seedance25_params", "fal_seedance2_duration",
+            "fal_ref_images", "fal_ref_videos", "fal_ref_audio",
+            "fal_h3_params", "fal_h3_aspect", "fal_h3_ref_aspect", "fal_flux3_params", "bfl_flux3_params",
+            "fal_img_common", "fal_img_size", "fal_img_steps", "fal_flux2_params", "fal_nb2_params",
+            "fal_flux2_edit_params"
         ];
 
         // Features incompatible with API backends (local-only features)

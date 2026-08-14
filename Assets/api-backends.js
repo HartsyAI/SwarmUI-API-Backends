@@ -4,6 +4,20 @@
  */
 
 const APIBackendsConfig = {
+    /* Model capabilities served by the extension (APIBackendsListModelCapabilities), keyed by full model name.
+       This is the authoritative source: it is generated from the same ModelDefinition declarations the C#
+       request builders use, so the UI cannot offer a param the request builder ignores.
+       The model-name pattern matching further down is only a fallback for when this fetch hasn't landed yet. */
+    capabilities: null,
+
+    /// Returns the served capability entry for a model, or null if the map isn't loaded / model is unknown.
+    capabilityFor(modelName) {
+        if (!this.capabilities || !modelName) {
+            return null;
+        }
+        return this.capabilities[modelName] || null;
+    },
+
     // Provider IDs mapped to their model-specific feature flags
     providers: {
         openai_api: ['dalle2_params', 'dalle3_params', 'gpt-image-1_params', 'gpt-image-1.5_params', 'gpt-image-2_params', 'gpt_image_params', 'openai_image_size', 'openai_sora_params'],
@@ -121,6 +135,11 @@ const APIBackendsConfig = {
 
     // Determine the active model-specific feature flag based on the selected model
     getActiveModelFlags(curArch, modelName) {
+        // Declared capabilities win over any name-based guessing.
+        const cap = this.capabilityFor(modelName);
+        if (cap && cap.flags) {
+            return cap.flags;
+        }
         if (curArch === 'fal_api') return this.getFalModelFlags(modelName);
         if (curArch === 'bfl_api') return this.getBflModelFlags(modelName);
         if (curArch === 'ideogram_api') return this.getIdeogramModelFlags(modelName);
@@ -297,6 +316,24 @@ const APIBackendsConfig = {
 
     // Check if a core Swarm param should be shown for the current API model
     shouldShowCoreParam(curArch, modelName, paramId) {
+        // Declared capabilities decide image input: covers reference models (UNO, InstantCharacter)
+        // and -ref2v models that the old name patterns never matched.
+        const cap = this.capabilityFor(modelName);
+        if (cap && paramId === 'initimage') {
+            return cap.init_image === true;
+        }
+        if (cap && paramId === 'batchsize') {
+            // Batch Size is images-per-API-call. Swarm's Images param is separate calls and is handled by Swarm.
+            return cap.supports_batch === true;
+        }
+        if (cap && paramId === 'cfgscale') {
+            return (cap.flags || []).includes('fal_t2i_params');
+        }
+        if (cap && paramId === 'steps') {
+            // Some models take steps without any guidance scale (Z-Image), so the two are gated separately.
+            const flags = cap.flags || [];
+            return flags.includes('fal_t2i_params') || flags.includes('fal_img_steps');
+        }
         // Flag-based core param visibility for Fal models
         if (curArch === 'fal_api') {
             const flags = this.getFalModelFlags(modelName);
@@ -409,9 +446,30 @@ if (typeof addModelChangeCallback === 'function') {
     });
 }
 
+// Load the declared model capabilities, then apply them. If this fails the extension still works via the
+// name-pattern fallbacks, just without the fixes that depend on declared data.
+function loadAPIBackendCapabilities() {
+    if (typeof genericRequest !== 'function') {
+        return;
+    }
+    genericRequest('APIBackendsListModelCapabilities', {}, data => {
+        if (!data || !data.models) {
+            console.warn('[api-backends] capability map missing from response, falling back to name patterns');
+            return;
+        }
+        APIBackendsConfig.capabilities = data.models;
+        console.log(`[api-backends] loaded capabilities for ${Object.keys(data.models).length} models`);
+        reviseBackendFeatureSet();
+        hideUnsupportableParams();
+    }, 0, err => {
+        console.warn('[api-backends] failed to load capability map, falling back to name patterns:', err);
+    });
+}
+
 // Initial setup
 setTimeout(() => {
     console.log('[api-backends] Initial parameter setup starting');
+    loadAPIBackendCapabilities();
     reviseBackendFeatureSet();
     hideUnsupportableParams();
 }, 500);
