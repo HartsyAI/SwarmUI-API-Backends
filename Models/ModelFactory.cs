@@ -77,7 +77,10 @@ public static class ModelFactory
                 CompatClass = default,
                 StandardWidth = 1024,
                 StandardHeight = 1024,
-                IsThisModelOfClass = (model, header) => true
+                // Claim ONLY this extension's own virtual models: a catch-all `=> true` here used to swallow
+                // any LOCAL checkpoint no earlier-registered class matched (a 7.7 GB ACE-Step file classified
+                // as "DALL-E"), which blocked later extensions' real header-based detectors entirely.
+                IsThisModelOfClass = (model, header) => model?.Name?.StartsWith("API Models/", StringComparison.Ordinal) == true
             };
             _modelClasses[id] = modelClass;
             T2IModelClassSorter.Register(modelClass);
