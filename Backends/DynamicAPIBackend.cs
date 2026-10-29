@@ -522,7 +522,7 @@ public class DynamicAPIBackend : APIAbstractBackend
     }
 
     /// <summary>Generate with live output. For video models, wraps result as VideoFile
-    /// to avoid ImageSharp conversion (Image extends ImageFile, VideoFile extends MediaFile).</summary>
+    /// to avoid ImageMagick conversion (Image extends ImageFile, VideoFile extends MediaFile).</summary>
     public override async Task GenerateLive(T2IParamInput user_input, string batchId, Action<object> takeOutput)
     {
         takeOutput(new JObject
@@ -541,7 +541,7 @@ public class DynamicAPIBackend : APIAbstractBackend
         {
             if (isVideoModel && img.Type.MetaType == MediaMetaType.Video)
             {
-                // Wrap as VideoFile (extends MediaFile) to skip ImageSharp conversion
+                // Wrap as VideoFile (extends MediaFile) to skip ImageMagick conversion
                 VideoFile video = new(img.RawData, img.Type);
                 takeOutput(video);
             }
