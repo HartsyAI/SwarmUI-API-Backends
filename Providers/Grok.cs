@@ -55,6 +55,7 @@ public sealed class GrokProvider : IProviderSource
             .WithUsageHint("Recommended Grok model for image generation and editing")
             .WithTags("grok", "xai", "imagine", "generative")
             .WithFeatureFlag("grok_2_image_params")
+            .WithInitImage()
             .Build()
     ];
 }
