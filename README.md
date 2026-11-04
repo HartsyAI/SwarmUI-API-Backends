@@ -24,7 +24,7 @@
 
 The APIBackends Extension for SwarmUI enables integration with multiple commercial image and video generation APIs. It registers API-hosted models into SwarmUI's normal model list so they can be selected and used from the **Generate** tab like local models.
 
-- Generate images using DALL-E 3, GPT Image 1.5, or GPT Image 2
+- Generate images using GPT Image 1.5, GPT Image 2, or GPT Image 2.5
 - Access Black Forest Labs' Flux models
 - Generate with Ideogram V3
 - Create videos with Seedance 2.0, Sora 2, Veo 3.1, Kling, and more via Fal.ai
@@ -39,7 +39,7 @@ The APIBackends Extension for SwarmUI enables integration with multiple commerci
 ------------
 
 * Currently supports 6 API providers:
-  - OpenAI (DALL-E 2, DALL-E 3, GPT Image 1, GPT Image 1.5, GPT Image 2, Sora)
+  - OpenAI (GPT Image 1.5, GPT Image 2, GPT Image 2.5 Sunburst, GPT Image 2.5 Flare)
   - Ideogram (V1, V2, V2 Turbo, V3)
   - Black Forest Labs (FLUX Pro, Ultra, Dev, Kontext Pro/Max, FLUX 2 Pro/Max)
   - Grok (Grok 2 Image)
@@ -130,7 +130,7 @@ If you prefer to install manually:
 
 1. Go to the **Generate** tab
 2. Open the model dropdown -- API models appear under `API Models/<Provider>/...`
-   - Example: `API Models/OpenAI/dall-e-3`, `API Models/Fal/Sora/sora-2-t2v`
+   - Example: `API Models/OpenAI/gpt-image-2`, `API Models/Fal/Sora/sora-2-t2v`
 3. Select a model -- provider-specific parameters appear automatically
 4. Enter a prompt and click **Generate**
 
@@ -165,7 +165,7 @@ Each API provider requires an API key. Get yours here:
 
 Parameters are shown/hidden automatically based on which model you select.
 
-* **OpenAI:** Image Size, Quality, Style (DALL-E 3), Background (GPT Image), Output Format, Moderation, Output Compression. GPT Image 2 supports up to 2K resolution but does not support transparent backgrounds.
+* **OpenAI:** Image Size, Quality, Background (GPT Image), Output Format, Moderation, Output Compression. GPT Image 2 supports up to 2K resolution.
 * **Ideogram:** Aspect Ratio, Style Type, Magic Prompt, Rendering Speed, Image Remix Weight, Color Theme, Negative Prompt, Image Prompt (for editing)
 * **Black Forest Labs:** Width, Height, Guidance, Steps, Prompt Enhancement, Raw Mode, Image Prompt, Safety Filter Level, Output Format
 * **Grok:** Aspect Ratio, Output Resolution
@@ -194,7 +194,7 @@ SwarmUI-API-Backends/
   Providers/
     ProviderDefinitions.cs     -- Aggregates all provider definitions
     RequestBuilder.cs          -- Provider-specific request/response logic
-    OpenAI.cs                  -- OpenAI provider (DALL-E, GPT Image)
+    OpenAI.cs                  -- OpenAI provider (GPT Image)
     BlackForestLabs.cs         -- BFL provider (FLUX models)
     Ideogram.cs                -- Ideogram provider
     Grok.cs                    -- Grok/xAI provider

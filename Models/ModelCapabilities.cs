@@ -68,8 +68,7 @@ public static class ModelCapabilities
         ["video.grok"] = ["fal_video_params", "fal_video_audio", "fal_video_negative"],
 
         // Non-Fal providers keep their own per-model flags on the ModelDefinition.
-        ["image.openai"] = [],
-        ["video.openai_sora"] = ["openai_sora_params"]
+        ["image.openai"] = []
     };
 
     /// <summary>Families whose request builders send a per-call image count. Everything else produces exactly

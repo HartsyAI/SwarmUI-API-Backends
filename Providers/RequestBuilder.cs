@@ -154,143 +154,43 @@ public abstract class BaseRequestBuilder : IRequestBuilder
 
 public sealed class OpenAIRequestBuilder : BaseRequestBuilder
 {
-    private const string OpenAIVideoBaseUrl = "https://api.openai.com/v1/videos";
-
     public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
     {
         string modelName = model.Id;
-        // Sora video models use different request structure
-        if (IsSoraModel(modelName))
-        {
-            return BuildSoraVideoRequest(input, modelName);
-        }
         JObject request = new()
         {
             ["prompt"] = input.Get(T2IParamTypes.Prompt),
             ["model"] = modelName,
-            // DALL-E 3 rejects any n above 1; the others accept a real batch.
-            ["n"] = modelName == "dall-e-3" ? 1 : GetNumImages(input),
+            ["n"] = GetNumImages(input),
             ["size"] = SizeForOpenAIModel(input, modelName)
         };
-        if (modelName is "gpt-image-1" or "gpt-image-1.5" or "gpt-image-2")
-        {
-            if (input.TryGet(SwarmUIAPIBackends.QualityParam_GPTImage1, out string quality)) request["quality"] = quality;
-            if (input.TryGet(SwarmUIAPIBackends.BackgroundParam_GPTImage1, out string bg)) request["background"] = bg;
-            if (input.TryGet(SwarmUIAPIBackends.ModerationParam_GPTImage1, out string mod)) request["moderation"] = mod;
-            if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_GPTImage1, out string format)) request["output_format"] = format;
-            if (input.TryGet(SwarmUIAPIBackends.OutputCompressionParam_GPTImage1, out int compression)) request["output_compression"] = compression;
-        }
-        else if (modelName is "dall-e-3")
-        {
-            if (input.TryGet(SwarmUIAPIBackends.QualityParam_OpenAI, out string quality)) request["quality"] = quality;
-            if (input.TryGet(SwarmUIAPIBackends.StyleParam_OpenAI, out string style)) request["style"] = style;
-            request["response_format"] = "b64_json";
-        }
-        else
-        {
-            request["response_format"] = "b64_json";
-        }
+        if (input.TryGet(SwarmUIAPIBackends.QualityParam_GPTImage1, out string quality)) request["quality"] = quality;
+        if (input.TryGet(SwarmUIAPIBackends.BackgroundParam_GPTImage1, out string bg)) request["background"] = bg;
+        if (input.TryGet(SwarmUIAPIBackends.ModerationParam_GPTImage1, out string mod)) request["moderation"] = mod;
+        if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_GPTImage1, out string format)) request["output_format"] = format;
+        if (input.TryGet(SwarmUIAPIBackends.OutputCompressionParam_GPTImage1, out int compression)) request["output_compression"] = compression;
         return request;
     }
 
-    /// <summary>Each OpenAI image model accepts a different size list, so each has its own param.</summary>
+    /// <summary>GPT Image 1.5 has its own size list; GPT Image 2 and the 2.5 models share the GPT Image 2 list.</summary>
     private static string SizeForOpenAIModel(T2IParamInput input, string modelName)
     {
         T2IRegisteredParam<string> param = modelName switch
         {
-            "dall-e-2" => SwarmUIAPIBackends.SizeParam_DallE2,
-            "gpt-image-2" => SwarmUIAPIBackends.SizeParam_GPTImage2,
-            "gpt-image-1" or "gpt-image-1.5" => SwarmUIAPIBackends.SizeParam_GPTImage,
-            _ => SwarmUIAPIBackends.SizeParam_OpenAI
+            "gpt-image-1.5" => SwarmUIAPIBackends.SizeParam_GPTImage,
+            _ => SwarmUIAPIBackends.SizeParam_GPTImage2
         };
         return input.TryGet(param, out string size) ? size : "1024x1024";
     }
 
-    private static bool IsSoraModel(string modelName) => modelName.StartsWith("sora-");
-
-    private static JObject BuildSoraVideoRequest(T2IParamInput input, string modelName)
-    {
-        // Map model IDs to API model names (sora-2-t2v -> sora-2, sora-2-pro-t2v -> sora-2-pro)
-        string apiModel = modelName.Replace("-t2v", "").Replace("-i2v", "");
-        JObject request = new()
-        {
-            ["prompt"] = input.Get(T2IParamTypes.Prompt),
-            ["model"] = apiModel
-        };
-        if (input.TryGet(SwarmUIAPIBackends.SizeParam_OpenAISora, out string size))
-        {
-            request["size"] = size;
-        }
-        if (input.TryGet(SwarmUIAPIBackends.SecondsParam_OpenAISora, out int seconds))
-        {
-            request["seconds"] = seconds;
-        }
-        return request;
-    }
-
     public override async Task<byte[][]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
     {
-        // Check if this is a Sora video response (has "id" and "status" fields)
-        if (response["id"] != null && response["status"] != null)
-        {
-            return [await ProcessSoraVideoResponse(response, apiKey)];
-        }
         JArray data = response["data"] as JArray;
         if (data is null || data.Count is 0)
         {
             throw new Exception("No image data in OpenAI response");
         }
         return await CollectImages(data, "b64_json", "url", "OpenAI");
-    }
-
-    private async Task<byte[]> ProcessSoraVideoResponse(JObject initialResponse, string apiKey)
-    {
-        string videoId = initialResponse["id"]?.ToString();
-        if (string.IsNullOrEmpty(videoId))
-        {
-            throw new Exception("OpenAI Sora response missing video ID");
-        }
-        string status = initialResponse["status"]?.ToString();
-        int maxAttempts = 120; // 10 minutes max (5 second intervals)
-        int attempts = 0;
-        // Poll for completion
-        while (status is "queued" or "in_progress" && attempts < maxAttempts)
-        {
-            await Task.Delay(5000); // Wait 5 seconds between polls
-            attempts++;
-            using HttpRequestMessage pollRequest = new(HttpMethod.Get, $"{OpenAIVideoBaseUrl}/{videoId}");
-            pollRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
-            using HttpResponseMessage pollResponse = await HttpClient.SendAsync(pollRequest);
-            string pollContent = await pollResponse.Content.ReadAsStringAsync();
-            if (!pollResponse.IsSuccessStatusCode)
-            {
-                throw new Exception($"OpenAI Sora polling failed: {pollContent}");
-            }
-            JObject statusResponse = JObject.Parse(pollContent);
-            status = statusResponse["status"]?.ToString();
-            if (status == "failed")
-            {
-                string error = statusResponse["error"]?.ToString() ?? "Unknown error";
-                throw new Exception($"OpenAI Sora video generation failed: {error}");
-            }
-            Logs.Verbose($"[OpenAI Sora] Video {videoId} status: {status}, progress: {statusResponse["progress"]}%");
-        }
-        if (status != "completed")
-        {
-            throw new Exception($"OpenAI Sora video generation timed out or failed. Status: {status}");
-        }
-        // Download the completed video
-        using HttpRequestMessage downloadRequest = new(HttpMethod.Get, $"{OpenAIVideoBaseUrl}/{videoId}/content");
-        downloadRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
-        using HttpResponseMessage downloadResponse = await HttpClient.SendAsync(downloadRequest);
-        if (!downloadResponse.IsSuccessStatusCode)
-        {
-            string error = await downloadResponse.Content.ReadAsStringAsync();
-            throw new Exception($"OpenAI Sora video download failed: {error}");
-        }
-        byte[] videoData = await downloadResponse.Content.ReadAsByteArrayAsync();
-        Logs.Verbose($"[OpenAI Sora] Downloaded video {videoId}, size: {videoData.Length} bytes");
-        return videoData;
     }
 }
 

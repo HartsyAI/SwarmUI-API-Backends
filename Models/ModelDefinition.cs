@@ -14,7 +14,7 @@ public enum ModelModality
 /// <summary>Type-safe definition for an API model. Used by ModelFactory to create T2IModel instances.</summary>
 public sealed class ModelDefinition
 {
-    /// <summary>Unique model identifier (e.g., "dall-e-3", "flux/dev").</summary>
+    /// <summary>Unique model identifier (e.g., "gpt-image-2", "flux/dev").</summary>
     public required string Id { get; init; }
 
     /// <summary>Display title for the model.</summary>
@@ -47,7 +47,7 @@ public sealed class ModelDefinition
     /// <summary>Tags for categorization and filtering.</summary>
     public string[] Tags { get; init; } = [];
 
-    /// <summary>Feature flag for parameter visibility (e.g., "dalle3_params").</summary>
+    /// <summary>Feature flag for parameter visibility (e.g., "gpt-image-2_params").</summary>
     public string FeatureFlag { get; init; } = "";
 
     /// <summary>Optional model-specific endpoint path override.</summary>
