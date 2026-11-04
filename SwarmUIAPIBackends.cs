@@ -91,7 +91,6 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<bool> PromptEnhanceParam_BlackForest;
     public static T2IRegisteredParam<string> OutputFormatParam_BlackForest;
     public static T2IRegisteredParam<bool> RawModeParam_BlackForest;
-    public static T2IRegisteredParam<Image> ImagePromptParam_BlackForest;
     public static T2IRegisteredParam<double> ImagePromptStrengthParam_BlackForest;
     public static T2IRegisteredParam<int> WidthParam_BlackForest => T2IParamTypes.Width;
     public static T2IRegisteredParam<int> HeightParam_BlackForest => T2IParamTypes.Height;
@@ -119,7 +118,7 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<string> OutputFormatParam_Fal;
     public static T2IRegisteredParam<bool> SafetyCheckerParam_Fal;
 
-    // Fal.ai Aspect Ratio Image Parameters (FLUX Ultra, Kling Image, Nano Banana, Imagen 3)
+    // Fal.ai Aspect Ratio Image Parameters (FLUX Ultra, Kling Image, Nano Banana)
     public static T2IRegisteredParam<string> AspectRatioParam_FalImage;
     public static T2IRegisteredParam<string> ResolutionParam_FalImage;
     public static T2IRegisteredParam<string> OutputFormatParam_FalAspect;
@@ -139,11 +138,6 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<string> ResolutionParam_FalVideo;
     public static T2IRegisteredParam<bool> GenerateAudioParam_FalVideo;
     public static T2IRegisteredParam<string> NegativePromptParam_FalVideo;
-
-    // Sora-specific video parameters (duration: 4,8,12; aspect: 16:9,9:16; resolution: 720p,1080p; NO audio/negative)
-    public static T2IRegisteredParam<string> DurationParam_Sora;
-    public static T2IRegisteredParam<string> AspectRatioParam_Sora;
-    public static T2IRegisteredParam<string> ResolutionParam_Sora;
 
     // Kling-specific video parameters (duration: 3-15; aspect: 16:9,9:16,1:1; audio; negative; NO resolution)
     public static T2IRegisteredParam<string> DurationParam_Kling;
@@ -250,7 +244,7 @@ public class SwarmUIAPIBackends : Extension
         IdeogramAdvancedGroup = new("Ideogram Advanced Settings", Toggles: true, Open: false, OrderPriority: 21, Description: "Additional options for fine-tuning Ideogram generations.");
 
         GrokParamGroup = new("Grok API", Toggles: false, Open: true, OrderPriority: 30, Description: "API access to Grok's image generation models.");
-        Grok2ImageGroup = new("Grok 2 Image Settings", Toggles: false, Open: true, OrderPriority: 37, Description: "Parameters specific to Grok's 2 Image model generation.");
+        Grok2ImageGroup = new("Grok Image Settings", Toggles: false, Open: true, OrderPriority: 37, Description: "Parameters for Grok image generation and editing.");
 
         GoogleParamGroup = new("Google API", Toggles: false, Open: true, OrderPriority: 35, Description: "API access to Google's image generation models.");
         GoogleImagenGroup = new("Google Image Settings", Toggles: false, Open: true, OrderPriority: 35, Description: "Parameters for Google Gemini image generation.");
@@ -418,7 +412,7 @@ public class SwarmUIAPIBackends : Extension
 
         ResolutionParam_IdeogramV4 = T2IParamTypes.Register<string>(new("Ideogram VFour Resolution",
             "Output resolution for Ideogram V4.", "1024x1024",
-            GetValues: _ => ["1024x1024///Square", "1344x768///Landscape", "768x1344///Portrait", "1536x640///Wide", "640x1536///Tall"],
+            GetValues: _ => ["1024x1024///Square", "1280x720///Landscape", "720x1280///Portrait", "1536x512///Wide", "512x1536///Tall"],
             OrderPriority: -8, Group: T2IParamTypes.GroupResolution, FeatureFlag: "ideogram_v4_params"));
 
         CopyrightDetectionParam_IdeogramV4 = T2IParamTypes.Register<bool>(new("Ideogram Copyright Detection",
@@ -457,7 +451,7 @@ public class SwarmUIAPIBackends : Extension
 
         // Black Forest Labs API Parameters
         GuidanceParam_BlackForest = T2IParamTypes.Register<double>(new("Prompt Guidance",
-            "Controls how strictly the generation follows the prompt (Flux Dev only).\n" +
+            "Controls how strictly the generation follows the prompt (Flux Dev and Flux 2 Flex).\n" +
             "Default 3.0 for balanced results.\n" +
             "Lower values (1.5-2.5): More creative but less controlled\n" +
             "Higher values (3.0-5.0): Stricter prompt following but may reduce realism.", "3.0",
@@ -486,15 +480,8 @@ public class SwarmUIAPIBackends : Extension
             "Only available in Flux Pro 1.1 ultra mode.", "false", OrderPriority: -3,
             Group: BlackForestAdvancedGroup, FeatureFlag: "flux_ultra_params"));
 
-        ImagePromptParam_BlackForest = T2IParamTypes.Register<Image>(new("Image Prompt",
-            "Optional image to use as a starting point or reference.\n" +
-            "Acts as a visual guide for the generation process.\n" +
-            "Useful for variations, style matching, or guided compositions.\n" +
-            "Supported by: Flux Dev, Flux Pro 1.1, Flux Ultra.", null, OrderPriority: -2,
-            Group: BlackForestAdvancedGroup, FeatureFlag: "bfl_image_prompt"));
-
         ImagePromptStrengthParam_BlackForest = T2IParamTypes.Register<double>(new("Image Prompt Strength",
-            "Controls how much the Image Prompt influences the generation.\n" +
+            "Controls how much the Init Image influences the generation.\n" +
             "0.0: Ignore image prompt completely\n" +
             "1.0: Follow image prompt very closely\n" +
             "Default 0.1 provides subtle guidance while allowing creativity.",
@@ -517,7 +504,8 @@ public class SwarmUIAPIBackends : Extension
                 "16:9///Landscape (16:9)", "9:16///Portrait (9:16)",
                 "4:3///Landscape (4:3)", "3:4///Portrait (3:4)",
                 "3:2///Landscape (3:2)", "2:3///Portrait (2:3)",
-                "2:1///Wide (2:1)", "1:2///Tall (1:2)"
+                "2:1///Wide (2:1)", "1:2///Tall (1:2)",
+                "21:9///Ultrawide (21:9)", "5:2///Wide Banner (5:2)"
             ],
             OrderPriority: -10, Group: Grok2ImageGroup, FeatureFlag: "grok_2_image_params"));
 
@@ -582,7 +570,7 @@ public class SwarmUIAPIBackends : Extension
             "jpeg", GetValues: _ => ["jpeg///JPEG (Smaller)", "png///PNG (Lossless)"],
             OrderPriority: -2, Group: T2IParamTypes.GroupSampling, FeatureFlag: "fal_img_common"));
 
-        // Fal.ai Aspect Ratio Image Parameters (FLUX Ultra, Kling Image, Nano Banana, Imagen 3)
+        // Fal.ai Aspect Ratio Image Parameters (FLUX Ultra, Kling Image, Nano Banana)
         AspectRatioParam_FalImage = T2IParamTypes.Register<string>(new("Image Aspect Ratio",
             "Aspect ratio for models that use aspect ratio instead of image size.\n" +
             "16:9: Widescreen, 9:16: Portrait, 1:1: Square, etc.",
@@ -767,35 +755,6 @@ public class SwarmUIAPIBackends : Extension
             "Resolution for Kandinsky 5 Pro. This model uses its own scale rather than 480p/720p.", "512P",
             GetValues: _ => ["512P///512P", "1024P///1024P (High)"],
             OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_kandinsky_params"));
-
-        // ===== SORA-SPECIFIC PARAMETERS =====
-        DurationParam_Sora = T2IParamTypes.Register<string>(new("Sora Video Duration",
-            "Length of the generated video in seconds.\n" +
-            "Sora supports 4, 8, or 12 second videos.",
-            "4", GetValues: _ => [
-                "4///4 seconds",
-                "8///8 seconds",
-                "12///12 seconds"
-            ],
-            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_sora_video_params"));
-
-        AspectRatioParam_Sora = T2IParamTypes.Register<string>(new("Sora Video Aspect Ratio",
-            "Aspect ratio for the generated video.\n" +
-            "Sora supports 16:9 (widescreen) and 9:16 (portrait).",
-            "16:9", GetValues: _ => [
-                "16:9///Widescreen (16:9)",
-                "9:16///Portrait (9:16)"
-            ],
-            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_sora_video_params"));
-
-        ResolutionParam_Sora = T2IParamTypes.Register<string>(new("Sora Video Resolution",
-            "Resolution of the generated video.\n" +
-            "Sora supports 720p and 1080p.",
-            "720p", GetValues: _ => [
-                "720p///720p (Standard)",
-                "1080p///1080p (HD)"
-            ],
-            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_sora_video_params"));
 
         // ===== KLING-SPECIFIC PARAMETERS =====
         DurationParam_Kling = T2IParamTypes.Register<string>(new("Kling Video Duration",
@@ -1165,8 +1124,8 @@ public class SwarmUIAPIBackends : Extension
             OrderPriority: -2, Group: T2IParamTypes.GroupSampling, FeatureFlag: "fal_nb2_params"));
 
         ResolutionParam_Flux3Bfl = T2IParamTypes.Register<string>(new("FLUX Three Direct Video Resolution",
-            "Resolution for FLUX 3 on Black Forest Labs' own API, which names these hd and fhd.", "hd",
-            GetValues: _ => ["hd///HD (720p)", "fhd///Full HD (1080p)"],
+            "Resolution for FLUX 3 on Black Forest Labs' own API. Drafts are HD only.", "hd",
+            GetValues: _ => ["hd///HD (720p)", "fhd///Full HD (1080p)", "qhd///2K", "uhd///4K"],
             OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "bfl_flux3_params"));
 
         DurationParam_H3 = T2IParamTypes.Register<string>(new("MiniMax HThree Video Duration",
@@ -1286,11 +1245,11 @@ public class SwarmUIAPIBackends : Extension
             "ideogram_v1_params", "ideogram_v2_params", "ideogram_v3_params", "ideogram_v4_params", "ideogram_style",
             "flux_ultra_params", "flux_pro_params", "flux_dev_params",
             "flux_kontext_pro_params", "flux_kontext_max_params", "flux_2_max_params", "flux_2_pro_params",
-            "bfl_prompt_enhance", "bfl_image_prompt",
+            "flux_2_klein_params", "bfl_prompt_enhance",
             "grok_2_image_params", "google_gemini_params", "google_gemini3_params",
             "fal_t2i_params", "fal_i2i_params", "fal_video_params", "fal_utility_params",
             "fal_aspect_image", "fal_resolution_image", "fal_recraft_params",
-            "fal_sora_video_params", "fal_kling_video_params", "fal_veo_video_params",
+            "fal_kling_video_params", "fal_veo_video_params",
             "fal_luma_video_params", "fal_minimax_video_params", "fal_hunyuan_video_params",
             "fal_seedance2_video_params", "fal_seedance1_video_params", "fal_seedance_ref_params",
             "fal_utility_video_params",

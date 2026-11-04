@@ -27,7 +27,7 @@ The APIBackends Extension for SwarmUI enables integration with multiple commerci
 - Generate images using DALL-E 3, GPT Image 1.5, or GPT Image 2
 - Access Black Forest Labs' Flux models
 - Generate with Ideogram V3
-- Create videos with Seedance 2.0, Sora 2, Veo 3.1, Kling, and more via Fal.ai
+- Create videos with Seedance 2.0, Veo 3.1, Kling, and more via Fal.ai
 - Use utility models for background removal, upscaling, and face restoration
 - Seamlessly switch between different API providers
 
@@ -40,9 +40,9 @@ The APIBackends Extension for SwarmUI enables integration with multiple commerci
 
 * Currently supports 6 API providers:
   - OpenAI (DALL-E 2, DALL-E 3, GPT Image 1, GPT Image 1.5, GPT Image 2, Sora)
-  - Ideogram (V1, V2, V2 Turbo, V3)
-  - Black Forest Labs (FLUX Pro, Ultra, Dev, Kontext Pro/Max, FLUX 2 Pro/Max)
-  - Grok (Grok 2 Image)
+  - Ideogram (V1, V2, V2 Turbo, V2A, V3, V4)
+  - Black Forest Labs (FLUX Pro, Ultra, Dev, Kontext Pro/Max, FLUX 2 Pro/Max/Flex/Klein, FLUX 3 Video)
+  - Grok (Grok Imagine Image 2.0, Grok Imagine Image, Grok 2 Image)
   - Google (Gemini 2.5 Flash Image, Gemini 3.1 Flash Image, Gemini 3.1 Flash Lite Image, Gemini Nano Banana 2.1, Gemini 3 Pro Image)
   - Fal.ai (130+ models -- image, video, and utility -- via a single API key)
 * Provider-specific parameter controls that show/hide automatically per model
@@ -56,9 +56,9 @@ The APIBackends Extension for SwarmUI enables integration with multiple commerci
 
 Fal.ai acts as a unified gateway to models from many providers. With a single Fal API key you get access to all of them.
 
-**Image Models** include FLUX (dev, schnell, pro, ultra, kontext, flex, lora, general), Recraft V3, Ideogram (V2, V2a, V3), Stability AI (SD 3.5, SDXL Lightning, Stable Cascade), Grok, Google (Nano Banana Pro, Nano Banana 2.1, Nano Banana 2 Lite, Gemini Flash), Kling (V3, O3), Qwen, Bria (Fibo), ByteDance Seedream, Reve, ImagineArt, F-Lite, HiDream (I1, E1), OmniGen, AuraFlow, Lumina, Sana, Playground, Kolors, MiniMax, Step1X, Hunyuan, UNO, and Instant Character.
+**Image Models** include FLUX (dev, schnell, pro, ultra, kontext, flex, LoRA, general), FLUX.2 (pro, max, dev, flex, klein 9B), Recraft V3, Ideogram (V2, V2a, V3), Stability AI (SD 3.5, SD 3.0, SDXL Lightning), Grok Imagine Image, Google (Nano Banana Pro, Nano Banana 2, Gemini Flash), Kling Image (V3, O3), Qwen Image (base, 2.0, 2.0 Pro, 3), Bria FIBO, ByteDance Seedream (4.0, 5.0 Pro), ImagineArt, HiDream (I1, O1), OmniGen, AuraFlow, Lumina, Sana, Playground, Kolors, MiniMax Image-01, Hunyuan Image 3.0, UNO, Instant Character, and Z-Image Turbo.
 
-**Video Models** include ByteDance Seedance (2.0, 2.0 Fast, 1.0 Pro, 1.0 Lite -- T2V, I2V, and Ref2V), Sora 2, Veo (3.1, 3, 2), Kling (O3 Pro/Std, V3 Pro/Std, V2.5 Turbo Pro), Grok Video, MiniMax Hailuo, PixVerse V5, Wan 2.2, LTX, Vidu Q3, Hunyuan, Mochi, Luma Ray 2, Pika V2.2, Kandinsky 5 Pro, Magi, CogVideoX, SkyReels, and Decart Lucy.
+**Video Models** include ByteDance Seedance (2.5, 2.0, 2.0 Fast, 2.0 Mini, 1.0 Pro, 1.0 Lite), Veo (3.1, 3), Kling (O3, V3, V3 Turbo Pro, V2.5 Turbo Pro), Grok Imagine Video, MiniMax (H3, Hailuo 02), PixVerse (V5, V6), Wan (2.7, 2.6, 2.5, 2.2), LTX (2 19B and 13B distilled), Vidu Q3, Hunyuan Video, Luma Ray 2, Pika V2.2, Kandinsky 5 Pro, CogVideoX-5B, and FLUX 3 video.
 
 **Utility Models** include background removal (rembg, Bria RMBG 2.0, BEN V2), upscaling (Clarity, Topaz, Creative Upscaler, ESRGAN, Topaz Video), face restoration (CodeFormer), and video background removal (Bria Video BG Removal).
 
@@ -130,7 +130,7 @@ If you prefer to install manually:
 
 1. Go to the **Generate** tab
 2. Open the model dropdown -- API models appear under `API Models/<Provider>/...`
-   - Example: `API Models/OpenAI/dall-e-3`, `API Models/Fal/Sora/sora-2-t2v`
+   - Example: `API Models/OpenAI/dall-e-3`, `API Models/Fal/Kling/kling-o3-pro-t2v`
 3. Select a model -- provider-specific parameters appear automatically
 4. Enter a prompt and click **Generate**
 
@@ -167,11 +167,11 @@ Parameters are shown/hidden automatically based on which model you select.
 
 * **OpenAI:** Image Size, Quality, Style (DALL-E 3), Background (GPT Image), Output Format, Moderation, Output Compression. GPT Image 2 supports up to 2K resolution but does not support transparent backgrounds.
 * **Ideogram:** Aspect Ratio, Style Type, Magic Prompt, Rendering Speed, Image Remix Weight, Color Theme, Negative Prompt, Image Prompt (for editing)
-* **Black Forest Labs:** Width, Height, Guidance, Steps, Prompt Enhancement, Raw Mode, Image Prompt, Safety Filter Level, Output Format
+* **Black Forest Labs:** Width, Height, Guidance, Steps, Prompt Enhancement, Raw Mode, Init Image, Safety Filter Level, Output Format
 * **Grok:** Aspect Ratio, Output Resolution
 * **Google:** Aspect Ratio, Image Resolution (Gemini 3)
 * **Fal.ai Image:** Image Size, Aspect Ratio, Resolution, Guidance Scale, Inference Steps, Seed, Output Format, Safety Checker, Negative Prompt, Recraft Style
-* **Fal.ai Video:** Each video model family has its own parameter set with model-specific Duration, Aspect Ratio, Resolution, Generate Audio, and Negative Prompt options. Supported families: Seedance 2.0, Seedance 1.0, Sora, Kling, Veo, Luma, MiniMax, Hunyuan, and generic (Wan, Pika, PixVerse, etc.)
+* **Fal.ai Video:** Each video model family has its own parameter set with model-specific Duration, Aspect Ratio, Resolution, Generate Audio, and Negative Prompt options. Supported families: Seedance 2.0, Seedance 1.0, Kling, Veo, Luma, MiniMax, Hunyuan, and generic (Wan, Pika, PixVerse, etc.)
 * **Fal.ai Seedance Ref2V:** Reference Image URLs, Reference Video URLs, Reference Audio URLs (for multi-reference video generation)
 
 ## Architecture
@@ -220,7 +220,7 @@ API models are registered with names like:
 
 - `API Models/<Provider>/<ModelId>`
 
-This groups all API-backed models under a single top-level folder in the model selector. Fal.ai models include a subfolder for the original provider, e.g. `API Models/Fal/Sora/sora-2-t2v` or `API Models/Fal/ByteDance/seedance-2.0-t2v`.
+This groups all API-backed models under a single top-level folder in the model selector. Fal.ai models include a subfolder for the original provider, e.g. `API Models/Fal/Kling/kling-o3-pro-t2v` or `API Models/Fal/ByteDance/seedance-2.0-t2v`.
 
 ## API
 ------
@@ -262,7 +262,7 @@ In requests, set the `model` parameter to an API model name, for example:
 
 - `model: "API Models/Ideogram/V_3"`
 - `model: "API Models/BFL/flux-2-max"`
-- `model: "API Models/Fal/Sora/sora-2-t2v"`
+- `model: "API Models/Fal/Kling/kling-o3-pro-t2v"`
 - `model: "API Models/Fal/ByteDance/seedance-2.0-t2v"`
 
 ## Troubleshooting
