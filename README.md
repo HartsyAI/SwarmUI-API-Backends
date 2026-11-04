@@ -40,9 +40,9 @@ The APIBackends Extension for SwarmUI enables integration with multiple commerci
 
 * Currently supports 6 API providers:
   - OpenAI (DALL-E 2, DALL-E 3, GPT Image 1, GPT Image 1.5, GPT Image 2, Sora)
-  - Ideogram (V1, V2, V2 Turbo, V3)
-  - Black Forest Labs (FLUX Pro, Ultra, Dev, Kontext Pro/Max, FLUX 2 Pro/Max)
-  - Grok (Grok 2 Image)
+  - Ideogram (V1, V2, V2 Turbo, V2A, V3, V4)
+  - Black Forest Labs (FLUX Pro, Ultra, Dev, Kontext Pro/Max, FLUX 2 Pro/Max/Flex/Klein, FLUX 3 Video)
+  - Grok (Grok Imagine Image 2.0, Grok Imagine Image, Grok 2 Image)
   - Google (Imagen 3.0, Gemini 2.0 Flash, Gemini 2.5 Flash, Gemini 3.1 Flash, Gemini 3 Pro)
   - Fal.ai (130+ models -- image, video, and utility -- via a single API key)
 * Provider-specific parameter controls that show/hide automatically per model
@@ -167,7 +167,7 @@ Parameters are shown/hidden automatically based on which model you select.
 
 * **OpenAI:** Image Size, Quality, Style (DALL-E 3), Background (GPT Image), Output Format, Moderation, Output Compression. GPT Image 2 supports up to 2K resolution but does not support transparent backgrounds.
 * **Ideogram:** Aspect Ratio, Style Type, Magic Prompt, Rendering Speed, Image Remix Weight, Color Theme, Negative Prompt, Image Prompt (for editing)
-* **Black Forest Labs:** Width, Height, Guidance, Steps, Prompt Enhancement, Raw Mode, Image Prompt, Safety Filter Level, Output Format
+* **Black Forest Labs:** Width, Height, Guidance, Steps, Prompt Enhancement, Raw Mode, Init Image, Safety Filter Level, Output Format
 * **Grok:** Aspect Ratio, Output Resolution
 * **Google:** Aspect Ratio, Person Generation, Image Size (Imagen), Image Resolution (Gemini 3)
 * **Fal.ai Image:** Image Size, Aspect Ratio, Resolution, Guidance Scale, Inference Steps, Seed, Output Format, Safety Checker, Negative Prompt, Recraft Style

@@ -315,6 +315,9 @@ public sealed class IdeogramRequestBuilder : BaseRequestBuilder
         ["3:1"] = "ASPECT_3_1"
     };
 
+    /// <summary>Legacy model IDs that accept negative_prompt (per the Ideogram v1 API reference).</summary>
+    private static readonly HashSet<string> LegacyNegativePromptModels = new() { "V_1", "V_2", "V_2_TURBO" };
+
     private static readonly Dictionary<string, string> V3AspectRatioMap = new()
     {
         ["1:1"] = "1x1",
@@ -385,6 +388,9 @@ public sealed class IdeogramRequestBuilder : BaseRequestBuilder
         bool isV3 = IsV3Model(model);
         bool hasInitImage = input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null;
         bool hasMask = input.TryGet(T2IParamTypes.MaskImage, out Image maskImg) && maskImg?.RawData is not null;
+        // Mask + init image is an edit (/edit for legacy models, /v1/ideogram-v3/edit for V3)
+        bool isEdit = hasInitImage && hasMask;
+        bool legacyEdit = isEdit && !isV3;
         JObject requestBody = new()
         {
             ["prompt"] = input.Get(T2IParamTypes.Prompt)
@@ -393,58 +399,39 @@ public sealed class IdeogramRequestBuilder : BaseRequestBuilder
         {
             requestBody["model"] = model.Id;
         }
-        // Common params
-        if (input.TryGet(SwarmUIAPIBackends.MagicPromptParam_Ideogram, out string magic)) requestBody["magic_prompt_option"] = magic;
-        else requestBody["magic_prompt_option"] = "AUTO";
-        if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Ideogram, out string aspect)) requestBody["aspect_ratio"] = isV3 ? MapAspectRatioV3(aspect) : MapAspectRatioLegacy(aspect);
+        // Magic prompt: V3 uses magic_prompt, legacy models use magic_prompt_option
+        string magicKey = isV3 ? "magic_prompt" : "magic_prompt_option";
+        string magic = "AUTO";
+        if (input.TryGet(SwarmUIAPIBackends.MagicPromptParam_Ideogram, out string magicParam)) magic = magicParam;
+        requestBody[magicKey] = magic;
         if (input.TryGet(SwarmUIAPIBackends.StyleTypeParam_Ideogram, out string style) && !string.IsNullOrEmpty(style)) requestBody["style_type"] = style;
         if (input.TryGet(T2IParamTypes.Seed, out long seed) && seed >= 0) requestBody["seed"] = (int)seed;
-        // Negative prompt: legacy models only (V3 doesn't support it)
-        if (!isV3 && input.TryGet(SwarmUIAPIBackends.NegativePromptParam_Ideogram, out string negPrompt) && !string.IsNullOrEmpty(negPrompt))
-            requestBody["negative_prompt"] = negPrompt;
-        // Color palette (V2+ only, handled by feature flag)
-        if (input.TryGet(SwarmUIAPIBackends.ColorPaletteParam_Ideogram, out string palette) && !string.IsNullOrEmpty(palette) && palette != "None")
+        // Edits do not accept aspect ratio or negative prompt
+        if (!isEdit)
+        {
+            if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Ideogram, out string aspect)) requestBody["aspect_ratio"] = isV3 ? MapAspectRatioV3(aspect) : MapAspectRatioLegacy(aspect);
+            bool supportsNegative = isV3 || LegacyNegativePromptModels.Contains(model.Id);
+            if (supportsNegative && input.TryGet(SwarmUIAPIBackends.NegativePromptParam_Ideogram, out string negPrompt) && !string.IsNullOrEmpty(negPrompt))
+                requestBody["negative_prompt"] = negPrompt;
+        }
+        // Color palette (V2+ only, handled by feature flag); legacy /edit does not accept it
+        if (!legacyEdit && input.TryGet(SwarmUIAPIBackends.ColorPaletteParam_Ideogram, out string palette) && !string.IsNullOrEmpty(palette) && palette != "None")
             requestBody["color_palette"] = new JObject { ["name"] = palette };
         // V3-specific params
         if (isV3)
         {
             if (input.TryGet(SwarmUIAPIBackends.RenderingSpeedParam_Ideogram, out string speed)) requestBody["rendering_speed"] = speed;
+            // Image weight: V3 remix only (scale 0-1 to the API's 1-100)
+            if (hasInitImage && !hasMask && input.TryGet(SwarmUIAPIBackends.ImageWeightParam_Ideogram, out double weight))
+                requestBody["image_weight"] = Math.Clamp((int)Math.Round(weight * 100), 1, 100);
         }
-        // Image input: use core Swarm InitImage
-        if (hasInitImage)
-        {
-            string base64Image = Convert.ToBase64String(initImg.RawData);
-            requestBody["image"] = base64Image;
-            if (hasMask)
-            {
-                requestBody["mask"] = Convert.ToBase64String(maskImg.RawData);
-            }
-            // Image weight: V3 remix only (scale 0-1 to 1-100)
-            if (isV3 && !hasMask && input.TryGet(SwarmUIAPIBackends.ImageWeightParam_Ideogram, out double weight))
-                requestBody["image_weight"] = (int)Math.Round(weight * 100);
-        }
-        if (isV3)
+        // Input images are attached as multipart files by DynamicAPIBackend, so they are not part of this body.
+        // Legacy generate takes image_request as JSON; legacy remix takes it as a multipart field next to image_file.
+        if (isV3 || isEdit)
         {
             return requestBody;
         }
         return new JObject { ["image_request"] = requestBody };
-    }
-
-    public override string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input)
-    {
-        bool hasInitImage = input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null;
-        bool hasMask = input.TryGet(T2IParamTypes.MaskImage, out Image maskImg) && maskImg?.RawData is not null;
-        if (IsV4Model(model))
-        {
-            return "https://api.ideogram.ai/v1/ideogram-v4/generate";
-        }
-        if (IsV3Model(model))
-        {
-            if (hasInitImage && hasMask) return "https://api.ideogram.ai/v1/ideogram-v3/edit";
-            if (hasInitImage) return "https://api.ideogram.ai/v1/ideogram-v3/remix";
-            return "https://api.ideogram.ai/v1/ideogram-v3/generate";
-        }
-        return hasInitImage ? "https://api.ideogram.ai/edit" : provider.BaseUrl;
     }
 
     public override void AddAuthHeaders(HttpRequestMessage request, string apiKey, ProviderDefinition provider)
@@ -502,7 +489,7 @@ public sealed class BlackForestRequestBuilder : BaseRequestBuilder
             if (input.TryGet(SwarmUIAPIBackends.GuidanceParam_BlackForest, out double guidance)) request["guidance"] = guidance;
             if (input.TryGet(SwarmUIAPIBackends.StepsParam_BlackForest, out int steps)) request["steps"] = steps;
         }
-        // Prompt upsampling: all except flux-2-* models
+        // Prompt upsampling: FLUX.1 takes prompt_upsampling. FLUX.2 has no toggle here, so its API default (on) applies.
         if (!modelId.StartsWith("flux-2-"))
         {
             if (input.TryGet(SwarmUIAPIBackends.PromptUpsampling_BlackForest, out bool upsample)) request["prompt_upsampling"] = upsample;
@@ -512,17 +499,18 @@ public sealed class BlackForestRequestBuilder : BaseRequestBuilder
         {
             if (input.TryGet(SwarmUIAPIBackends.RawModeParam_BlackForest, out bool raw)) request["raw"] = raw;
         }
-        // Image input: use core Swarm InitImage, sent as image_prompt or input_image depending on model
+        // Image input: use core Swarm InitImage, sent as input_image (Kontext, FLUX.2) or image_prompt (FLUX 1.1, Dev)
         if (input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null)
         {
             string base64Image = Convert.ToBase64String(initImg.RawData);
-            if (modelId is "flux-kontext-pro" or "flux-kontext-max" or "flux-2-pro" or "flux-2-max" or "flux-2-flex")
+            if (modelId is "flux-kontext-pro" or "flux-kontext-max" or "flux-2-pro" or "flux-2-max" or "flux-2-flex" or "flux-2-klein-9b" or "flux-2-klein-4b")
             {
                 request["input_image"] = base64Image;
-                // FLUX.2 also accepts input_image_2..8; extra references come from the shared reference URL param.
+                // FLUX.2 takes input_image_2 onward as extra references (Klein: up to input_image_4, others up to input_image_8).
+                int maxInputImages = modelId.StartsWith("flux-2-klein-") ? 4 : 8;
                 if (modelId.StartsWith("flux-2-") && UrlList(input, SwarmUIAPIBackends.RefImageUrlsParam) is JArray extras)
                 {
-                    for (int i = 0; i < extras.Count && i < 7; i++)
+                    for (int i = 0; i < extras.Count && i + 2 <= maxInputImages; i++)
                     {
                         request[$"input_image_{i + 2}"] = extras[i];
                     }
@@ -554,8 +542,9 @@ public sealed class BlackForestRequestBuilder : BaseRequestBuilder
         bool hasImage = input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null;
         if (hasImage)
         {
+            // A single opening frame is sent as one base64 string; the array form is only for timestamped [seconds, image] pairs.
             request["mode"] = "i2v";
-            request["keyframes"] = new JArray($"data:image/png;base64,{Convert.ToBase64String(initImg.RawData)}");
+            request["keyframes"] = Convert.ToBase64String(initImg.RawData);
         }
         else
         {
@@ -585,27 +574,21 @@ public sealed class BlackForestRequestBuilder : BaseRequestBuilder
 
     public override async Task<byte[][]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
     {
+        if (string.IsNullOrEmpty(apiKey))
+        {
+            throw new Exception("Black Forest Labs polling needs an API key.");
+        }
         string pollingUrl = response["polling_url"]?.ToString();
-        if (!string.IsNullOrEmpty(pollingUrl) && !string.IsNullOrEmpty(apiKey))
+        if (string.IsNullOrEmpty(pollingUrl))
         {
-            return [await PollForResult(pollingUrl, apiKey)];
+            throw new Exception($"Black Forest Labs response missing polling_url. Response: {response}");
         }
-        string resultUrl = response["result"]?["sample"]?.ToString();
-        if (!string.IsNullOrEmpty(resultUrl))
-        {
-            return [await DownloadImageFromUrl(resultUrl)];
-        }
-        if (response["sample"] is not null)
-        {
-            string sampleUrl = response["sample"].ToString();
-            return [await DownloadImageFromUrl(sampleUrl)];
-        }
-        throw new Exception($"Black Forest Labs response missing image data. Response: {response}");
+        return [await PollForResult(pollingUrl, apiKey)];
     }
 
     private async Task<byte[]> PollForResult(string pollingUrl, string apiKey)
     {
-        // Video jobs run for minutes, far past the 2 minutes the original image-only budget allowed.
+        // Video jobs run for minutes, so the budget is 450 polls at 2 seconds each.
         int maxAttempts = 450;
         int delayMs = 2000;
         for (int i = 0; i < maxAttempts; i++)
@@ -621,21 +604,20 @@ public sealed class BlackForestRequestBuilder : BaseRequestBuilder
             Logs.Verbose($"[BFL] Polling status: {status}");
             if (status is "Ready")
             {
-                // Images come back under 'sample'; video jobs use a video key instead.
-                JToken payload = result["result"];
-                string sampleUrl = (payload?["sample"] ?? payload?["video"] ?? payload?["video_url"])?.ToString();
-                if (!string.IsNullOrEmpty(sampleUrl))
+                // The finished image or video URL is result.sample.
+                string sampleUrl = result["result"]?["sample"]?.ToString();
+                if (string.IsNullOrEmpty(sampleUrl))
                 {
-                    return await DownloadImageFromUrl(sampleUrl);
+                    throw new Exception($"BFL result ready but carried no sample URL. Result: {result["result"]}");
                 }
-                throw new Exception($"BFL result ready but carried no downloadable URL. Result: {payload}");
+                return await DownloadImageFromUrl(sampleUrl);
             }
-            else if (status is "Error" || status is "Failed")
+            if (status is "Error" or "Request Moderated" or "Content Moderated")
             {
-                throw new Exception($"BFL generation failed: {result}");
+                throw new Exception($"BFL generation failed with status '{status}': {result}");
             }
         }
-        throw new Exception("BFL polling timed out after 120 seconds");
+        throw new Exception($"BFL polling timed out after {maxAttempts * delayMs / 1000} seconds");
     }
 }
 
@@ -658,11 +640,11 @@ public sealed class GrokRequestBuilder : BaseRequestBuilder
             request["aspect_ratio"] = aspect;
         if (input.TryGet(SwarmUIAPIBackends.ResolutionParam_Grok, out string resolution) && !string.IsNullOrEmpty(resolution))
             request["resolution"] = resolution;
-        // Image editing: use core Swarm InitImage
+        // Image editing: the edits endpoint takes the source image as an object (see DynamicAPIBackend.GetBaseUrl)
         if (input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null)
         {
             string base64Image = Convert.ToBase64String(initImg.RawData);
-            request["image_url"] = $"data:image/png;base64,{base64Image}";
+            request["image"] = new JObject { ["url"] = $"data:image/png;base64,{base64Image}" };
         }
         return request;
     }
