@@ -57,7 +57,7 @@ const APIBackendsConfig = {
             '*': ['seed', 'initimage', 'maskimage']
         },
         grok_api: {
-            '*': ['seed', 'initimage']
+            '*': ['initimage']
         },
         google_api: {
             'gemini-': ['seed', 'initimage'],
