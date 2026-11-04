@@ -17,7 +17,7 @@ public static class APIBackendsPermissions
     public static readonly PermInfo PermUseIdeogram = Permissions.Register(new("use_ideogram", "Use Ideogram API", "Allows using Ideogram's API for image generation.", PermissionDefault.POWERUSERS, APIBackendsPermGroup));
     public static readonly PermInfo PermUseBlackForest = Permissions.Register(new("use_blackforest", "Use Black Forest Labs API", "Allows using Black Forest Labs' Flux model APIs for image generation.", PermissionDefault.POWERUSERS, APIBackendsPermGroup));
     public static readonly PermInfo PermUseGrok = Permissions.Register(new("use_grok", "Use Grok API", "Allows using Grok's API for image generation.", PermissionDefault.POWERUSERS, APIBackendsPermGroup));
-    public static readonly PermInfo PermUseGoogleImagen = Permissions.Register(new("use_google_api", "Use Google API", "Allows using Google's image generation models (Imagen, Gemini) for image generation.", PermissionDefault.POWERUSERS, APIBackendsPermGroup));
+    public static readonly PermInfo PermUseGoogleImagen = Permissions.Register(new("use_google_api", "Use Google API", "Allows using Google's Gemini image generation models for image generation.", PermissionDefault.POWERUSERS, APIBackendsPermGroup));
     public static readonly PermInfo PermUseFal = Permissions.Register(new("use_fal_api", "Use Fal.ai API", "Allows using Fal.ai's 600+ models for image and video generation.", PermissionDefault.POWERUSERS, APIBackendsPermGroup));
     public static readonly PermInfo PermViewCapabilities = Permissions.Register(new("view_api_model_capabilities", "View API Model Capabilities", "Allows reading the API model capability map that drives parameter visibility.", PermissionDefault.GUEST, APIBackendsPermGroup));
 }
@@ -107,8 +107,6 @@ public class SwarmUIAPIBackends : Extension
 
     // Google Parameters
     public static T2IRegisteredParam<string> AspectRatioParam_Google;
-    public static T2IRegisteredParam<string> PersonGenerationParam_Google;
-    public static T2IRegisteredParam<string> ImageSizeParam_Google;
     public static T2IRegisteredParam<string> ImageSizeParam_GoogleGemini3;
     public static T2IRegisteredParam<Image> InitImageParam_Google => T2IParamTypes.InitImage;
 
@@ -249,7 +247,7 @@ public class SwarmUIAPIBackends : Extension
         Grok2ImageGroup = new("Grok Image Settings", Toggles: false, Open: true, OrderPriority: 37, Description: "Parameters for Grok image generation and editing.");
 
         GoogleParamGroup = new("Google API", Toggles: false, Open: true, OrderPriority: 35, Description: "API access to Google's image generation models.");
-        GoogleImagenGroup = new("Google Image Settings", Toggles: false, Open: true, OrderPriority: 35, Description: "Parameters for Google Imagen and Gemini image generation.");
+        GoogleImagenGroup = new("Google Image Settings", Toggles: false, Open: true, OrderPriority: 35, Description: "Parameters for Google Gemini image generation.");
 
         BlackForestGroup = new("Black Forest Labs API", Toggles: false, Open: true, OrderPriority: 40, Description: "API access to Black Forest Labs' high quality Flux image generation models.");
         BlackForestGeneralGroup = new("Flux Core Settings", Toggles: false, Open: true, OrderPriority: 40, Description: "Core parameters for Flux image generation.\nFlux models excel at high-quality image generation with strong artistic control.");
@@ -524,33 +522,15 @@ public class SwarmUIAPIBackends : Extension
             "1:1", GetValues: _ => ["1:1///Square (1:1)", "16:9///Landscape (16:9)", "9:16///Portrait (9:16)", "4:3///Landscape (4:3)", "3:4///Portrait (3:4)"],
             OrderPriority: -10, Group: GoogleImagenGroup, FeatureFlag: "google_api"));
 
-        PersonGenerationParam_Google = T2IParamTypes.Register<string>(new("Person Generation",
-            "Controls whether the model can generate images of people (Imagen only).\n" +
-            "'Allow Adult' - Generate images of adults only (default)\n" +
-            "'Allow All' - Generate images of adults and children\n" +
-            "'Don't Allow' - Block all person generation",
-            "allow_adult", GetValues: _ => [
-                "allow_adult///Allow Adults (Default)",
-                "allow_all///Allow All (Adults & Children)",
-                "dont_allow///Don't Allow"
-            ],
-            OrderPriority: -8, Group: GoogleImagenGroup, FeatureFlag: "google_imagen_params"));
-
-        ImageSizeParam_Google = T2IParamTypes.Register<string>(new("Google Image Size",
-            "Controls the output resolution (Imagen only).\n" +
-            "'1K' - Standard resolution (~1024px)\n" +
-            "'2K' - Higher resolution (~2048px)",
-            "1K", GetValues: _ => ["1K///1K (Standard)", "2K///2K (Higher Quality)"],
-            OrderPriority: -7, Group: GoogleImagenGroup, FeatureFlag: "google_imagen_params"));
-
         ImageSizeParam_GoogleGemini3 = T2IParamTypes.Register<string>(new("Gemini Image Resolution",
             "Controls the output resolution for Gemini 3 image models.\n" +
-            "Gemini 3.1 Flash: 512px, 1K (default), 2K, 4K\n" +
-            "Gemini 3 Pro: 1K (default), 2K, 4K\n" +
+            "512: Nano Banana 2 (gemini-3.1-flash-image) only\n" +
+            "1K (default): all Gemini 3 image models\n" +
+            "2K, 4K: all except Nano Banana 2 Lite (1K only)\n" +
             "Higher resolutions produce more detailed images but cost more.\n" +
             "Must use uppercase 'K' (e.g. 1K, 2K, 4K).",
             "1K", GetValues: _ => [
-                "512px///512px (0.5K - Flash only)",
+                "512///512px (0.5K - Nano Banana 2 only)",
                 "1K///1K (Standard, Default)",
                 "2K///2K (High Quality)",
                 "4K///4K (Ultra High Quality)"
@@ -1227,7 +1207,7 @@ public class SwarmUIAPIBackends : Extension
         RegisterApiKeyIfNeeded("bfl_api", "black_forest", "Black Forest Labs (FLUX)", "https://dashboard.bfl.ai/", new HtmlString("To use Black Forest in SwarmUI (via Hartsy extensions), you must set your Black Forest API key."));
         RegisterApiKeyIfNeeded("ideogram_api", "ideogram", "Ideogram", "https://developer.ideogram.ai/ideogram-api/api-setup", new HtmlString("To use Ideogram in SwarmUI (via Hartsy extensions), you must set your Ideogram API key."));
         RegisterApiKeyIfNeeded("grok_api", "grok", "Grok", "https://accounts.x.ai/sign-up?redirect=grok-com", new HtmlString("To use Grok in SwarmUI (via Hartsy extensions), you must set your Grok API key."));
-        RegisterApiKeyIfNeeded("google_api", "google", "Google (Imagen, Gemini)", "https://ai.google.dev/gemini-api/docs/api-key", new HtmlString("To use Google models in SwarmUI (via Hartsy extensions), you must set your Google API key."));
+        RegisterApiKeyIfNeeded("google_api", "google", "Google (Gemini)", "https://ai.google.dev/gemini-api/docs/api-key", new HtmlString("To use Google models in SwarmUI (via Hartsy extensions), you must set your Google API key."));
         RegisterApiKeyIfNeeded("fal_api", "fal", "Fal.ai (600+ Models)", "https://fal.ai/dashboard/keys", new HtmlString("To use Fal.ai models in SwarmUI (via Hartsy extensions), you must set your Fal.ai API key."));
         Logs.Init("Hartsy's APIBackends extension V1.1 has successfully started.");
     }
@@ -1266,7 +1246,7 @@ public class SwarmUIAPIBackends : Extension
             "flux_ultra_params", "flux_pro_params", "flux_dev_params",
             "flux_kontext_pro_params", "flux_kontext_max_params", "flux_2_max_params", "flux_2_pro_params",
             "flux_2_klein_params", "bfl_prompt_enhance",
-            "grok_2_image_params", "google_imagen_params", "google_gemini_params", "google_gemini3_params",
+            "grok_2_image_params", "google_gemini_params", "google_gemini3_params",
             "fal_t2i_params", "fal_i2i_params", "fal_video_params", "fal_utility_params",
             "fal_aspect_image", "fal_resolution_image", "fal_recraft_params",
             "fal_kling_video_params", "fal_veo_video_params",

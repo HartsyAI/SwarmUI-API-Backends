@@ -43,7 +43,7 @@ The APIBackends Extension for SwarmUI enables integration with multiple commerci
   - Ideogram (V1, V2, V2 Turbo, V2A, V3, V4)
   - Black Forest Labs (FLUX Pro, Ultra, Dev, Kontext Pro/Max, FLUX 2 Pro/Max/Flex/Klein, FLUX 3 Video)
   - Grok (Grok Imagine Image 2.0, Grok Imagine Image, Grok 2 Image)
-  - Google (Imagen 3.0, Gemini 2.0 Flash, Gemini 2.5 Flash, Gemini 3.1 Flash, Gemini 3 Pro)
+  - Google (Gemini 2.5 Flash Image, Gemini 3.1 Flash Image, Gemini 3.1 Flash Lite Image, Gemini Nano Banana 2.1, Gemini 3 Pro Image)
   - Fal.ai (130+ models -- image, video, and utility -- via a single API key)
 * Provider-specific parameter controls that show/hide automatically per model
 * Video generation support (Seedance 2.0, Sora 2, Veo 3.1, Kling, Grok Video, Hailuo, PixVerse, Wan, and more)
@@ -158,7 +158,7 @@ Each API provider requires an API key. Get yours here:
 | Black Forest Labs (FLUX) | https://dashboard.bfl.ai/ |
 | Ideogram | https://developer.ideogram.ai/ideogram-api/api-setup |
 | Grok (xAI) | https://accounts.x.ai/ |
-| Google (Imagen, Gemini) | https://ai.google.dev/gemini-api/docs/api-key |
+| Google (Gemini) | https://ai.google.dev/gemini-api/docs/api-key |
 | Fal.ai | https://fal.ai/dashboard/keys |
 
 ### Provider Parameters
@@ -169,7 +169,7 @@ Parameters are shown/hidden automatically based on which model you select.
 * **Ideogram:** Aspect Ratio, Style Type, Magic Prompt, Rendering Speed, Image Remix Weight, Color Theme, Negative Prompt, Image Prompt (for editing)
 * **Black Forest Labs:** Width, Height, Guidance, Steps, Prompt Enhancement, Raw Mode, Init Image, Safety Filter Level, Output Format
 * **Grok:** Aspect Ratio, Output Resolution
-* **Google:** Aspect Ratio, Person Generation, Image Size (Imagen), Image Resolution (Gemini 3)
+* **Google:** Aspect Ratio, Image Resolution (Gemini 3)
 * **Fal.ai Image:** Image Size, Aspect Ratio, Resolution, Guidance Scale, Inference Steps, Seed, Output Format, Safety Checker, Negative Prompt, Recraft Style
 * **Fal.ai Video:** Each video model family has its own parameter set with model-specific Duration, Aspect Ratio, Resolution, Generate Audio, and Negative Prompt options. Supported families: Seedance 2.0, Seedance 1.0, Kling, Veo, Luma, MiniMax, Hunyuan, and generic (Wan, Pika, PixVerse, etc.)
 * **Fal.ai Seedance Ref2V:** Reference Image URLs, Reference Video URLs, Reference Audio URLs (for multi-reference video generation)
@@ -198,7 +198,7 @@ SwarmUI-API-Backends/
     BlackForestLabs.cs         -- BFL provider (FLUX models)
     Ideogram.cs                -- Ideogram provider
     Grok.cs                    -- Grok/xAI provider
-    Google.cs                  -- Google provider (Imagen, Gemini)
+    Google.cs                  -- Google provider (Gemini)
     Fal.cs                     -- Fal.ai provider (130+ models)
   Assets/
     api-backends.js            -- UI parameter visibility (feature flags)
