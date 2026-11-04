@@ -40,7 +40,7 @@ The APIBackends Extension for SwarmUI enables integration with multiple commerci
 
 * Currently supports 6 API providers:
   - OpenAI (DALL-E 2, DALL-E 3, GPT Image 1, GPT Image 1.5, GPT Image 2, Sora)
-  - Ideogram (V1, V2, V2 Turbo, V3)
+  - Ideogram (V1, V2, V2 Turbo, V2A, V3, V4)
   - Black Forest Labs (FLUX Pro, Ultra, Dev, Kontext Pro/Max, FLUX 2 Pro/Max)
   - Grok (Grok 2 Image)
   - Google (Imagen 3.0, Gemini 2.0 Flash, Gemini 2.5 Flash, Gemini 3.1 Flash, Gemini 3 Pro)

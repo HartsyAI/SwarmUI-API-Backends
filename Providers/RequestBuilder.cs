@@ -315,6 +315,9 @@ public sealed class IdeogramRequestBuilder : BaseRequestBuilder
         ["3:1"] = "ASPECT_3_1"
     };
 
+    /// <summary>Legacy model IDs that accept negative_prompt (per the Ideogram v1 API reference).</summary>
+    private static readonly HashSet<string> LegacyNegativePromptModels = new() { "V_1", "V_2", "V_2_TURBO" };
+
     private static readonly Dictionary<string, string> V3AspectRatioMap = new()
     {
         ["1:1"] = "1x1",
@@ -385,6 +388,9 @@ public sealed class IdeogramRequestBuilder : BaseRequestBuilder
         bool isV3 = IsV3Model(model);
         bool hasInitImage = input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null;
         bool hasMask = input.TryGet(T2IParamTypes.MaskImage, out Image maskImg) && maskImg?.RawData is not null;
+        // Mask + init image is an edit (/edit for legacy models, /v1/ideogram-v3/edit for V3)
+        bool isEdit = hasInitImage && hasMask;
+        bool legacyEdit = isEdit && !isV3;
         JObject requestBody = new()
         {
             ["prompt"] = input.Get(T2IParamTypes.Prompt)
@@ -393,58 +399,39 @@ public sealed class IdeogramRequestBuilder : BaseRequestBuilder
         {
             requestBody["model"] = model.Id;
         }
-        // Common params
-        if (input.TryGet(SwarmUIAPIBackends.MagicPromptParam_Ideogram, out string magic)) requestBody["magic_prompt_option"] = magic;
-        else requestBody["magic_prompt_option"] = "AUTO";
-        if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Ideogram, out string aspect)) requestBody["aspect_ratio"] = isV3 ? MapAspectRatioV3(aspect) : MapAspectRatioLegacy(aspect);
+        // Magic prompt: V3 uses magic_prompt, legacy models use magic_prompt_option
+        string magicKey = isV3 ? "magic_prompt" : "magic_prompt_option";
+        string magic = "AUTO";
+        if (input.TryGet(SwarmUIAPIBackends.MagicPromptParam_Ideogram, out string magicParam)) magic = magicParam;
+        requestBody[magicKey] = magic;
         if (input.TryGet(SwarmUIAPIBackends.StyleTypeParam_Ideogram, out string style) && !string.IsNullOrEmpty(style)) requestBody["style_type"] = style;
         if (input.TryGet(T2IParamTypes.Seed, out long seed) && seed >= 0) requestBody["seed"] = (int)seed;
-        // Negative prompt: legacy models only (V3 doesn't support it)
-        if (!isV3 && input.TryGet(SwarmUIAPIBackends.NegativePromptParam_Ideogram, out string negPrompt) && !string.IsNullOrEmpty(negPrompt))
-            requestBody["negative_prompt"] = negPrompt;
-        // Color palette (V2+ only, handled by feature flag)
-        if (input.TryGet(SwarmUIAPIBackends.ColorPaletteParam_Ideogram, out string palette) && !string.IsNullOrEmpty(palette) && palette != "None")
+        // Edits do not accept aspect ratio or negative prompt
+        if (!isEdit)
+        {
+            if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Ideogram, out string aspect)) requestBody["aspect_ratio"] = isV3 ? MapAspectRatioV3(aspect) : MapAspectRatioLegacy(aspect);
+            bool supportsNegative = isV3 || LegacyNegativePromptModels.Contains(model.Id);
+            if (supportsNegative && input.TryGet(SwarmUIAPIBackends.NegativePromptParam_Ideogram, out string negPrompt) && !string.IsNullOrEmpty(negPrompt))
+                requestBody["negative_prompt"] = negPrompt;
+        }
+        // Color palette (V2+ only, handled by feature flag); legacy /edit does not accept it
+        if (!legacyEdit && input.TryGet(SwarmUIAPIBackends.ColorPaletteParam_Ideogram, out string palette) && !string.IsNullOrEmpty(palette) && palette != "None")
             requestBody["color_palette"] = new JObject { ["name"] = palette };
         // V3-specific params
         if (isV3)
         {
             if (input.TryGet(SwarmUIAPIBackends.RenderingSpeedParam_Ideogram, out string speed)) requestBody["rendering_speed"] = speed;
+            // Image weight: V3 remix only (scale 0-1 to the API's 1-100)
+            if (hasInitImage && !hasMask && input.TryGet(SwarmUIAPIBackends.ImageWeightParam_Ideogram, out double weight))
+                requestBody["image_weight"] = Math.Clamp((int)Math.Round(weight * 100), 1, 100);
         }
-        // Image input: use core Swarm InitImage
-        if (hasInitImage)
-        {
-            string base64Image = Convert.ToBase64String(initImg.RawData);
-            requestBody["image"] = base64Image;
-            if (hasMask)
-            {
-                requestBody["mask"] = Convert.ToBase64String(maskImg.RawData);
-            }
-            // Image weight: V3 remix only (scale 0-1 to 1-100)
-            if (isV3 && !hasMask && input.TryGet(SwarmUIAPIBackends.ImageWeightParam_Ideogram, out double weight))
-                requestBody["image_weight"] = (int)Math.Round(weight * 100);
-        }
-        if (isV3)
+        // Input images are attached as multipart files by DynamicAPIBackend, so they are not part of this body.
+        // Legacy generate takes image_request as JSON; legacy remix takes it as a multipart field next to image_file.
+        if (isV3 || isEdit)
         {
             return requestBody;
         }
         return new JObject { ["image_request"] = requestBody };
-    }
-
-    public override string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input)
-    {
-        bool hasInitImage = input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null;
-        bool hasMask = input.TryGet(T2IParamTypes.MaskImage, out Image maskImg) && maskImg?.RawData is not null;
-        if (IsV4Model(model))
-        {
-            return "https://api.ideogram.ai/v1/ideogram-v4/generate";
-        }
-        if (IsV3Model(model))
-        {
-            if (hasInitImage && hasMask) return "https://api.ideogram.ai/v1/ideogram-v3/edit";
-            if (hasInitImage) return "https://api.ideogram.ai/v1/ideogram-v3/remix";
-            return "https://api.ideogram.ai/v1/ideogram-v3/generate";
-        }
-        return hasInitImage ? "https://api.ideogram.ai/edit" : provider.BaseUrl;
     }
 
     public override void AddAuthHeaders(HttpRequestMessage request, string apiKey, ProviderDefinition provider)

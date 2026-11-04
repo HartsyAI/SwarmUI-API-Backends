@@ -343,7 +343,8 @@ const APIBackendsConfig = {
             if (paramId === 'initimage' && flags.includes('fal_i2i_params')) return true;
         }
         if (curArch === 'ideogram_api' && modelName.includes('V_4')) {
-            return false;
+            // V4 has no seed or mask input; Init Image drives the /remix route
+            return paramId === 'initimage';
         }
         const providerConfig = this.coreParamsToShow[curArch];
         if (!providerConfig) return false;
