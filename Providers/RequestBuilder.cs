@@ -489,7 +489,7 @@ public sealed class BlackForestRequestBuilder : BaseRequestBuilder
             if (input.TryGet(SwarmUIAPIBackends.GuidanceParam_BlackForest, out double guidance)) request["guidance"] = guidance;
             if (input.TryGet(SwarmUIAPIBackends.StepsParam_BlackForest, out int steps)) request["steps"] = steps;
         }
-        // Prompt upsampling: all except flux-2-* models
+        // Prompt upsampling: FLUX.1 takes prompt_upsampling. FLUX.2 has no toggle here, so its API default (on) applies.
         if (!modelId.StartsWith("flux-2-"))
         {
             if (input.TryGet(SwarmUIAPIBackends.PromptUpsampling_BlackForest, out bool upsample)) request["prompt_upsampling"] = upsample;
@@ -499,17 +499,18 @@ public sealed class BlackForestRequestBuilder : BaseRequestBuilder
         {
             if (input.TryGet(SwarmUIAPIBackends.RawModeParam_BlackForest, out bool raw)) request["raw"] = raw;
         }
-        // Image input: use core Swarm InitImage, sent as image_prompt or input_image depending on model
+        // Image input: use core Swarm InitImage, sent as input_image (Kontext, FLUX.2) or image_prompt (FLUX 1.1, Dev)
         if (input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null)
         {
             string base64Image = Convert.ToBase64String(initImg.RawData);
-            if (modelId is "flux-kontext-pro" or "flux-kontext-max" or "flux-2-pro" or "flux-2-max" or "flux-2-flex")
+            if (modelId is "flux-kontext-pro" or "flux-kontext-max" or "flux-2-pro" or "flux-2-max" or "flux-2-flex" or "flux-2-klein-9b" or "flux-2-klein-4b")
             {
                 request["input_image"] = base64Image;
-                // FLUX.2 also accepts input_image_2..8; extra references come from the shared reference URL param.
+                // FLUX.2 takes input_image_2 onward as extra references (Klein: up to input_image_4, others up to input_image_8).
+                int maxInputImages = modelId.StartsWith("flux-2-klein-") ? 4 : 8;
                 if (modelId.StartsWith("flux-2-") && UrlList(input, SwarmUIAPIBackends.RefImageUrlsParam) is JArray extras)
                 {
-                    for (int i = 0; i < extras.Count && i < 7; i++)
+                    for (int i = 0; i < extras.Count && i + 2 <= maxInputImages; i++)
                     {
                         request[$"input_image_{i + 2}"] = extras[i];
                     }
@@ -541,8 +542,9 @@ public sealed class BlackForestRequestBuilder : BaseRequestBuilder
         bool hasImage = input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null;
         if (hasImage)
         {
+            // A single opening frame is sent as one base64 string; the array form is only for timestamped [seconds, image] pairs.
             request["mode"] = "i2v";
-            request["keyframes"] = new JArray($"data:image/png;base64,{Convert.ToBase64String(initImg.RawData)}");
+            request["keyframes"] = Convert.ToBase64String(initImg.RawData);
         }
         else
         {
@@ -572,27 +574,21 @@ public sealed class BlackForestRequestBuilder : BaseRequestBuilder
 
     public override async Task<byte[][]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
     {
+        if (string.IsNullOrEmpty(apiKey))
+        {
+            throw new Exception("Black Forest Labs polling needs an API key.");
+        }
         string pollingUrl = response["polling_url"]?.ToString();
-        if (!string.IsNullOrEmpty(pollingUrl) && !string.IsNullOrEmpty(apiKey))
+        if (string.IsNullOrEmpty(pollingUrl))
         {
-            return [await PollForResult(pollingUrl, apiKey)];
+            throw new Exception($"Black Forest Labs response missing polling_url. Response: {response}");
         }
-        string resultUrl = response["result"]?["sample"]?.ToString();
-        if (!string.IsNullOrEmpty(resultUrl))
-        {
-            return [await DownloadImageFromUrl(resultUrl)];
-        }
-        if (response["sample"] is not null)
-        {
-            string sampleUrl = response["sample"].ToString();
-            return [await DownloadImageFromUrl(sampleUrl)];
-        }
-        throw new Exception($"Black Forest Labs response missing image data. Response: {response}");
+        return [await PollForResult(pollingUrl, apiKey)];
     }
 
     private async Task<byte[]> PollForResult(string pollingUrl, string apiKey)
     {
-        // Video jobs run for minutes, far past the 2 minutes the original image-only budget allowed.
+        // Video jobs run for minutes, so the budget is 450 polls at 2 seconds each.
         int maxAttempts = 450;
         int delayMs = 2000;
         for (int i = 0; i < maxAttempts; i++)
@@ -608,21 +604,20 @@ public sealed class BlackForestRequestBuilder : BaseRequestBuilder
             Logs.Verbose($"[BFL] Polling status: {status}");
             if (status is "Ready")
             {
-                // Images come back under 'sample'; video jobs use a video key instead.
-                JToken payload = result["result"];
-                string sampleUrl = (payload?["sample"] ?? payload?["video"] ?? payload?["video_url"])?.ToString();
-                if (!string.IsNullOrEmpty(sampleUrl))
+                // The finished image or video URL is result.sample.
+                string sampleUrl = result["result"]?["sample"]?.ToString();
+                if (string.IsNullOrEmpty(sampleUrl))
                 {
-                    return await DownloadImageFromUrl(sampleUrl);
+                    throw new Exception($"BFL result ready but carried no sample URL. Result: {result["result"]}");
                 }
-                throw new Exception($"BFL result ready but carried no downloadable URL. Result: {payload}");
+                return await DownloadImageFromUrl(sampleUrl);
             }
-            else if (status is "Error" || status is "Failed")
+            if (status is "Error" or "Request Moderated" or "Content Moderated")
             {
-                throw new Exception($"BFL generation failed: {result}");
+                throw new Exception($"BFL generation failed with status '{status}': {result}");
             }
         }
-        throw new Exception("BFL polling timed out after 120 seconds");
+        throw new Exception($"BFL polling timed out after {maxAttempts * delayMs / 1000} seconds");
     }
 }
 
