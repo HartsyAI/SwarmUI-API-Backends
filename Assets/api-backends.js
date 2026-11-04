@@ -22,10 +22,10 @@ const APIBackendsConfig = {
     providers: {
         openai_api: ['gpt-image-1.5_params', 'gpt-image-2_params', 'gpt_image_params', 'openai_image_size'],
         ideogram_api: ['ideogram_v1_params', 'ideogram_v2_params', 'ideogram_v3_params', 'ideogram_v4_params', 'ideogram_style'],
-        bfl_api: ['flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params', 'flux_2_max_params', 'flux_2_pro_params', 'bfl_prompt_enhance', 'bfl_image_prompt'],
+        bfl_api: ['flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params', 'flux_2_max_params', 'flux_2_pro_params', 'flux_2_flex_params', 'flux_2_klein_params', 'bfl_prompt_enhance', 'bfl_flux3_params'],
         grok_api: ['grok_2_image_params'],
-        google_api: ['google_imagen_params', 'google_gemini_params', 'google_gemini3_params'],
-        fal_api: ['fal_t2i_params', 'fal_i2i_params', 'fal_video_params', 'fal_utility_params', 'fal_aspect_image', 'fal_resolution_image', 'fal_recraft_params', 'fal_sora_video_params', 'fal_kling_video_params', 'fal_veo_video_params', 'fal_minimax_video_params', 'fal_luma_video_params', 'fal_hunyuan_video_params', 'fal_seedance2_video_params', 'fal_seedance1_video_params', 'fal_seedance_ref_params']
+        google_api: ['google_gemini_params', 'google_gemini3_params'],
+        fal_api: ['fal_t2i_params', 'fal_i2i_params', 'fal_video_params', 'fal_utility_params', 'fal_aspect_image', 'fal_resolution_image', 'fal_recraft_params', 'fal_kling_video_params', 'fal_veo_video_params', 'fal_minimax_video_params', 'fal_luma_video_params', 'fal_hunyuan_video_params', 'fal_seedance2_video_params', 'fal_seedance1_video_params', 'fal_seedance_ref_params']
     },
 
     // Model name patterns to feature flags (order matters)
@@ -34,11 +34,11 @@ const APIBackendsConfig = {
             { pattern: 'grok-2-image', flag: 'grok_2_image_params' }
         ],
         google_api: [
-            { pattern: 'imagen-3.0', flag: 'google_imagen_params' },
             { pattern: 'gemini-3.1-flash-image', flag: 'google_gemini3_params' },
+            { pattern: 'gemini-3.1-flash-lite-image', flag: 'google_gemini3_params' },
+            { pattern: 'gemini-nano-banana-2.1', flag: 'google_gemini3_params' },
             { pattern: 'gemini-3-pro-image', flag: 'google_gemini3_params' },
-            { pattern: 'gemini-2.5-flash-image', flag: 'google_gemini_params' },
-            { pattern: 'gemini-2.0', flag: 'google_gemini_params' }
+            { pattern: 'gemini-2.5-flash-image', flag: 'google_gemini_params' }
         ]
     },
 
@@ -51,13 +51,15 @@ const APIBackendsConfig = {
             'flux-kontext-pro': ['seed', 'aspectratio', 'initimage'],
             'flux-kontext-max': ['seed', 'aspectratio', 'initimage'],
             'flux-2-pro': ['seed', 'width', 'height', 'initimage'],
-            'flux-2-max': ['seed', 'width', 'height', 'initimage']
+            'flux-2-max': ['seed', 'width', 'height', 'initimage'],
+            'flux-2-flex': ['seed', 'width', 'height', 'initimage'],
+            'flux-2-klein': ['seed', 'width', 'height', 'initimage']
         },
         ideogram_api: {
             '*': ['seed', 'initimage', 'maskimage']
         },
         grok_api: {
-            '*': ['seed', 'initimage']
+            '*': ['initimage']
         },
         google_api: {
             'gemini-': ['seed', 'initimage'],
@@ -69,7 +71,6 @@ const APIBackendsConfig = {
             '-ref2v': ['seed', 'initimage'],
             'flux-pro-ultra': ['seed'],
             'nano-banana-pro': ['seed'],
-            '/Google/imagen-3': ['seed'],
             '*': ['seed']
         }
     },
@@ -155,14 +156,11 @@ const APIBackendsConfig = {
 
     getGoogleModelFlags(modelName) {
         let flags = [];
-        if (modelName.includes('gemini-3.1-flash-image') || modelName.includes('gemini-3-pro-image')) {
+        if (modelName.includes('gemini-3.1-flash-image') || modelName.includes('gemini-3.1-flash-lite-image') || modelName.includes('gemini-nano-banana-2.1') || modelName.includes('gemini-3-pro-image')) {
             flags.push('google_gemini3_params');
         }
-        else if (modelName.includes('gemini-2.5-flash-image') || modelName.includes('gemini-2.0')) {
+        else if (modelName.includes('gemini-2.5-flash-image')) {
             flags.push('google_gemini_params');
-        }
-        else if (modelName.includes('imagen-')) {
-            flags.push('google_imagen_params');
         }
         return flags;
     },
@@ -195,21 +193,19 @@ const APIBackendsConfig = {
     },
 
     // BFL capability-based flags per model (returns multiple flags)
+    // Fallback only, used when the capability map did not load. Mirrors the BFL flags in ModelCapabilities.cs.
     getBflModelFlags(modelName) {
-        let flags = [];
-        // Model-specific flag
-        if (modelName.includes('flux-pro-1.1-ultra')) flags.push('flux_ultra_params');
-        else if (modelName.includes('flux-pro-1.1')) flags.push('flux_pro_params');
-        else if (modelName.includes('flux-dev')) flags.push('flux_dev_params');
-        else if (modelName.includes('flux-kontext-pro')) flags.push('flux_kontext_pro_params');
-        else if (modelName.includes('flux-kontext-max')) flags.push('flux_kontext_max_params');
-        else if (modelName.includes('flux-2-pro')) flags.push('flux_2_pro_params');
-        else if (modelName.includes('flux-2-max')) flags.push('flux_2_max_params');
-        // Prompt enhancement: all except flux-2-* models
-        if (!modelName.includes('flux-2-')) flags.push('bfl_prompt_enhance');
-        // Image prompt (single): flux-dev, flux-pro-1.1, flux-ultra
-        if (modelName.includes('flux-dev') || modelName.includes('flux-pro-1.1')) flags.push('bfl_image_prompt');
-        return flags;
+        if (modelName.includes('flux-pro-1.1-ultra')) return ['flux_ultra_params', 'bfl_prompt_enhance'];
+        if (modelName.includes('flux-pro-1.1')) return ['flux_pro_params', 'bfl_prompt_enhance'];
+        if (modelName.includes('flux-dev')) return ['flux_dev_params', 'fal_img_steps', 'bfl_prompt_enhance'];
+        if (modelName.includes('flux-kontext-pro')) return ['flux_kontext_pro_params', 'bfl_prompt_enhance'];
+        if (modelName.includes('flux-kontext-max')) return ['flux_kontext_max_params', 'bfl_prompt_enhance'];
+        if (modelName.includes('flux-2-pro')) return ['flux_2_pro_params'];
+        if (modelName.includes('flux-2-max')) return ['flux_2_max_params'];
+        if (modelName.includes('flux-2-flex')) return ['flux_2_flex_params', 'flux_dev_params', 'fal_img_steps'];
+        if (modelName.includes('flux-2-klein')) return ['flux_2_klein_params'];
+        if (modelName.includes('flux-3-video')) return ['bfl_flux3_params', 'fal_flux3_params', 'fal_video_audio'];
+        return [];
     },
 
     getFalModelFlags(modelName) {
@@ -228,7 +224,6 @@ const APIBackendsConfig = {
             if (modelName.includes('grok-imagine-video-edit')) isVideo = true;
         }
         if (isVideo) {
-            if (modelName.includes('/Sora/')) return ['fal_sora_video_params'];
             if (modelName.includes('/Kling/')) return ['fal_kling_video_params'];
             if (modelName.includes('/Google/') && modelName.includes('veo')) return ['fal_veo_video_params'];
             if (modelName.includes('seedance') && modelName.includes('2.0')) {
@@ -258,11 +253,6 @@ const APIBackendsConfig = {
         // Nano Banana Pro (Google via Fal): aspect_ratio + resolution, NO image_size/steps/guidance
         if (modelName.includes('nano-banana-pro')) {
             flags.push('fal_aspect_image', 'fal_resolution_image');
-            return flags;
-        }
-        // Google Imagen 3: aspect_ratio, NO image_size/steps/guidance
-        if (modelName.includes('/Google/imagen-3')) {
-            flags.push('fal_aspect_image');
             return flags;
         }
         // Grok Imagine Image (+ edit): aspect_ratio, NO image_size/steps/guidance/seed
@@ -302,7 +292,6 @@ const APIBackendsConfig = {
         if (modelName.endsWith('-edit')) return true;
         if (modelName.endsWith('-i2i')) return true;
         if (modelName.includes('kontext')) return true;
-        if (modelName.includes('hidream-e1')) return true;
         // Dual models that support both t2i and editing (image input optional)
         if (modelName.includes('seedream')) return true;
         if (modelName.includes('omnigen')) return true;
@@ -338,7 +327,8 @@ const APIBackendsConfig = {
             if (paramId === 'initimage' && flags.includes('fal_i2i_params')) return true;
         }
         if (curArch === 'ideogram_api' && modelName.includes('V_4')) {
-            return false;
+            // V4 has no seed or mask input; Init Image drives the /remix route
+            return paramId === 'initimage';
         }
         const providerConfig = this.coreParamsToShow[curArch];
         if (!providerConfig) return false;
