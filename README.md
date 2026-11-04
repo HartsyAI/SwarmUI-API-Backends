@@ -166,7 +166,7 @@ Each API provider requires an API key. Get yours here:
 Parameters are shown/hidden automatically based on which model you select.
 
 * **OpenAI:** Image Size, Quality, Background (GPT Image), Output Format, Moderation, Output Compression. GPT Image 2 supports up to 2K resolution.
-* **Ideogram:** Aspect Ratio, Style Type, Magic Prompt, Rendering Speed, Image Remix Weight, Color Theme, Negative Prompt, Image Prompt (for editing)
+* **Ideogram:** Aspect Ratio, Style Type, Magic Prompt, Rendering Speed, Image Remix Weight, Color Theme, Negative Prompt, Copyright Detection (V4). Init Image remixes an image; add a Mask to edit it.
 * **Black Forest Labs:** Width, Height, Guidance, Steps, Prompt Enhancement, Raw Mode, Init Image, Safety Filter Level, Output Format
 * **Grok:** Aspect Ratio, Output Resolution
 * **Google:** Aspect Ratio, Image Resolution (Gemini 3)
@@ -300,6 +300,7 @@ For further help, join the [Hartsy Discord Community](https://discord.gg/nWfCupj
 ## Changelog
 ------------
 
+* Unreleased: Model catalog updated to the live provider APIs. Removed OpenAI DALL-E 2/3, GPT Image 1 and Sora models; Google Imagen and retired Gemini preview IDs; Grok Imagine Image Quality; and 14 Fal.ai endpoints that no longer exist, including Fal Sora, Veo 2, Imagen 3, F-Lite, Reve Edit and Step1X. Added GPT Image 2.5, Ideogram V2A, Grok Imagine Image 2.0, Gemini 3.1 Flash Lite Image, Gemini Nano Banana 2.1, and new Fal.ai image and video models. Init Image is enabled for Ideogram and BFL models that accept one.
 * Version 1.3: ByteDance Seedance video models (2.0, 1.0 -- T2V, I2V, Ref2V), toggle switch UI for backend settings, expanded utility model catalog, content policy troubleshooting
 * Version 1.2: Fal.ai video generation support (120+ models), automatic parameter visibility per model type, video output as .mp4
 * Version 1.1: Modular provider/model factory architecture, unified `API Models/<Provider>/...` model naming
