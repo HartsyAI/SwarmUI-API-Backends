@@ -251,7 +251,7 @@ public class SwarmUIAPIBackends : Extension
         IdeogramAdvancedGroup = new("Ideogram Advanced Settings", Toggles: true, Open: false, OrderPriority: 21, Description: "Additional options for fine-tuning Ideogram generations.");
 
         GrokParamGroup = new("Grok API", Toggles: false, Open: true, OrderPriority: 30, Description: "API access to Grok's image generation models.");
-        Grok2ImageGroup = new("Grok 2 Image Settings", Toggles: false, Open: true, OrderPriority: 37, Description: "Parameters specific to Grok's 2 Image model generation.");
+        Grok2ImageGroup = new("Grok Image Settings", Toggles: false, Open: true, OrderPriority: 37, Description: "Parameters for Grok image generation and editing.");
 
         GoogleParamGroup = new("Google API", Toggles: false, Open: true, OrderPriority: 35, Description: "API access to Google's image generation models.");
         GoogleImagenGroup = new("Google Image Settings", Toggles: false, Open: true, OrderPriority: 35, Description: "Parameters for Google Imagen and Gemini image generation.");
@@ -419,7 +419,7 @@ public class SwarmUIAPIBackends : Extension
 
         ResolutionParam_IdeogramV4 = T2IParamTypes.Register<string>(new("Ideogram VFour Resolution",
             "Output resolution for Ideogram V4.", "1024x1024",
-            GetValues: _ => ["1024x1024///Square", "1344x768///Landscape", "768x1344///Portrait", "1536x640///Wide", "640x1536///Tall"],
+            GetValues: _ => ["1024x1024///Square", "1280x720///Landscape", "720x1280///Portrait", "1536x512///Wide", "512x1536///Tall"],
             OrderPriority: -8, Group: T2IParamTypes.GroupResolution, FeatureFlag: "ideogram_v4_params"));
 
         CopyrightDetectionParam_IdeogramV4 = T2IParamTypes.Register<bool>(new("Ideogram Copyright Detection",
@@ -511,7 +511,8 @@ public class SwarmUIAPIBackends : Extension
                 "16:9///Landscape (16:9)", "9:16///Portrait (9:16)",
                 "4:3///Landscape (4:3)", "3:4///Portrait (3:4)",
                 "3:2///Landscape (3:2)", "2:3///Portrait (2:3)",
-                "2:1///Wide (2:1)", "1:2///Tall (1:2)"
+                "2:1///Wide (2:1)", "1:2///Tall (1:2)",
+                "21:9///Ultrawide (21:9)", "5:2///Wide Banner (5:2)"
             ],
             OrderPriority: -10, Group: Grok2ImageGroup, FeatureFlag: "grok_2_image_params"));
 
