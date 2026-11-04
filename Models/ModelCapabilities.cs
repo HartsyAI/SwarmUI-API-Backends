@@ -34,7 +34,6 @@ public static class ModelCapabilities
         ["image.bfl_steps"] = ["fal_img_steps"],
         ["utility.image"] = ["fal_utility_params"],
         ["utility.video"] = ["fal_utility_params", "fal_utility_video_params"],
-        ["video.sora"] = ["fal_sora_video_params"],
         ["video.kling"] = ["fal_kling_video_params"],
         ["video.veo"] = ["fal_veo_video_params"],
         ["video.luma"] = ["fal_luma_video_params"],

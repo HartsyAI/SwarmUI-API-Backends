@@ -120,7 +120,7 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<string> OutputFormatParam_Fal;
     public static T2IRegisteredParam<bool> SafetyCheckerParam_Fal;
 
-    // Fal.ai Aspect Ratio Image Parameters (FLUX Ultra, Kling Image, Nano Banana, Imagen 3)
+    // Fal.ai Aspect Ratio Image Parameters (FLUX Ultra, Kling Image, Nano Banana)
     public static T2IRegisteredParam<string> AspectRatioParam_FalImage;
     public static T2IRegisteredParam<string> ResolutionParam_FalImage;
     public static T2IRegisteredParam<string> OutputFormatParam_FalAspect;
@@ -140,11 +140,6 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<string> ResolutionParam_FalVideo;
     public static T2IRegisteredParam<bool> GenerateAudioParam_FalVideo;
     public static T2IRegisteredParam<string> NegativePromptParam_FalVideo;
-
-    // Sora-specific video parameters (duration: 4,8,12; aspect: 16:9,9:16; resolution: 720p,1080p; NO audio/negative)
-    public static T2IRegisteredParam<string> DurationParam_Sora;
-    public static T2IRegisteredParam<string> AspectRatioParam_Sora;
-    public static T2IRegisteredParam<string> ResolutionParam_Sora;
 
     // Kling-specific video parameters (duration: 3-15; aspect: 16:9,9:16,1:1; audio; negative; NO resolution)
     public static T2IRegisteredParam<string> DurationParam_Kling;
@@ -595,7 +590,7 @@ public class SwarmUIAPIBackends : Extension
             "jpeg", GetValues: _ => ["jpeg///JPEG (Smaller)", "png///PNG (Lossless)"],
             OrderPriority: -2, Group: T2IParamTypes.GroupSampling, FeatureFlag: "fal_img_common"));
 
-        // Fal.ai Aspect Ratio Image Parameters (FLUX Ultra, Kling Image, Nano Banana, Imagen 3)
+        // Fal.ai Aspect Ratio Image Parameters (FLUX Ultra, Kling Image, Nano Banana)
         AspectRatioParam_FalImage = T2IParamTypes.Register<string>(new("Image Aspect Ratio",
             "Aspect ratio for models that use aspect ratio instead of image size.\n" +
             "16:9: Widescreen, 9:16: Portrait, 1:1: Square, etc.",
@@ -780,35 +775,6 @@ public class SwarmUIAPIBackends : Extension
             "Resolution for Kandinsky 5 Pro. This model uses its own scale rather than 480p/720p.", "512P",
             GetValues: _ => ["512P///512P", "1024P///1024P (High)"],
             OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_kandinsky_params"));
-
-        // ===== SORA-SPECIFIC PARAMETERS =====
-        DurationParam_Sora = T2IParamTypes.Register<string>(new("Sora Video Duration",
-            "Length of the generated video in seconds.\n" +
-            "Sora supports 4, 8, or 12 second videos.",
-            "4", GetValues: _ => [
-                "4///4 seconds",
-                "8///8 seconds",
-                "12///12 seconds"
-            ],
-            OrderPriority: -10, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_sora_video_params"));
-
-        AspectRatioParam_Sora = T2IParamTypes.Register<string>(new("Sora Video Aspect Ratio",
-            "Aspect ratio for the generated video.\n" +
-            "Sora supports 16:9 (widescreen) and 9:16 (portrait).",
-            "16:9", GetValues: _ => [
-                "16:9///Widescreen (16:9)",
-                "9:16///Portrait (9:16)"
-            ],
-            OrderPriority: -9, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_sora_video_params"));
-
-        ResolutionParam_Sora = T2IParamTypes.Register<string>(new("Sora Video Resolution",
-            "Resolution of the generated video.\n" +
-            "Sora supports 720p and 1080p.",
-            "720p", GetValues: _ => [
-                "720p///720p (Standard)",
-                "1080p///1080p (HD)"
-            ],
-            OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "fal_sora_video_params"));
 
         // ===== KLING-SPECIFIC PARAMETERS =====
         DurationParam_Kling = T2IParamTypes.Register<string>(new("Kling Video Duration",
@@ -1303,7 +1269,7 @@ public class SwarmUIAPIBackends : Extension
             "grok_2_image_params", "google_imagen_params", "google_gemini_params", "google_gemini3_params",
             "fal_t2i_params", "fal_i2i_params", "fal_video_params", "fal_utility_params",
             "fal_aspect_image", "fal_resolution_image", "fal_recraft_params",
-            "fal_sora_video_params", "fal_kling_video_params", "fal_veo_video_params",
+            "fal_kling_video_params", "fal_veo_video_params",
             "fal_luma_video_params", "fal_minimax_video_params", "fal_hunyuan_video_params",
             "fal_seedance2_video_params", "fal_seedance1_video_params", "fal_seedance_ref_params",
             "fal_utility_video_params",

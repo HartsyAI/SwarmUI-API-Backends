@@ -812,7 +812,6 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         ["image.aspect"] = (i, r, m) => BuildAspectRatioImageParams(i, r, m.Id),
         ["image.recraft"] = (i, r, m) => BuildRecraftImageParams(i, r),
         ["image.bria"] = (i, r, m) => BuildBriaImageParams(i, r),
-        ["video.sora"] = (i, r, m) => BuildSoraVideoParams(i, r),
         ["video.kling"] = (i, r, m) => BuildKlingVideoParams(i, r),
         ["video.veo"] = (i, r, m) => BuildVeoVideoParams(i, r),
         ["video.luma"] = (i, r, m) => BuildLumaVideoParams(i, r),
@@ -981,7 +980,7 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         if (input.TryGet(SwarmUIAPIBackends.WebSearchParam_NB2, out bool search)) request["enable_web_search"] = search;
     }
 
-    /// <summary>Aspect ratio models: FLUX Ultra, Kling Image, Nano Banana, Imagen 3. Use aspect_ratio + resolution instead of image_size.</summary>
+    /// <summary>Aspect ratio models: FLUX Ultra, Kling Image, Nano Banana. Use aspect_ratio + resolution instead of image_size.</summary>
     private static void BuildAspectRatioImageParams(T2IParamInput input, JObject request, string modelId)
     {
         if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_FalImage, out string aspectRatio) && aspectRatio != "auto")
@@ -990,19 +989,13 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         if (input.TryGet(SwarmUIAPIBackends.ResolutionParam_FalImage, out string resolution))
             request["resolution"] = resolution;
         request["num_images"] = GetNumImages(input);
-        // Seed: supported by FLUX Ultra, Nano Banana, Imagen 3 (NOT Kling Image)
+        // Seed: supported by FLUX Ultra, Nano Banana (NOT Kling Image)
         if (!modelId.StartsWith("Kling/"))
         {
             if (input.TryGet(SwarmUIAPIBackends.SeedParam_Fal, out long seed) && seed >= 0) request["seed"] = seed;
         }
         // Output format: all aspect ratio models support it
         if (input.TryGet(SwarmUIAPIBackends.OutputFormatParam_FalAspect, out string format)) request["output_format"] = format;
-        // Negative prompt: Imagen 3 only
-        if (modelId.StartsWith("Google/imagen-3"))
-        {
-            if (input.TryGet(SwarmUIAPIBackends.NegativePromptParam_FalImage, out string negPrompt) && !string.IsNullOrEmpty(negPrompt))
-                request["negative_prompt"] = negPrompt;
-        }
     }
 
     /// <summary>Recraft V3: image_size + style, NO steps/guidance/seed.</summary>
@@ -1025,23 +1018,6 @@ public sealed class FalRequestBuilder : BaseRequestBuilder
         if (input.TryGet(SwarmUIAPIBackends.NumInferenceStepsParam_Fal, out int steps)) request["steps_num"] = steps;
         if (input.TryGet(SwarmUIAPIBackends.NegativePromptParam_FalImage, out string negPrompt) && !string.IsNullOrEmpty(negPrompt))
             request["negative_prompt"] = negPrompt;
-    }
-
-    /// <summary>Sora 2: duration (int: 4,8,12), aspect_ratio (16:9,9:16), resolution (720p,1080p). NO: generate_audio, negative_prompt, seed</summary>
-    private static void BuildSoraVideoParams(T2IParamInput input, JObject request)
-    {
-        if (input.TryGet(SwarmUIAPIBackends.DurationParam_Sora, out string duration) && int.TryParse(duration, out int durationInt))
-        {
-            request["duration"] = durationInt;
-        }
-        if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Sora, out string aspectRatio))
-        {
-            request["aspect_ratio"] = aspectRatio;
-        }
-        if (input.TryGet(SwarmUIAPIBackends.ResolutionParam_Sora, out string resolution))
-        {
-            request["resolution"] = resolution;
-        }
     }
 
     /// <summary>Kling: duration (string: 3-15), aspect_ratio (16:9,9:16,1:1), generate_audio, negative_prompt. NO: seed, resolution</summary>
