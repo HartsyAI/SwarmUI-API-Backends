@@ -91,7 +91,6 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<bool> PromptEnhanceParam_BlackForest;
     public static T2IRegisteredParam<string> OutputFormatParam_BlackForest;
     public static T2IRegisteredParam<bool> RawModeParam_BlackForest;
-    public static T2IRegisteredParam<Image> ImagePromptParam_BlackForest;
     public static T2IRegisteredParam<double> ImagePromptStrengthParam_BlackForest;
     public static T2IRegisteredParam<int> WidthParam_BlackForest => T2IParamTypes.Width;
     public static T2IRegisteredParam<int> HeightParam_BlackForest => T2IParamTypes.Height;
@@ -459,7 +458,7 @@ public class SwarmUIAPIBackends : Extension
 
         // Black Forest Labs API Parameters
         GuidanceParam_BlackForest = T2IParamTypes.Register<double>(new("Prompt Guidance",
-            "Controls how strictly the generation follows the prompt (Flux Dev only).\n" +
+            "Controls how strictly the generation follows the prompt (Flux Dev and Flux 2 Flex).\n" +
             "Default 3.0 for balanced results.\n" +
             "Lower values (1.5-2.5): More creative but less controlled\n" +
             "Higher values (3.0-5.0): Stricter prompt following but may reduce realism.", "3.0",
@@ -488,15 +487,8 @@ public class SwarmUIAPIBackends : Extension
             "Only available in Flux Pro 1.1 ultra mode.", "false", OrderPriority: -3,
             Group: BlackForestAdvancedGroup, FeatureFlag: "flux_ultra_params"));
 
-        ImagePromptParam_BlackForest = T2IParamTypes.Register<Image>(new("Image Prompt",
-            "Optional image to use as a starting point or reference.\n" +
-            "Acts as a visual guide for the generation process.\n" +
-            "Useful for variations, style matching, or guided compositions.\n" +
-            "Supported by: Flux Dev, Flux Pro 1.1, Flux Ultra.", null, OrderPriority: -2,
-            Group: BlackForestAdvancedGroup, FeatureFlag: "bfl_image_prompt"));
-
         ImagePromptStrengthParam_BlackForest = T2IParamTypes.Register<double>(new("Image Prompt Strength",
-            "Controls how much the Image Prompt influences the generation.\n" +
+            "Controls how much the Init Image influences the generation.\n" +
             "0.0: Ignore image prompt completely\n" +
             "1.0: Follow image prompt very closely\n" +
             "Default 0.1 provides subtle guidance while allowing creativity.",
@@ -1185,8 +1177,8 @@ public class SwarmUIAPIBackends : Extension
             OrderPriority: -2, Group: T2IParamTypes.GroupSampling, FeatureFlag: "fal_nb2_params"));
 
         ResolutionParam_Flux3Bfl = T2IParamTypes.Register<string>(new("FLUX Three Direct Video Resolution",
-            "Resolution for FLUX 3 on Black Forest Labs' own API, which names these hd and fhd.", "hd",
-            GetValues: _ => ["hd///HD (720p)", "fhd///Full HD (1080p)"],
+            "Resolution for FLUX 3 on Black Forest Labs' own API. Drafts are HD only.", "hd",
+            GetValues: _ => ["hd///HD (720p)", "fhd///Full HD (1080p)", "qhd///2K", "uhd///4K"],
             OrderPriority: -8, Group: T2IParamTypes.GroupText2Video, FeatureFlag: "bfl_flux3_params"));
 
         DurationParam_H3 = T2IParamTypes.Register<string>(new("MiniMax HThree Video Duration",
@@ -1306,7 +1298,7 @@ public class SwarmUIAPIBackends : Extension
             "ideogram_v1_params", "ideogram_v2_params", "ideogram_v3_params", "ideogram_v4_params", "ideogram_style",
             "flux_ultra_params", "flux_pro_params", "flux_dev_params",
             "flux_kontext_pro_params", "flux_kontext_max_params", "flux_2_max_params", "flux_2_pro_params",
-            "bfl_prompt_enhance", "bfl_image_prompt",
+            "flux_2_klein_params", "bfl_prompt_enhance",
             "grok_2_image_params", "google_imagen_params", "google_gemini_params", "google_gemini3_params",
             "fal_t2i_params", "fal_i2i_params", "fal_video_params", "fal_utility_params",
             "fal_aspect_image", "fal_resolution_image", "fal_recraft_params",
