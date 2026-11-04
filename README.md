@@ -56,9 +56,9 @@ The APIBackends Extension for SwarmUI enables integration with multiple commerci
 
 Fal.ai acts as a unified gateway to models from many providers. With a single Fal API key you get access to all of them.
 
-**Image Models** include FLUX (dev, schnell, pro, ultra, kontext, flex, lora, general), Recraft V3, Ideogram (V2, V2a, V3), Stability AI (SD 3.5, SDXL Lightning), Grok, Google (Nano Banana Pro, Gemini Flash), Kling (V3, O3), Qwen, Bria (Fibo), ByteDance Seedream, ImagineArt, HiDream (I1), OmniGen, AuraFlow, Lumina, Sana, Playground, Kolors, MiniMax, Hunyuan, UNO, and Instant Character.
+**Image Models** include FLUX (dev, schnell, pro, ultra, kontext, flex, LoRA, general), FLUX.2 (pro, max, dev, flex, klein 9B), Recraft V3, Ideogram (V2, V2a, V3), Stability AI (SD 3.5, SD 3.0, SDXL Lightning), Grok Imagine Image, Google (Nano Banana Pro, Nano Banana 2, Gemini Flash), Kling Image (V3, O3), Qwen Image (base, 2.0, 2.0 Pro, 3), Bria FIBO, ByteDance Seedream (4.0, 5.0 Pro), ImagineArt, HiDream (I1, O1), OmniGen, AuraFlow, Lumina, Sana, Playground, Kolors, MiniMax Image-01, Hunyuan Image 3.0, UNO, Instant Character, and Z-Image Turbo.
 
-**Video Models** include ByteDance Seedance (2.0, 2.0 Fast, 1.0 Pro, 1.0 Lite -- T2V, I2V, and Ref2V), Veo (3.1, 3), Kling (O3 Pro/Std, V3 Pro/Std, V2.5 Turbo Pro), Grok Video, MiniMax Hailuo, PixVerse V5, Wan 2.2, LTX, Vidu Q3, Hunyuan, Mochi, Luma Ray 2, Pika V2.2, Kandinsky 5 Pro, Magi, CogVideoX, SkyReels, and Decart Lucy.
+**Video Models** include ByteDance Seedance (2.5, 2.0, 2.0 Fast, 2.0 Mini, 1.0 Pro, 1.0 Lite), Veo (3.1, 3), Kling (O3, V3, V3 Turbo Pro, V2.5 Turbo Pro), Grok Imagine Video, MiniMax (H3, Hailuo 02), PixVerse (V5, V6), Wan (2.7, 2.6, 2.5, 2.2), LTX (2 19B and 13B distilled), Vidu Q3, Hunyuan Video, Luma Ray 2, Pika V2.2, Kandinsky 5 Pro, CogVideoX-5B, and FLUX 3 video.
 
 **Utility Models** include background removal (rembg, Bria RMBG 2.0, BEN V2), upscaling (Clarity, Topaz, Creative Upscaler, ESRGAN, Topaz Video), face restoration (CodeFormer), and video background removal (Bria Video BG Removal).
 
