@@ -66,7 +66,7 @@ public class DynamicAPIBackend : APIAbstractBackend
         [ConfigComment("Enable Grok API models.")]
         public bool EnableGrok = false;
 
-        [ConfigComment("Enable Google (Imagen, Gemini) API models.")]
+        [ConfigComment("Enable Google (Gemini) API models.")]
         public bool EnableGoogle = false;
 
         [ConfigComment("Enable Fal.ai API models (600+ models including FLUX, SD, Recraft, etc.).")]
@@ -232,8 +232,7 @@ public class DynamicAPIBackend : APIAbstractBackend
         else if (providerId is "google_api")
         {
             string cleanName = modelName.Replace("API Models/Google/", "");
-            string baseUrlForGoogle = cleanName.StartsWith("gemini-") ? $"{baseUrl}/{cleanName}:generateContent" : $"{baseUrl}/{cleanName}:predict";
-            return baseUrlForGoogle;
+            return $"{baseUrl}/{cleanName}:generateContent";
         }
         else if (providerId is "fal_api")
         {

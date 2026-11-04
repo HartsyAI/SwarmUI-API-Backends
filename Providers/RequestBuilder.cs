@@ -684,81 +684,60 @@ public sealed class GrokRequestBuilder : BaseRequestBuilder
 
 public sealed class GoogleRequestBuilder : BaseRequestBuilder
 {
-    /// <summary>Checks if a model is a Gemini 3 series model that supports image_size parameter.</summary>
+    /// <summary>Checks if a model is a Gemini 3 series image model that supports the imageSize parameter.</summary>
     private static bool IsGemini3Model(string modelId)
     {
-        return modelId is "gemini-3.1-flash-image-preview" or "gemini-3-pro-image-preview";
+        return modelId is "gemini-3.1-flash-image" or "gemini-3.1-flash-lite-image" or "gemini-nano-banana-2.1" or "gemini-3-pro-image";
     }
 
     public override JObject BuildRequest(T2IParamInput input, ModelDefinition model, ProviderDefinition provider)
     {
-        bool isGemini = model.Id.StartsWith("gemini-");
-        if (isGemini)
+        JArray parts = new() { new JObject { ["text"] = input.Get(T2IParamTypes.Prompt) } };
+        // Image editing: send init image as inline data in contents
+        if (input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null)
         {
-            JArray parts = new() { new JObject { ["text"] = input.Get(T2IParamTypes.Prompt) } };
-            // Image editing: send init image as inline data in contents
-            if (input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null)
+            string base64Image = Convert.ToBase64String(initImg.RawData);
+            parts.Insert(0, new JObject
             {
-                string base64Image = Convert.ToBase64String(initImg.RawData);
-                parts.Insert(0, new JObject
+                ["inlineData"] = new JObject
                 {
-                    ["inlineData"] = new JObject
-                    {
-                        ["mimeType"] = "image/png",
-                        ["data"] = base64Image
-                    }
-                });
-            }
-            JObject genConfig = new()
-            {
-                ["responseModalities"] = new JArray { "TEXT", "IMAGE" }
-            };
-            // Build image_config with aspect_ratio and optional image_size
-            JObject imageConfig = new();
-            bool hasImageConfig = false;
-            if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Google, out string geminiAspect) && !string.IsNullOrEmpty(geminiAspect))
-            {
-                imageConfig["aspect_ratio"] = geminiAspect;
-                hasImageConfig = true;
-            }
-            // image_size: only supported by Gemini 3 models 
-            if (IsGemini3Model(model.Id) && input.TryGet(SwarmUIAPIBackends.ImageSizeParam_GoogleGemini3, out string imageSize) && !string.IsNullOrEmpty(imageSize))
-            {
-                imageConfig["image_size"] = imageSize;
-                hasImageConfig = true;
-            }
-            if (hasImageConfig)
-            {
-                genConfig["image_config"] = imageConfig;
-            }
-            return new JObject
-            {
-                ["contents"] = new JArray { new JObject { ["parts"] = parts } },
-                ["generationConfig"] = genConfig
-            };
+                    ["mimeType"] = "image/png",
+                    ["data"] = base64Image
+                }
+            });
         }
-        // Imagen
-        JObject parameters = new() { ["sampleCount"] = GetNumImages(input) };
-        if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Google, out string aspect) && !string.IsNullOrEmpty(aspect))
-            parameters["aspectRatio"] = aspect;
-        if (input.TryGet(SwarmUIAPIBackends.PersonGenerationParam_Google, out string person) && !string.IsNullOrEmpty(person))
-            parameters["personGeneration"] = person;
-        if (input.TryGet(SwarmUIAPIBackends.ImageSizeParam_Google, out string imagenImageSize) && !string.IsNullOrEmpty(imagenImageSize))
-            parameters["imageSize"] = imagenImageSize;
+        JObject genConfig = new()
+        {
+            ["responseModalities"] = new JArray { "TEXT", "IMAGE" }
+        };
+        // Build imageConfig with aspectRatio and optional imageSize
+        JObject imageConfig = new();
+        bool hasImageConfig = false;
+        if (input.TryGet(SwarmUIAPIBackends.AspectRatioParam_Google, out string geminiAspect) && !string.IsNullOrEmpty(geminiAspect))
+        {
+            imageConfig["aspectRatio"] = geminiAspect;
+            hasImageConfig = true;
+        }
+        // imageSize: only sent to Gemini 3 series image models
+        if (IsGemini3Model(model.Id) && input.TryGet(SwarmUIAPIBackends.ImageSizeParam_GoogleGemini3, out string imageSize) && !string.IsNullOrEmpty(imageSize))
+        {
+            imageConfig["imageSize"] = imageSize;
+            hasImageConfig = true;
+        }
+        if (hasImageConfig)
+        {
+            genConfig["imageConfig"] = imageConfig;
+        }
         return new JObject
         {
-            ["instances"] = new JArray
-            {
-                new JObject { ["prompt"] = input.Get(T2IParamTypes.Prompt) }
-            },
-            ["parameters"] = parameters
+            ["contents"] = new JArray { new JObject { ["parts"] = parts } },
+            ["generationConfig"] = genConfig
         };
     }
 
     public override string GetEndpointUrl(ModelDefinition model, ProviderDefinition provider, T2IParamInput input)
     {
-        bool isGemini = model.Id.StartsWith("gemini-");
-        return isGemini ? $"{provider.BaseUrl}/{model.Id}:generateContent" : $"{provider.BaseUrl}/{model.Id}:predict";
+        return $"{provider.BaseUrl}/{model.Id}:generateContent";
     }
 
     public override async Task<byte[][]> ProcessResponse(JObject response, ProviderDefinition provider, string apiKey = null)
@@ -780,23 +759,6 @@ public sealed class GoogleRequestBuilder : BaseRequestBuilder
                     {
                         parsed.Add(DecodeBase64Image(base64));
                     }
-                }
-            }
-            if (parsed.Count > 0)
-            {
-                return [.. parsed];
-            }
-        }
-        JArray predictions = response["predictions"] as JArray;
-        if (predictions is not null && predictions.Count > 0)
-        {
-            List<byte[]> parsed = [];
-            foreach (JToken prediction in predictions)
-            {
-                string base64 = prediction["bytesBase64Encoded"]?.ToString();
-                if (!string.IsNullOrEmpty(base64))
-                {
-                    parsed.Add(DecodeBase64Image(base64));
                 }
             }
             if (parsed.Count > 0)
