@@ -658,11 +658,11 @@ public sealed class GrokRequestBuilder : BaseRequestBuilder
             request["aspect_ratio"] = aspect;
         if (input.TryGet(SwarmUIAPIBackends.ResolutionParam_Grok, out string resolution) && !string.IsNullOrEmpty(resolution))
             request["resolution"] = resolution;
-        // Image editing: use core Swarm InitImage
+        // Image editing: the edits endpoint takes the source image as an object (see DynamicAPIBackend.GetBaseUrl)
         if (input.TryGet(T2IParamTypes.InitImage, out Image initImg) && initImg?.RawData is not null)
         {
             string base64Image = Convert.ToBase64String(initImg.RawData);
-            request["image_url"] = $"data:image/png;base64,{base64Image}";
+            request["image"] = new JObject { ["url"] = $"data:image/png;base64,{base64Image}" };
         }
         return request;
     }

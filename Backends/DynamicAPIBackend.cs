@@ -258,6 +258,12 @@ public class DynamicAPIBackend : APIAbstractBackend
             }
             return baseUrl;
         }
+        else if (providerId is "grok_api")
+        {
+            // Generation takes no input image; source images go to the edits endpoint
+            bool hasGrokInputImage = input.TryGet(T2IParamTypes.InitImage, out Image grokInitImg) && grokInitImg?.RawData is not null;
+            return hasGrokInputImage ? "https://api.x.ai/v1/images/edits" : baseUrl;
+        }
         Logs.Verbose($"[DynamicAPIBackend] Using base URL: {baseUrl}");
         return baseUrl;
     }
