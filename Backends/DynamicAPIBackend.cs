@@ -60,7 +60,7 @@ public class DynamicAPIBackend : APIAbstractBackend
         [ConfigComment("Enable Ideogram API models.")]
         public bool EnableIdeogram = false;
 
-        [ConfigComment("Enable OpenAI (DALL-E, GPT Image) API models.")]
+        [ConfigComment("Enable OpenAI (GPT Image) API models.")]
         public bool EnableOpenAI = false;
 
         [ConfigComment("Enable Grok API models.")]
@@ -254,16 +254,6 @@ public class DynamicAPIBackend : APIAbstractBackend
                 }
             }
             return $"{baseUrl}/{cleanName}";
-        }
-        else if (providerId is "openai_api")
-        {
-            string cleanName = modelName.Replace("API Models/OpenAI/", "").Replace(".safetensors", "");
-            // Route Sora video models to the /v1/videos endpoint
-            if (cleanName.StartsWith("sora-"))
-            {
-                return "https://api.openai.com/v1/videos";
-            }
-            return baseUrl;
         }
         else if (providerId is "grok_api")
         {

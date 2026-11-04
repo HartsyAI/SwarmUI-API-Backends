@@ -26,10 +26,7 @@ public static class APIBackendsPermissions
 public class SwarmUIAPIBackends : Extension
 {
     public static T2IParamGroup OpenAIParamGroup;
-    public static T2IParamGroup DallE2Group;
-    public static T2IParamGroup DallE3Group;
     public static T2IParamGroup GPTImage1Group;
-    public static T2IParamGroup OpenAISoraGroup;
     public static T2IParamGroup GrokParamGroup;
     public static T2IParamGroup Grok2ImageGroup;
     public static T2IParamGroup GoogleParamGroup;
@@ -42,11 +39,7 @@ public class SwarmUIAPIBackends : Extension
     public static T2IParamGroup BlackForestAdvancedGroup;
 
     // OpenAI Parameters
-    public static T2IRegisteredParam<string> SizeParam_OpenAI;
-    public static T2IRegisteredParam<string> SizeParam_DallE2, SizeParam_GPTImage, SizeParam_GPTImage2;
-    public static T2IRegisteredParam<string> QualityParam_OpenAI;
-    public static T2IRegisteredParam<string> StyleParam_OpenAI;
-    public static T2IRegisteredParam<string> ResponseFormatParam_OpenAI;
+    public static T2IRegisteredParam<string> SizeParam_GPTImage, SizeParam_GPTImage2;
 
     // GPT Image 1 Parameters
     public static T2IRegisteredParam<string> QualityParam_GPTImage1;
@@ -61,10 +54,6 @@ public class SwarmUIAPIBackends : Extension
     public static T2IRegisteredParam<string> ModerationParam_GPTImage1_5 => ModerationParam_GPTImage1;
     public static T2IRegisteredParam<string> OutputFormatParam_GPTImage1_5 => OutputFormatParam_GPTImage1;
     public static T2IRegisteredParam<int> OutputCompressionParam_GPTImage1_5 => OutputCompressionParam_GPTImage1;
-
-    // OpenAI Sora Video Parameters
-    public static T2IRegisteredParam<string> SizeParam_OpenAISora;
-    public static T2IRegisteredParam<int> SecondsParam_OpenAISora;
 
     // Ideogram Parameters
     public static T2IRegisteredParam<string> StyleParam_Ideogram;
@@ -234,10 +223,7 @@ public class SwarmUIAPIBackends : Extension
     public override void OnInit()
     {
         OpenAIParamGroup = new("OpenAI API", Toggles: false, Open: true, OrderPriority: 10);
-        DallE2Group = new("DALL-E 2 Settings", Toggles: false, Open: true, OrderPriority: 10, Description: "Parameters specific to OpenAI's DALL-E 2 model generation.");
-        DallE3Group = new("DALL-E 3 Settings", Toggles: false, Open: true, OrderPriority: 11, Description: "Parameters specific to OpenAI's DALL-E 3 model, featuring enhanced quality and style options.");
         GPTImage1Group = new("GPT Image 1 Settings", Toggles: false, Open: true, OrderPriority: 12, Description: "Able to generate images with stronger instruction following, contextual awareness, and world knowledge.");
-        OpenAISoraGroup = new("OpenAI Sora Video Settings", Toggles: false, Open: true, OrderPriority: 13, Description: "Parameters for OpenAI's Sora video generation models.\nGenerate high-quality videos directly from OpenAI.");
 
         IdeogramParamGroup = new("Ideogram API", Toggles: false, Open: true, OrderPriority: 20);
         IdeogramGeneralGroup = new("Ideogram Basic Settings", Toggles: false, Open: true, OrderPriority: 20, Description: "Core parameters for Ideogram image generation.");
@@ -253,20 +239,7 @@ public class SwarmUIAPIBackends : Extension
         BlackForestGeneralGroup = new("Flux Core Settings", Toggles: false, Open: true, OrderPriority: 40, Description: "Core parameters for Flux image generation.\nFlux models excel at high-quality image generation with strong artistic control.");
         BlackForestAdvancedGroup = new("Flux Advanced Settings", Toggles: true, Open: false, OrderPriority: 41, Description: "Additional options for fine-tuning Flux generations and output processing.");
 
-        // One size list per model family. GetValues receives a Session, not the selected model, so the old
-        // model.ID checks here were really testing the session GUID and never matched - every OpenAI model
-        // silently showed the DALL-E 3 sizes.
-        SizeParam_OpenAI = T2IParamTypes.Register<string>(new("Output Resolution",
-            "Dimensions of the generated image (DALL-E 3).", "1024x1024",
-            GetValues: _ => ["1024x1024///Square", "1792x1024///Landscape", "1024x1792///Portrait"],
-            OrderPriority: -10, ViewType: ParamViewType.POT_SLIDER,
-            Group: T2IParamTypes.GroupResolution, FeatureFlag: "dalle3_params"));
-
-        SizeParam_DallE2 = T2IParamTypes.Register<string>(new("DALL-E Two Output Resolution",
-            "Dimensions of the generated image. DALL-E 2 only supports these three square sizes.", "1024x1024",
-            GetValues: _ => ["256x256///Small (256x256)", "512x512///Medium (512x512)", "1024x1024///Large (1024x1024)"],
-            OrderPriority: -10, Group: T2IParamTypes.GroupResolution, FeatureFlag: "dalle2_params"));
-
+        // Each GPT Image model family has its own size list.
         SizeParam_GPTImage = T2IParamTypes.Register<string>(new("GPT Image Output Resolution",
             "Dimensions of the generated image.", "auto",
             GetValues: _ => ["auto///Auto (Recommended)", "1024x1024///Square", "1536x1024///Landscape", "1024x1536///Portrait"],
@@ -276,30 +249,6 @@ public class SwarmUIAPIBackends : Extension
             "Dimensions of the generated image. GPT Image 2 reaches 2K; edges must be multiples of 16.", "auto",
             GetValues: _ => ["auto///Auto (Recommended)", "1024x1024///Square (1K)", "1536x1024///Landscape (1.5K)", "1024x1536///Portrait (1.5K)", "2048x2048///Square (2K)", "2048x1152///Wide Landscape (2K)", "1152x2048///Tall Portrait (2K)"],
             OrderPriority: -10, Group: T2IParamTypes.GroupResolution, FeatureFlag: "gpt-image-2_params"));
-
-        QualityParam_OpenAI = T2IParamTypes.Register<string>(new("Generation Quality",
-            "Controls the level of detail and consistency in DALL-E 3 images.\n" +
-            "'Standard' - Balanced quality suitable for most uses, generates faster\n" +
-            "'HD' - Enhanced detail and better consistency across the entire image, takes longer to generate\n" +
-            "Note: HD mode costs more credits but can be worth it for complex scenes or when fine details matter.",
-            "standard", GetValues: _ => ["standard///Standard (Faster)", "hd///HD (Higher Quality)"],
-            OrderPriority: -8, Group: DallE3Group, FeatureFlag: "dalle3_params"));
-
-        StyleParam_OpenAI = T2IParamTypes.Register<string>(new("Visual Style",
-            "Determines the artistic approach for DALL-E 3 generations:\n" +
-            "'Vivid' - Creates hyper-realistic, dramatic images with enhanced contrast and details\n" +
-            "'Natural' - Produces more photorealistic results with subtle lighting and natural composition\n" +
-            "Choose 'Vivid' for artistic or commercial work, 'Natural' for documentary or product photos.",
-            "vivid", GetValues: _ => ["vivid///Vivid (Dramatic)", "natural///Natural (Realistic)"],
-            OrderPriority: -7, Group: DallE3Group, FeatureFlag: "dalle3_params"));
-
-        ResponseFormatParam_OpenAI = T2IParamTypes.Register<string>(new("Response Format",
-            "Determines how the generated image is returned from the API.\n" +
-            "'URL' - Returns a temporary URL valid for 60 minutes\n" +
-            "'Base64' - Returns the image data directly encoded in base64\n" +
-            "Base64 is preferred for immediate use, URLs for deferred processing.",
-            "b64_json", GetValues: _ => ["url", "b64_json"], OrderPriority: -6,
-            IsAdvanced: true, Group: DallE3Group, FeatureFlag: "dalle3_params"));
 
         // gpt-image-1 parameters
         QualityParam_GPTImage1 = T2IParamTypes.Register<string>(new("Quality",
@@ -345,23 +294,6 @@ public class SwarmUIAPIBackends : Extension
             "Default is 100% (maximum quality).",
             "100", Min: 0, Max: 100, ViewType: ParamViewType.SLIDER,
             OrderPriority: -4, Group: GPTImage1Group, FeatureFlag: "gpt_image_params"));
-
-        // OpenAI Sora Video Parameters
-        SizeParam_OpenAISora = T2IParamTypes.Register<string>(new("OpenAI Sora Video Size",
-            "Controls the resolution of the generated video.\n" +
-            "'1920x1080' - Full HD landscape (16:9)\n" +
-            "'1080x1920' - Full HD portrait (9:16)\n" +
-            "'1280x720' - HD landscape (16:9)\n" +
-            "'480x480' - Square format",
-            "1280x720", GetValues: _ => ["1920x1080///Full HD Landscape (1920x1080)", "1080x1920///Full HD Portrait (1080x1920)", "1280x720///HD Landscape (1280x720)", "480x480///Square (480x480)"],
-            OrderPriority: -10, Group: OpenAISoraGroup, FeatureFlag: "openai_sora_params"));
-
-        SecondsParam_OpenAISora = T2IParamTypes.Register<int>(new("OpenAI Sora Video Duration",
-            "Controls the duration of the generated video in seconds.\n" +
-            "Sora supports videos from 5 to 20 seconds.\n" +
-            "Longer videos take more time and cost more credits.",
-            "10", Min: 5, Max: 20, ViewType: ParamViewType.SLIDER,
-            OrderPriority: -9, Group: OpenAISoraGroup, FeatureFlag: "openai_sora_params"));
 
         // Ideogram Parameters
         StyleParam_Ideogram = T2IParamTypes.Register<string>(new("Generation Style",
@@ -1241,7 +1173,7 @@ public class SwarmUIAPIBackends : Extension
 
         // Model-specific feature flags
         string[] modelFlags = [
-            "dalle2_params", "dalle3_params", "flux_2_flex_params", "gpt-image-1_params", "gpt-image-1.5_params", "gpt_image_params", "openai_image_size",
+            "flux_2_flex_params", "gpt-image-1.5_params", "gpt_image_params", "openai_image_size",
             "ideogram_v1_params", "ideogram_v2_params", "ideogram_v3_params", "ideogram_v4_params", "ideogram_style",
             "flux_ultra_params", "flux_pro_params", "flux_dev_params",
             "flux_kontext_pro_params", "flux_kontext_max_params", "flux_2_max_params", "flux_2_pro_params",

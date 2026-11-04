@@ -147,9 +147,7 @@ public abstract class APIAbstractBackend : AbstractT2IBackend
         }
     }
 
-    /// <summary>Determines the media type of a response. The model's declared modality is authoritative:
-    /// providers that return the video out-of-band (OpenAI Sora responds with a job envelope, not a "video" key)
-    /// would otherwise have their mp4 bytes mislabelled as an image.</summary>
+    /// <summary>Determines the media type of a response. The model's declared modality is authoritative, so video models without a "video" key are not labelled as images.</summary>
     protected virtual MediaType DetermineResponseMediaType(JObject responseJson, T2IParamInput input)
     {
         string modelName = input?.Get(T2IParamTypes.Model)?.Name ?? "";
