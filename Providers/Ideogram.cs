@@ -31,6 +31,7 @@ public sealed class IdeogramProvider : IProviderSource
             .WithUsageHint("Good for images requiring accurate text rendering")
             .WithTags("text-rendering", "generative")
             .WithFeatureFlag("ideogram_v1_params")
+            .WithInitImage()
             .Build(),
 
         ModelDefinitionBuilder.Create()
@@ -44,6 +45,7 @@ public sealed class IdeogramProvider : IProviderSource
             .WithUsageHint("Enhanced text rendering and image quality")
             .WithTags("text-rendering", "high-quality")
             .WithFeatureFlag("ideogram_v2_params")
+            .WithInitImage()
             .Build(),
 
         ModelDefinitionBuilder.Create()
@@ -57,6 +59,7 @@ public sealed class IdeogramProvider : IProviderSource
             .WithUsageHint("Fast generation with good quality")
             .WithTags("text-rendering", "fast")
             .WithFeatureFlag("ideogram_v2_params")
+            .WithInitImage()
             .Build(),
 
         ModelDefinitionBuilder.Create()
@@ -70,6 +73,7 @@ public sealed class IdeogramProvider : IProviderSource
             .WithUsageHint("Good for images requiring accurate text rendering")
             .WithTags("text-rendering", "generative")
             .WithFeatureFlag("ideogram_v2_params")
+            .WithInitImage()
             .Build(),
 
         ModelDefinitionBuilder.Create()
@@ -83,6 +87,7 @@ public sealed class IdeogramProvider : IProviderSource
             .WithUsageHint("Best for professional-grade images with perfect text")
             .WithTags("text-rendering", "premium", "high-quality")
             .WithFeatureFlag("ideogram_v3_params")
+            .WithInitImage()
             .Build(),
 
         ModelDefinitionBuilder.Create()
@@ -96,6 +101,7 @@ public sealed class IdeogramProvider : IProviderSource
             .WithUsageHint("Best for high-resolution images; uses fixed resolutions and a rendering-speed/quality control")
             .WithTags("text-rendering", "premium", "high-quality", "high-resolution")
             .WithFeatureFlag("ideogram_v4_params")
+            .WithInitImage()
             .Build()
     ];
 }
