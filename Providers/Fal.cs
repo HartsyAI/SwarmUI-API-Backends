@@ -25,9 +25,7 @@ public sealed class FalProvider : IProviderSource
         .AddModels(QwenModels)
         .AddModels(BriaModels)
         .AddModels(ByteDanceModels)
-        .AddModels(ReveModels)
         .AddModels(ImagineArtModels)
-        .AddModels(FLiteModels)
         .AddModels(HiDreamModels)
         .AddModels(OmniGenModels)
         .AddModels(AuraFlowModels)
@@ -36,11 +34,9 @@ public sealed class FalProvider : IProviderSource
         .AddModels(PlaygroundModels)
         .AddModels(KolorsModels)
         .AddModels(MiniMaxImageModels)
-        .AddModels(Step1XModels)
         .AddModels(HunyuanImageModels)
         .AddModels(UNOModels)
         .AddModels(InstantCharacterModels)
-        .AddModels(SoraModels)
         .AddModels(SeedanceVideoModels)
         .AddModels(MiniMaxVideoModels)
         .AddModels(PixVerseModels)
@@ -442,20 +438,6 @@ public sealed class FalProvider : IProviderSource
             .WithTags("stable-diffusion", "text-to-image", "sd3")
             .WithFeatureFlag("fal_t2i_params")
             .WithFamily("image.standard")
-            .Build(),
-        ModelDefinitionBuilder.Create()
-            .WithId("StabilityAI/stable-cascade")
-            .WithEndpointOverride("fal-ai/stable-cascade")
-            .WithTitle("Stable Cascade")
-            .WithDescription("Würstchen-based cascaded diffusion model with efficient generation")
-            .WithAuthor("Stability AI")
-            .WithDimensions(1024, 1024)
-            .WithPreviewImage("Images/ModelPreviews/Fal/StabilityAI/stable-cascade.jpg")
-            .WithDate("2024")
-            .WithUsageHint("Efficient high-quality image generation")
-            .WithTags("stable-diffusion", "text-to-image", "cascade")
-            .WithFeatureFlag("fal_t2i_params")
-            .WithFamily("image.standard")
             .Build()
     ];
 
@@ -634,34 +616,6 @@ public sealed class FalProvider : IProviderSource
             .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
-            .WithId("Google/imagen-3")
-            .WithEndpointOverride("fal-ai/imagen3")
-            .WithTitle("Imagen 3")
-            .WithDescription("Google's Imagen 3 text-to-image generation model")
-            .WithAuthor("Google")
-            .WithDimensions(1024, 1024)
-            .WithPreviewImage("Images/ModelPreviews/Fal/Google/imagen-3.jpg")
-            .WithDate("2024")
-            .WithUsageHint("Premium image generation from Google")
-            .WithTags("google", "text-to-image", "imagen")
-            .WithFeatureFlag("fal_t2i_params")
-            .WithFamily("image.aspect")
-            .Build(),
-        ModelDefinitionBuilder.Create()
-            .WithId("Google/imagen-3-fast")
-            .WithEndpointOverride("fal-ai/imagen3/fast")
-            .WithTitle("Imagen 3 Fast")
-            .WithDescription("Fast version of Google's Imagen 3 model")
-            .WithAuthor("Google")
-            .WithDimensions(1024, 1024)
-            .WithPreviewImage("Images/ModelPreviews/Fal/Google/imagen-3-fast.jpg")
-            .WithDate("2024")
-            .WithUsageHint("Quick image generation from Google")
-            .WithTags("google", "text-to-image", "imagen", "fast")
-            .WithFeatureFlag("fal_t2i_params")
-            .WithFamily("image.aspect")
-            .Build(),
-        ModelDefinitionBuilder.Create()
             .WithId("Google/gemini-flash-edit")
             .WithEndpointOverride("fal-ai/gemini-flash-edit")
             .WithTitle("Gemini Flash Edit")
@@ -689,35 +643,6 @@ public sealed class FalProvider : IProviderSource
             .WithTags("google", "veo", "text-to-video", "video", "audio")
             .WithFeatureFlag("fal_veo_video_params")
             .WithFamily("video.veo")
-            .Build(),
-        ModelDefinitionBuilder.Create()
-            .WithId("Google/veo-2-t2v")
-            .WithEndpointOverride("fal-ai/veo2")
-            .WithTitle("Veo 2 (T2V)")
-            .WithDescription("Google's Veo 2 high-quality video generation")
-            .WithAuthor("Google DeepMind")
-            .WithDimensions(1920, 1080)
-            .WithPreviewImage("Images/ModelPreviews/Fal/Google/veo-2-t2v.jpg")
-            .WithDate("2025")
-            .WithUsageHint("High-quality text-to-video from Google")
-            .WithTags("google", "veo", "text-to-video", "video")
-            .WithFeatureFlag("fal_veo_video_params")
-            .WithFamily("video.veo")
-            .Build(),
-        ModelDefinitionBuilder.Create()
-            .WithId("Google/veo-2-i2v")
-            .WithEndpointOverride("fal-ai/veo2/image-to-video")
-            .WithTitle("Veo 2 (I2V)")
-            .WithDescription("Google Veo 2 image-to-video with realistic motion")
-            .WithAuthor("Google DeepMind")
-            .WithDimensions(1920, 1080)
-            .WithPreviewImage("Images/ModelPreviews/Fal/Google/veo-2-i2v.jpg")
-            .WithDate("2025")
-            .WithUsageHint("Realistic motion from images")
-            .WithTags("google", "veo", "image-to-video", "video")
-            .WithFeatureFlag("fal_veo_video_params")
-            .WithFamily("video.veo")
-            .WithInitImage()
             .Build(),
         ModelDefinitionBuilder.Create()
             .WithId("Google/veo-3.1-ref-t2v")
@@ -1282,29 +1207,6 @@ public sealed class FalProvider : IProviderSource
 
     #endregion
 
-    #region Reve
-
-    private static IEnumerable<ModelDefinition> ReveModels =>
-    [
-        ModelDefinitionBuilder.Create()
-            .WithId("Reve/reve-edit")
-            .WithEndpointOverride("fal-ai/reve/edit")
-            .WithTitle("Reve Edit")
-            .WithDescription("High-quality image editing model")
-            .WithAuthor("Reve")
-            .WithDimensions(1024, 1024)
-            .WithPreviewImage("Images/ModelPreviews/Fal/Reve/reve-edit.jpg")
-            .WithDate("2025")
-            .WithUsageHint("Precise image editing")
-            .WithTags("reve", "image-editing")
-            .WithFeatureFlag("fal_i2i_params")
-            .WithFamily("image.standard")
-            .WithInitImage()
-            .Build()
-    ];
-
-    #endregion
-
     #region ImagineArt
 
     private static IEnumerable<ModelDefinition> ImagineArtModels =>
@@ -1322,42 +1224,6 @@ public sealed class FalProvider : IProviderSource
             .WithTags("imagineart", "text-to-image")
             .WithFeatureFlag("fal_t2i_params")
             .WithFamily("image.aspect")
-            .Build()
-    ];
-
-    #endregion
-
-    #region F-Lite (Fal x Freepik)
-
-    private static IEnumerable<ModelDefinition> FLiteModels =>
-    [
-        ModelDefinitionBuilder.Create()
-            .WithId("FLite/f-lite-standard")
-            .WithEndpointOverride("fal-ai/f-lite/standard")
-            .WithTitle("F-Lite Standard")
-            .WithDescription("10B parameter model trained on 80M copyright-safe images by Fal and Freepik")
-            .WithAuthor("Fal x Freepik")
-            .WithDimensions(1024, 1024)
-            .WithPreviewImage("Images/ModelPreviews/Fal/FLite/f-lite-standard.jpg")
-            .WithDate("2025")
-            .WithUsageHint("Commercial-safe image generation")
-            .WithTags("f-lite", "text-to-image", "commercial-safe")
-            .WithFeatureFlag("fal_t2i_params")
-            .WithFamily("image.standard")
-            .Build(),
-        ModelDefinitionBuilder.Create()
-            .WithId("FLite/f-lite-texture")
-            .WithEndpointOverride("fal-ai/f-lite/texture")
-            .WithTitle("F-Lite Texture")
-            .WithDescription("F-Lite texture generation mode for materials and patterns")
-            .WithAuthor("Fal x Freepik")
-            .WithDimensions(1024, 1024)
-            .WithPreviewImage("Images/ModelPreviews/Fal/FLite/f-lite-texture.jpg")
-            .WithDate("2025")
-            .WithUsageHint("Texture and pattern generation")
-            .WithTags("f-lite", "text-to-image", "texture", "commercial-safe")
-            .WithFeatureFlag("fal_t2i_params")
-            .WithFamily("image.standard")
             .Build()
     ];
 
@@ -1408,21 +1274,6 @@ public sealed class FalProvider : IProviderSource
             .WithTags("hidream", "text-to-image", "open-source", "fast")
             .WithFeatureFlag("fal_t2i_params")
             .WithFamily("image.standard")
-            .Build(),
-        ModelDefinitionBuilder.Create()
-            .WithId("HiDream/hidream-e1-full")
-            .WithEndpointOverride("fal-ai/hidream-e1-full")
-            .WithTitle("HiDream E1 Full")
-            .WithDescription("HiDream E1 Full editing model")
-            .WithAuthor("HiDream")
-            .WithDimensions(1024, 1024)
-            .WithPreviewImage("Images/ModelPreviews/Fal/HiDream/hidream-e1-full.jpg")
-            .WithDate("2025")
-            .WithUsageHint("Image editing with HiDream")
-            .WithTags("hidream", "image-to-image", "image-editing")
-            .WithFeatureFlag("fal_i2i_params")
-            .WithFamily("image.standard")
-            .WithInitImage()
             .Build()
     ];
 
@@ -1597,29 +1448,6 @@ public sealed class FalProvider : IProviderSource
 
     #endregion
 
-    #region Step1X
-
-    private static IEnumerable<ModelDefinition> Step1XModels =>
-    [
-        ModelDefinitionBuilder.Create()
-            .WithId("Step1X/step1x-edit")
-            .WithEndpointOverride("fal-ai/step1x-edit")
-            .WithTitle("Step1X Edit")
-            .WithDescription("Step1X image editing model")
-            .WithAuthor("Step1X")
-            .WithDimensions(1024, 1024)
-            .WithPreviewImage("Images/ModelPreviews/Fal/Step1X/step1x-edit.jpg")
-            .WithDate("2025")
-            .WithUsageHint("Precise image editing")
-            .WithTags("step1x", "image-to-image", "image-editing")
-            .WithFeatureFlag("fal_i2i_params")
-            .WithFamily("image.standard")
-            .WithInitImage()
-            .Build()
-    ];
-
-    #endregion
-
     #region Hunyuan (Image)
 
     private static IEnumerable<ModelDefinition> HunyuanImageModels =>
@@ -1682,72 +1510,6 @@ public sealed class FalProvider : IProviderSource
             .WithTags("instant-character", "text-to-image", "character")
             .WithFeatureFlag("fal_t2i_params")
             .WithFamily("image.standard")
-            .WithInitImage()
-            .Build()
-    ];
-
-    #endregion
-
-    #region OpenAI (Sora)
-
-    private static IEnumerable<ModelDefinition> SoraModels =>
-    [
-        ModelDefinitionBuilder.Create()
-            .WithId("Sora/sora-2-t2v")
-            .WithEndpointOverride("fal-ai/sora-2/text-to-video")
-            .WithTitle("Sora 2 (T2V)")
-            .WithDescription("OpenAI's state-of-the-art video model for richly detailed dynamic clips with audio")
-            .WithAuthor("OpenAI")
-            .WithDimensions(1920, 1080)
-            .WithPreviewImage("Images/ModelPreviews/Fal/Sora/sora-2-t2v.jpg")
-            .WithDate("2025")
-            .WithUsageHint("Highest quality text-to-video from OpenAI")
-            .WithTags("sora", "openai", "text-to-video", "video", "audio")
-            .WithFeatureFlag("fal_sora_video_params")
-            .WithFamily("video.sora")
-            .Build(),
-        ModelDefinitionBuilder.Create()
-            .WithId("Sora/sora-2-pro-t2v")
-            .WithEndpointOverride("fal-ai/sora-2/text-to-video/pro")
-            .WithTitle("Sora 2 Pro (T2V)")
-            .WithDescription("Professional tier of OpenAI's Sora 2 video generation")
-            .WithAuthor("OpenAI")
-            .WithDimensions(1920, 1080)
-            .WithPreviewImage("Images/ModelPreviews/Fal/Sora/sora-2-pro-t2v.jpg")
-            .WithDate("2025")
-            .WithUsageHint("Premium text-to-video quality")
-            .WithTags("sora", "openai", "text-to-video", "video", "pro")
-            .WithFeatureFlag("fal_sora_video_params")
-            .WithFamily("video.sora")
-            .Build(),
-        ModelDefinitionBuilder.Create()
-            .WithId("Sora/sora-2-i2v")
-            .WithEndpointOverride("fal-ai/sora-2/image-to-video")
-            .WithTitle("Sora 2 (I2V)")
-            .WithDescription("Create richly detailed dynamic clips with audio from images")
-            .WithAuthor("OpenAI")
-            .WithDimensions(1920, 1080)
-            .WithPreviewImage("Images/ModelPreviews/Fal/Sora/sora-2-i2v.jpg")
-            .WithDate("2025")
-            .WithUsageHint("Image-to-video with audio from OpenAI")
-            .WithTags("sora", "openai", "image-to-video", "video", "audio")
-            .WithFeatureFlag("fal_sora_video_params")
-            .WithFamily("video.sora")
-            .WithInitImage()
-            .Build(),
-        ModelDefinitionBuilder.Create()
-            .WithId("Sora/sora-2-pro-i2v")
-            .WithEndpointOverride("fal-ai/sora-2/image-to-video/pro")
-            .WithTitle("Sora 2 Pro (I2V)")
-            .WithDescription("Professional tier image-to-video from OpenAI's Sora 2")
-            .WithAuthor("OpenAI")
-            .WithDimensions(1920, 1080)
-            .WithPreviewImage("Images/ModelPreviews/Fal/Sora/sora-2-pro-i2v.jpg")
-            .WithDate("2025")
-            .WithUsageHint("Premium image-to-video quality")
-            .WithTags("sora", "openai", "image-to-video", "video", "pro")
-            .WithFeatureFlag("fal_sora_video_params")
-            .WithFamily("video.sora")
             .WithInitImage()
             .Build()
     ];

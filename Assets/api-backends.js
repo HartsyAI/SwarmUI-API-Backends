@@ -25,7 +25,7 @@ const APIBackendsConfig = {
         bfl_api: ['flux_ultra_params', 'flux_pro_params', 'flux_dev_params', 'flux_kontext_pro_params', 'flux_kontext_max_params', 'flux_2_max_params', 'flux_2_pro_params', 'bfl_prompt_enhance', 'bfl_image_prompt'],
         grok_api: ['grok_2_image_params'],
         google_api: ['google_imagen_params', 'google_gemini_params', 'google_gemini3_params'],
-        fal_api: ['fal_t2i_params', 'fal_i2i_params', 'fal_video_params', 'fal_utility_params', 'fal_aspect_image', 'fal_resolution_image', 'fal_recraft_params', 'fal_sora_video_params', 'fal_kling_video_params', 'fal_veo_video_params', 'fal_minimax_video_params', 'fal_luma_video_params', 'fal_hunyuan_video_params', 'fal_seedance2_video_params', 'fal_seedance1_video_params', 'fal_seedance_ref_params']
+        fal_api: ['fal_t2i_params', 'fal_i2i_params', 'fal_video_params', 'fal_utility_params', 'fal_aspect_image', 'fal_resolution_image', 'fal_recraft_params', 'fal_kling_video_params', 'fal_veo_video_params', 'fal_minimax_video_params', 'fal_luma_video_params', 'fal_hunyuan_video_params', 'fal_seedance2_video_params', 'fal_seedance1_video_params', 'fal_seedance_ref_params']
     },
 
     // Model name patterns to feature flags (order matters)
@@ -69,7 +69,6 @@ const APIBackendsConfig = {
             '-ref2v': ['seed', 'initimage'],
             'flux-pro-ultra': ['seed'],
             'nano-banana-pro': ['seed'],
-            '/Google/imagen-3': ['seed'],
             '*': ['seed']
         }
     },
@@ -233,7 +232,6 @@ const APIBackendsConfig = {
             if (modelName.includes('grok-imagine-video-edit')) isVideo = true;
         }
         if (isVideo) {
-            if (modelName.includes('/Sora/')) return ['fal_sora_video_params'];
             if (modelName.includes('/Kling/')) return ['fal_kling_video_params'];
             if (modelName.includes('/Google/') && modelName.includes('veo')) return ['fal_veo_video_params'];
             if (modelName.includes('seedance') && modelName.includes('2.0')) {
@@ -263,11 +261,6 @@ const APIBackendsConfig = {
         // Nano Banana Pro (Google via Fal): aspect_ratio + resolution, NO image_size/steps/guidance
         if (modelName.includes('nano-banana-pro')) {
             flags.push('fal_aspect_image', 'fal_resolution_image');
-            return flags;
-        }
-        // Google Imagen 3: aspect_ratio, NO image_size/steps/guidance
-        if (modelName.includes('/Google/imagen-3')) {
-            flags.push('fal_aspect_image');
             return flags;
         }
         // Grok Imagine Image (+ edit): aspect_ratio, NO image_size/steps/guidance/seed
@@ -307,7 +300,6 @@ const APIBackendsConfig = {
         if (modelName.endsWith('-edit')) return true;
         if (modelName.endsWith('-i2i')) return true;
         if (modelName.includes('kontext')) return true;
-        if (modelName.includes('hidream-e1')) return true;
         // Dual models that support both t2i and editing (image input optional)
         if (modelName.includes('seedream')) return true;
         if (modelName.includes('omnigen')) return true;
