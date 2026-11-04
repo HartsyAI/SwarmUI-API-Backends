@@ -220,14 +220,22 @@ public class DynamicAPIBackend : APIAbstractBackend
         }
         else if (providerId is "ideogram_api")
         {
+            bool hasInputImage = CheckIdeogramEdit(input);
+            bool hasMask = TryGetImageParam(input, SwarmUIAPIBackends.MaskImageParam_Ideogram, out _);
             if (IsIdeogramV4Model(modelName))
             {
-                return "https://api.ideogram.ai/v1/ideogram-v4/generate";
+                return hasInputImage ? "https://api.ideogram.ai/v1/ideogram-v4/remix" : "https://api.ideogram.ai/v1/ideogram-v4/generate";
             }
-            bool hasInputImage = CheckIdeogramEdit(input);
-            bool isV3 = IsIdeogramV3Model(modelName);
-            string baseUrlForIdeogram = isV3 ? hasInputImage ? "https://api.ideogram.ai/v1/ideogram-v3/edit" : "https://api.ideogram.ai/v1/ideogram-v3/generate" : hasInputImage ? "https://api.ideogram.ai/edit" : baseUrl;
-            return baseUrlForIdeogram;
+            if (IsIdeogramV3Model(modelName))
+            {
+                if (hasInputImage && hasMask) return "https://api.ideogram.ai/v1/ideogram-v3/edit";
+                if (hasInputImage) return "https://api.ideogram.ai/v1/ideogram-v3/remix";
+                return "https://api.ideogram.ai/v1/ideogram-v3/generate";
+            }
+            // Legacy models: /edit needs a mask (V_2 and V_2_TURBO only per the API reference); /remix takes an image without one
+            if (hasInputImage && hasMask) return "https://api.ideogram.ai/edit";
+            if (hasInputImage) return "https://api.ideogram.ai/remix";
+            return baseUrl;
         }
         else if (providerId is "google_api")
         {
@@ -279,23 +287,21 @@ public class DynamicAPIBackend : APIAbstractBackend
             MultipartFormDataContent formData = new MultipartFormDataContent();
             foreach (JProperty property in requestBody.Properties())
             {
-                if (property.Value != null && property.Name != "image" && property.Name != "mask" && property.Name != "image_file")
+                if (property.Value != null)
                 {
                     formData.Add(new StringContent(property.Value.ToString()), property.Name);
                 }
             }
             if (TryGetImageParam(input, SwarmUIAPIBackends.InitImageParam_Ideogram, out Image inputImg))
             {
-                string requestImageType = "image_file";
-                if (IsIdeogramV3Model(modelName))
-                {
-                    requestImageType = "image";
-                }
+                // V3 and V4 routes take "image"; legacy /remix and /edit take "image_file"
+                string requestImageType = IsIdeogramV3Model(modelName) || IsIdeogramV4Model(modelName) ? "image" : "image_file";
                 ByteArrayContent imageContent = new ByteArrayContent(inputImg.RawData);
                 imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
                 formData.Add(imageContent, requestImageType, "input.png");
             }
-            if (TryGetImageParam(input, SwarmUIAPIBackends.MaskImageParam_Ideogram, out Image maskImg))
+            // The V4 remix route has no mask field
+            if (!IsIdeogramV4Model(modelName) && TryGetImageParam(input, SwarmUIAPIBackends.MaskImageParam_Ideogram, out Image maskImg))
             {
                 ByteArrayContent maskContent = new ByteArrayContent(maskImg.RawData);
                 maskContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");

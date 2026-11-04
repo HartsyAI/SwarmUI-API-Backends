@@ -420,7 +420,7 @@ public class SwarmUIAPIBackends : Extension
 
         ResolutionParam_IdeogramV4 = T2IParamTypes.Register<string>(new("Ideogram VFour Resolution",
             "Output resolution for Ideogram V4.", "1024x1024",
-            GetValues: _ => ["1024x1024///Square", "1344x768///Landscape", "768x1344///Portrait", "1536x640///Wide", "640x1536///Tall"],
+            GetValues: _ => ["1024x1024///Square", "1280x720///Landscape", "720x1280///Portrait", "1536x512///Wide", "512x1536///Tall"],
             OrderPriority: -8, Group: T2IParamTypes.GroupResolution, FeatureFlag: "ideogram_v4_params"));
 
         CopyrightDetectionParam_IdeogramV4 = T2IParamTypes.Register<bool>(new("Ideogram Copyright Detection",
