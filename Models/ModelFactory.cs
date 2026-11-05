@@ -70,11 +70,13 @@ public static class ModelFactory
     {
         if (!_modelClasses.TryGetValue(id, out T2IModelClass modelClass))
         {
+            // Core and the browser key on compat class, and the browser warns when a model class has none.
+            T2IModelCompatClass compat = T2IModelClassSorter.RegisterCompat(new() { ID = id });
             modelClass = new T2IModelClass
             {
                 ID = id,
                 Name = name,
-                CompatClass = default,
+                CompatClass = compat,
                 StandardWidth = 1024,
                 StandardHeight = 1024,
                 // Claim ONLY this extension's own virtual models: a catch-all `=> true` here used to swallow
