@@ -25,7 +25,6 @@ public sealed class FalProvider : IProviderSource
         .AddModels(QwenModels)
         .AddModels(BriaModels)
         .AddModels(ByteDanceModels)
-        .AddModels(ImagineArtModels)
         .AddModels(HiDreamModels)
         .AddModels(OmniGenModels)
         .AddModels(AuraFlowModels)
@@ -1261,28 +1260,6 @@ public sealed class FalProvider : IProviderSource
 
     #endregion
 
-    #region ImagineArt
-
-    private static IEnumerable<ModelDefinition> ImagineArtModels =>
-    [
-        ModelDefinitionBuilder.Create()
-            .WithId("ImagineArt/imagineart-1.5")
-            .WithEndpointOverride("imagineart/imagineart-1.5-preview/text-to-image")
-            .WithTitle("ImagineArt 1.5")
-            .WithDescription("ImagineArt's text-to-image generation model")
-            .WithAuthor("ImagineArt")
-            .WithDimensions(1024, 1024)
-            .WithPreviewImage("Images/ModelPreviews/Fal/ImagineArt/imagineart-1.5.jpg")
-            .WithDate("2025")
-            .WithUsageHint("High-quality artistic image generation")
-            .WithTags("imagineart", "text-to-image")
-            .WithFeatureFlag("fal_t2i_params")
-            .WithFamily("image.aspect")
-            .Build()
-    ];
-
-    #endregion
-
     #region HiDream
 
     private static IEnumerable<ModelDefinition> HiDreamModels =>
@@ -1652,6 +1629,33 @@ public sealed class FalProvider : IProviderSource
             .WithPreviewImage("Images/ModelPreviews/Fal/MiniMax/hailuo-02-i2v.jpg")
             .WithDate("2025")
             .WithUsageHint("Image-to-video generation")
+            .WithTags("minimax", "hailuo", "image-to-video", "video")
+            .WithFeatureFlag("fal_minimax_video_params")
+            .WithFamily("video.minimax")
+            .WithInitImage()
+            .Build(),
+        ModelDefinitionBuilder.Create()
+            .WithId("MiniMax/hailuo-2.3-t2v")
+            .WithEndpointOverride("fal-ai/minimax/hailuo-2.3/standard/text-to-video")
+            .WithTitle("Hailuo 2.3 (T2V)")
+            .WithDescription("MiniMax's Hailuo 2.3 text-to-video generation model")
+            .WithAuthor("MiniMax")
+            .WithDimensions(1280, 720)
+            .WithDate("2025")
+            .WithUsageHint("Text-to-video generation, 6 or 10 seconds")
+            .WithTags("minimax", "hailuo", "text-to-video", "video")
+            .WithFeatureFlag("fal_minimax_video_params")
+            .WithFamily("video.minimax")
+            .Build(),
+        ModelDefinitionBuilder.Create()
+            .WithId("MiniMax/hailuo-2.3-i2v")
+            .WithEndpointOverride("fal-ai/minimax/hailuo-2.3/standard/image-to-video")
+            .WithTitle("Hailuo 2.3 (I2V)")
+            .WithDescription("MiniMax's Hailuo 2.3 image-to-video generation model")
+            .WithAuthor("MiniMax")
+            .WithDimensions(1280, 720)
+            .WithDate("2025")
+            .WithUsageHint("Image-to-video generation, 6 or 10 seconds")
             .WithTags("minimax", "hailuo", "image-to-video", "video")
             .WithFeatureFlag("fal_minimax_video_params")
             .WithFamily("video.minimax")
